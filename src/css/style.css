@@ -1,0 +1,82 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
+/* Base & Layout */
+@import './variables.css';
+@import './base.css';
+@import './layout.css';
+@import './navbar.css';
+
+/* Components */
+@import './components/buttons.css';
+@import './components/modals.css';
+@import './components/forms.css';
+@import './components/tables.css';
+@import './components/cards.css';
+@import './components/timeline.css';
+
+/* Feature Specific */
+@import './components/calendar.css';
+@import './components/procedures.css';
+
+/* Color Palette Overrides for Procedure Badges */
+.swatch-indigo {
+    background-color: #4F46E5;
+}
+
+.swatch-cyan {
+    background-color: #06B6D4;
+}
+
+.swatch-emerald {
+    background-color: #10B981;
+}
+
+.swatch-amber {
+    background-color: #F59E0B;
+}
+
+.swatch-red {
+    background-color: #EF4444;
+}
+
+.swatch-pink {
+    background-color: #EC4899;
+}
+
+.swatch-violet {
+    background-color: #8B5CF6;
+}
+
+.color-palette {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+    flex-wrap: wrap;
+}
+
+.color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-swatch:hover {
+    transform: scale(1.1);
+}
+
+.color-swatch.active {
+    border-color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.color-swatch.custom {
+    background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+    color: white;
+    font-weight: bold;
+}

@@ -1,0 +1,389 @@
+/* ACCOUNTS SECTION TAB NAV */
+.accounts-tabs-nav {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+}
+
+.acc-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: color 0.3s;
+    position: relative;
+}
+
+.acc-tab-btn:hover {
+    color: var(--text-main);
+}
+
+.acc-tab-btn.active {
+    color: var(--accent);
+}
+
+.acc-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+}
+
+.acc-tab-content {
+    display: none;
+}
+
+.acc-tab-content.active {
+    display: block;
+}
+
+/* CALENDAR STYLES (Month View) */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.calendar-header h2 {
+    font-size: 1.4rem;
+    color: var(--text-main);
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    gap: 10px;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+
+.calendar-day {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    min-height: 100px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    border-color: transparent;
+}
+
+.calendar-day.today {
+    border-color: var(--accent);
+    background: rgba(34, 211, 238, 0.05);
+}
+
+.cal-date-num {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    align-self: flex-end;
+}
+
+.calendar-day.today .cal-date-num {
+    color: var(--accent);
+}
+
+/* Notifications Alert Pulse (Ripple Effect) */
+@keyframes alert-pulse {
+    0% {
+        transform: scale(0.95);
+        filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
+        color: #ef4444;
+    }
+
+    50% {
+        transform: scale(1.1);
+        filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+        color: #f87171;
+        /* Lighter red for opacity feel */
+    }
+
+    100% {
+        transform: scale(0.95);
+        filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+        color: #ef4444;
+    }
+}
+
+.alert-pulse {
+    animation: alert-pulse 1.8s infinite ease-in-out;
+    color: #ef4444 !important;
+}
+
+/* Month View Event Mini Card (Legacy fallback) */
+.cal-event-mini {
+    background: rgba(16, 185, 129, 0.2);
+    /* Default fixed/emerald */
+    border-left: 3px solid #10B981;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cal-event-mini.off {
+    background: rgba(239, 68, 68, 0.2);
+    border-left-color: #EF4444;
+    opacity: 0.7;
+    text-decoration: line-through;
+}
+
+/* YEAR VIEW STYLES */
+.year-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.year-month-card {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.year-month-card:hover {
+    border-color: var(--accent);
+}
+
+.ym-header {
+    font-weight: 600;
+    margin-bottom: 10px;
+    text-align: center;
+    color: var(--text-main);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 5px;
+}
+
+.ym-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.ym-mini-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.ym-mini-day.has-event {
+    background: rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+    font-weight: bold;
+}
+
+/* DAY VIEW STYLES */
+.day-list-container {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 300px;
+}
+
+.day-event-card {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid var(--accent);
+    padding: 15px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.day-event-card h4 {
+    margin-bottom: 5px;
+}
+
+/* Event Pills used in Monthly layout */
+.event-pill {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-left: 3px solid transparent;
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.event-paid {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.event-pending {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.event-canceled {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    opacity: 0.6;
+    text-decoration: line-through;
+}
+
+/* Event Rows used in Daily layout */
+.day-event-row {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    border: 1px solid var(--glass-border);
+    transition: background 0.2s;
+}
+
+.day-event-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.day-evt-info {
+    flex: 1;
+}
+
+.day-evt-info h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.day-evt-info p {
+    margin: 4px 0 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Toggle Views container helpers */
+.active-cal-view {
+    display: block;
+}
+
+.hidden-cal-view {
+    display: none;
+}
+
+/* --- 20/80 Notion-like Calendar Layout --- */
+.calendar-layout-wrapper {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 25px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .calendar-layout-wrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+.calendar-sidebar {
+    padding: 20px;
+    border-radius: var(--border-radius);
+    height: 100%;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-main-view {
+    min-width: 0;
+    /* Prevents grid blowout */
+}
+
+/* Sidebar Mini Calendar */
+.sidebar-mini-calendar {
+    margin-top: 15px;
+}
+
+.smc-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.smc-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+
+.smc-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: var(--text-main);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.smc-day:hover:not(.empty) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.smc-day.empty {
+    color: transparent;
+    cursor: default;
+}
+
+.smc-day.active {
+    background: rgba(34, 211, 238, 0.2);
+    color: var(--accent);
+    font-weight: bold;
+}

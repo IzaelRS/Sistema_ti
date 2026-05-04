@@ -1,0 +1,78 @@
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    width: 500px;
+    padding: 2rem;
+    border-radius: 20px;
+    background: var(--bg-dark);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content.small {
+    width: 400px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.modal-header-center {
+    margin-bottom: 1.5rem;
+}
+
+.modal-header-center h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-main);
+}
+
+.modal-message {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 1.5rem;
+}
+
+.modal-actions-center {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.3s;
+}
+
+.close-btn:hover {
+    color: var(--text-main);
+}

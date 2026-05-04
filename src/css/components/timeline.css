@@ -1,0 +1,681 @@
+/* Timeline Native Styles */
+
+#timeline-section {
+    --topic-atendimento: #3b82f6;
+    --topic-internet: #10b981;
+    --topic-infra: #f97316;
+    --topic-sistema: #8b5cf6;
+    --topic-integracoes: #ec4899;
+}
+
+/* Timeline Views */
+.timeline-view-section {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+    padding: 1.5rem 2rem;
+}
+
+.timeline-view-section.active {
+    display: block;
+}
+
+/* Tab Nav Override for Timeline */
+#timeline-section .account-tabs {
+    padding: 1rem 2rem 0;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 0 !important;
+}
+
+#timeline-section .account-tab-btn {
+    padding: 0.65rem 1.25rem;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    position: relative;
+    bottom: -1px;
+}
+
+#timeline-section .account-tab-btn:hover {
+    color: var(--text-color);
+    background: var(--hover-bg, rgba(99,102,241,0.08));
+}
+
+#timeline-section .account-tab-btn.active {
+    color: var(--primary-color, #6366f1);
+    border-bottom: 3px solid var(--primary-color, #6366f1);
+    background: transparent;
+    font-weight: 700;
+}
+
+#timeline-section .account-tab-btn.role-hidden {
+    display: none;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Timeline Layout */
+.timeline-container {
+    background: var(--card-bg);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.topic-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 3rem;
+}
+
+.sla-container {
+    margin-left: auto;
+    background: #1e293b;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sla-container span {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.topic-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-helper-dates {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.timeline-track-container {
+    padding: 2rem 0;
+    position: relative;
+}
+
+.timeline-track {
+    height: 4px;
+    background: var(--glass-bg, #e2e8f0);
+    border-radius: 2px;
+    position: relative;
+    width: 100%;
+    overflow: visible;
+}
+
+.timeline-bar {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 6px;
+    z-index: 10;
+    background: transparent;
+    opacity: 1;
+    min-width: 4px;
+    overflow: visible;
+}
+
+.timeline-bar-visual {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    background-color: currentColor;
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.timeline-bar:hover .timeline-bar-visual {
+    transform: scaleY(1.8);
+    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-identifier-point {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px;
+    height: 12px;
+    background-color: currentColor;
+    border-radius: 50%;
+    z-index: 15;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+/* ============================================================
+   Efeito PULSANTE — eventos Em Ocorrência
+   ::before = anel expandindo | box-shadow = glow no ponto
+   ::after é reservado para o TOOLTIP
+   ============================================================ */
+@keyframes pulse-dot {
+    0%, 100% { transform: translate(-50%, -50%) scale(1);    box-shadow: 0 0 0 0 currentColor; }
+    50%       { transform: translate(-50%, -50%) scale(1.2);  box-shadow: 0 0 8px 4px rgba(255,255,255,0.15); }
+}
+
+@keyframes pulse-ring-expand {
+    0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.65; }
+    100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0;    }
+}
+
+/* Ponto principal — cresce e brilha */
+.timeline-identifier-point.pulsing {
+    animation: pulse-dot 1.6s ease-in-out infinite;
+    z-index: 20;
+    width: 14px;
+    height: 14px;
+    overflow: visible;
+}
+
+/* Anel expansivo via ::before (não conflita com ::after tooltip) */
+.timeline-identifier-point.pulsing::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: pulse-ring-expand 1.6s ease-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+
+.timeline-identifier-point:hover {
+    transform: translate(-50%, -50%) scale(1.3);
+    z-index: 30;
+}
+
+.timeline-identifier-point::after, .timeline-point::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--card-bg);
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: pre-wrap;
+    text-align: left;
+    min-width: 250px;
+    max-width: 350px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+}
+
+.timeline-identifier-point:hover::after, .timeline-point:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.attention-header {
+    text-align: center;
+}
+
+.attention-header h2 {
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.attention-topic-group {
+    margin-bottom: 3rem;
+}
+
+.attention-topic-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.attention-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.attention-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--topic-color, #e2e8f0);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.attention-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+}
+
+.attention-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.attention-card:hover::before {
+    transform: translateX(100%);
+}
+
+.attention-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.attention-card-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-color);
+    line-height: 1.3;
+}
+
+.attention-card-badge {
+    background: rgba(var(--topic-rgb, 100, 116, 139), 0.1);
+    color: var(--topic-color, #64748b);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.attention-card-date {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.attention-card-desc {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin-top: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.attention-card-actions {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ============================================================
+   Atenção - Accordion
+   ============================================================ */
+#view-attention {
+    padding: 1.5rem 2rem;
+}
+
+#view-attention .attention-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+#view-attention .attention-header h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0.35rem;
+}
+
+#view-attention .attention-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Accordion wrapper */
+.accordion-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.accordion-item:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+/* Accordion header — flex row */
+.accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.accordion-header:hover {
+    background: var(--hover-bg, rgba(99, 102, 241, 0.05));
+}
+
+/* Title group: indicator + label + badge in one row */
+.accordion-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.accordion-title-group .topic-indicator {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.accordion-title-group h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+/* Chevron icon */
+.accordion-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+
+.accordion-chevron svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+/* Rotate chevron when active */
+.accordion-item.active .accordion-chevron {
+    transform: rotate(180deg);
+}
+
+/* Accordion content — hidden by default */
+.accordion-content {
+    display: none;
+    border-top: 1px solid var(--border-color);
+}
+
+.accordion-item.active .accordion-content {
+    display: block;
+}
+
+.accordion-body {
+    padding: 1.25rem;
+}
+
+/* Cards grid inside accordion */
+.attention-carousel {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+/* Event card */
+.attention-card {
+    background: var(--bg-secondary, var(--card-bg));
+    border: 1px solid var(--border-color);
+    border-left: 4px solid;
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.attention-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.15));
+}
+
+.attention-card h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.attention-card .sub-topic {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.attention-card .card-detail,
+.attention-card .card-duration {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.attention-card .card-duration span {
+    font-weight: 600;
+    color: var(--primary-color, #6366f1);
+}
+
+.attention-card .card-description {
+    font-size: 0.85rem;
+    color: var(--text-color);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    grid-column: 1 / -1;
+}
+
+/* ============================================================
+   Auto-Refresh — Inline na barra de abas, lado direito
+   ============================================================ */
+.floating-refresh-control {
+    margin-left: auto;          /* empurra para a extremidade direita */
+    align-self: center;
+    padding-right: 0.5rem;
+}
+
+/* Hidden state */
+.floating-refresh-control.hidden {
+    display: none;
+}
+
+/* O label age como o container clicável */
+.refresh-toggle-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem 0.45rem 0.65rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.refresh-toggle-wrapper:hover {
+    border-color: var(--primary-color, #6366f1);
+    box-shadow: 0 2px 12px rgba(99,102,241,0.2);
+}
+
+/* Ícone de refresh */
+.refresh-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 0.2s, transform 0.4s ease;
+}
+
+/* Label texto */
+.refresh-toggle-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+/* Badge "60s" */
+.refresh-toggle-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--hover-bg, rgba(99,102,241,0.08));
+    padding: 1px 6px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+/* Esconder o checkbox nativo */
+.refresh-toggle-wrapper input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Toggle switch */
+.refresh-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.refresh-toggle-switch::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--border-color);
+    border-radius: 9px;
+    transition: background 0.25s ease;
+}
+
+.refresh-toggle-switch::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Estado ATIVO do toggle */
+.refresh-toggle-wrapper:has(input:checked) .refresh-toggle-switch::before {
+    background: var(--primary-color, #6366f1);
+}
+
+.refresh-toggle-wrapper:has(input:checked) .refresh-toggle-switch::after {
+    transform: translateX(14px);
+    box-shadow: 0 1px 4px rgba(99,102,241,0.5);
+}
+
+/* Quando ativo: mudar cor do label, ícone e badge */
+.refresh-toggle-wrapper:has(input:checked) .refresh-icon {
+    color: var(--primary-color, #6366f1);
+    animation: spin-refresh 1s linear infinite;
+}
+
+.refresh-toggle-wrapper:has(input:checked) .refresh-toggle-label {
+    color: var(--text-color);
+}
+
+.refresh-toggle-wrapper:has(input:checked) .refresh-toggle-badge {
+    color: var(--primary-color, #6366f1);
+    background: rgba(99,102,241,0.12);
+}
+
+.refresh-toggle-wrapper:has(input:checked) {
+    border-color: var(--primary-color, #6366f1);
+    box-shadow: 0 2px 12px rgba(99,102,241,0.25);
+}
+
+/* Rotação do ícone quando ativo */
+@keyframes spin-refresh {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}

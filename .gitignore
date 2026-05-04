@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+logs/
+*.log
+intranet.db
+timeline/timeline.db
+.env
+uploads/

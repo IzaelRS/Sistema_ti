@@ -1,0 +1,534 @@
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const bcrypt = require('bcrypt');
+const db = require('./database');
+const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
+
+const app = express();
+const PORT = 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+// Servir arquivos estáticos do build (em produção) e manter pasta public
+app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static('public'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Integração Timeline (Servir os arquivos estáticos na URL /timeline)
+app.use('/timeline', express.static(path.join(__dirname, 'timeline')));
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Somente Imagens (PNG, JPG, WEBP) e PDF são permitidos.'));
+        }
+    }
+});
+
+// --- Rate Limiters ---
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 10,
+    message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res, next, options) => {
+        console.warn(`[RATE LIMIT] Login bloqueado para IP: ${req.ip} - ${req.body?.email || ''}`);
+        res.status(429).json(options.message);
+    }
+});
+
+const uploadLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 20,
+    message: { error: 'Limite de uploads atingido. Tente novamente em 1 hora.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const generalApiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: 200,
+    message: { error: 'Muitas requisições. Aguarde um momento.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Aplica limite geral para todas as rotas API
+app.use('/api', generalApiLimiter);
+
+// --- Monitoramento (Health Check) ---
+const os = require('os');
+app.get('/api/health', (req, res) => {
+    const uptime = process.uptime();
+    const memUsage = process.memoryUsage();
+    
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: `${Math.floor(uptime / 60)} minutos`,
+        memory: {
+            used: `${Math.round(memUsage.heapUsed / 1024 / 1024)} MB`,
+            total: `${Math.round(memUsage.heapTotal / 1024 / 1024)} MB`,
+        },
+        system: {
+            platform: os.platform(),
+            freeMemory: `${Math.round(os.freemem() / 1024 / 1024)} MB`,
+            cpuLoad: os.loadavg()[0] ? os.loadavg()[0].toFixed(2) : 'N/A'
+        }
+    });
+});
+
+// --- Logging Middleware ---
+const logsDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir);
+
+const accessLogStream = fs.createWriteStream(
+    path.join(logsDir, 'access.log'),
+    { flags: 'a' }
+);
+
+app.use(morgan('dev'));
+app.use(morgan('combined', { stream: accessLogStream }));
+
+app.use((req, res, next) => {
+    // console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`); // Substituído pelo morgan
+    if (req.body && Object.keys(req.body).length > 0) {
+        const sanitizedBody = { ...req.body };
+        if (sanitizedBody.password) sanitizedBody.password = '***';
+        console.log('Body:', JSON.stringify(sanitizedBody));
+    }
+    next();
+});
+
+// --- API Endpoints ---
+
+// 0. Timeline Integration API
+const timelineRoutes = require('./timeline_routes');
+app.use('/api/timeline', timelineRoutes);
+
+// 1. Procedures (FAQs)
+app.get('/api/procedures', (req, res) => {
+    db.all("SELECT * FROM procedures ORDER BY position ASC, created_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/procedures', (req, res) => {
+    const { name, responsible, group_name, note, color } = req.body;
+
+    // Provide defaults for removed but required DB fields
+    const model = req.body.model || '';
+    const observation = req.body.observation || '';
+    const content = req.body.content || '';
+
+    if (!name || !responsible || !group_name) {
+        return res.status(400).json({ error: 'Campos obrigatórios estão faltando.' });
+    }
+
+    const query = `
+        INSERT INTO procedures (name, responsible, group_name, model, note, observation, content, color)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const params = [
+        name,
+        responsible || 'N/A',
+        group_name || 'Geral',
+        '',
+        note || '',
+        '',
+        content || '[]',
+        color || '#4F46E5'
+    ];
+
+    db.run(query, params, function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.status(201).json({ id: this.lastID, ...req.body });
+    });
+});
+
+app.put('/api/procedures/reorder', (req, res) => {
+    const { order } = req.body;
+
+    if (!Array.isArray(order)) {
+        return res.status(400).json({ error: 'Formato inválido.' });
+    }
+
+    db.serialize(() => {
+        db.run("BEGIN TRANSACTION");
+        const stmt = db.prepare("UPDATE procedures SET position = ? WHERE id = ?");
+        try {
+            order.forEach((id, index) => {
+                stmt.run(index, id);
+            });
+            stmt.finalize();
+            db.run("COMMIT", (err) => {
+                if (err) throw err;
+                res.json({ success: true });
+            });
+        } catch (err) {
+            db.run("ROLLBACK");
+            console.error('Erro ao reordenar:', err);
+            res.status(500).json({ error: 'Erro ao reordenar.' });
+        }
+    });
+});
+
+app.put('/api/procedures/:id', (req, res) => {
+    const { name, responsible, group_name, note, model, observation, content, color } = req.body;
+    const { id } = req.params;
+
+    if (!name) {
+        return res.status(400).json({ error: 'O nome do procedimento é obrigatório.' });
+    }
+
+    const query = `
+        UPDATE procedures
+        SET name = ?, responsible = ?, group_name = ?, model = ?, note = ?, observation = ?, content = ?, color = ?
+        WHERE id = ?
+    `;
+    const params = [
+        name,
+        responsible || 'N/A',
+        group_name || 'Geral',
+        model || '',
+        note || '',
+        observation || '',
+        content || '[]',
+        color || '#4F46E5',
+        id
+    ];
+
+    db.run(query, params, function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).json({ error: 'Procedimento não encontrado.' });
+        res.json({ id, ...req.body });
+    });
+});
+
+app.delete('/api/procedures/:id', (req, res) => {
+    db.run("DELETE FROM procedures WHERE id = ?", req.params.id, function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: 'Procedimento excluído.' });
+    });
+});
+
+
+// 2. Documents
+app.get('/api/documents', (req, res) => {
+    db.all("SELECT * FROM documents ORDER BY created_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/upload', uploadLimiter, (req, res) => {
+    upload.single('file')(req, res, function (err) {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading (e.g. file too large).
+            return res.status(400).json({ error: err.message });
+        } else if (err) {
+            // An unknown error occurred when uploading (e.g. invalid file type).
+            return res.status(400).json({ error: err.message });
+        }
+
+        // Everything went fine.
+        if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado ou formato inválido.' });
+
+        res.json({
+            path: `/uploads/${req.file.filename}`,
+            filename: req.file.filename,
+            originalname: req.file.originalname
+        });
+    });
+});
+
+app.post('/api/documents', uploadLimiter, upload.single('document'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+
+    const { filename, originalname, mimetype, size, path: filePath } = req.file;
+    db.run(
+        "INSERT INTO documents (filename, original_name, mimetype, size, path) VALUES (?, ?, ?, ?, ?)",
+        [filename, originalname, mimetype, size, filePath],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ id: this.lastID, originalname, filename });
+        }
+    );
+});
+
+app.delete('/api/documents/:id', (req, res) => {
+    db.get("SELECT path FROM documents WHERE id = ?", req.params.id, (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'Arquivo não encontrado.' });
+
+        // Delete file from filesystem
+        fs.unlink(row.path, (unlinkErr) => {
+            if (unlinkErr) console.error('Erro ao deletar arquivo:', unlinkErr);
+
+            // Delete from DB
+            db.run("DELETE FROM documents WHERE id = ?", req.params.id, (dbErr) => {
+                if (dbErr) return res.status(500).json({ error: dbErr.message });
+                res.json({ message: 'Documento excluído.' });
+            });
+        });
+    });
+});
+
+// 3. User / Account (Management and Profile)
+// NOTE: SELECT excludes password field for security
+app.get('/api/users', (req, res) => {
+    db.all("SELECT id, name, email, role, avatar_url, created_at FROM users ORDER BY created_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/users', async (req, res) => {
+    console.log('POST /api/users - body:', { ...req.body, password: '***' });
+    const { name, email, role, password } = req.body;
+    if (!name || !email || !role) {
+        console.warn('POST /api/users - Missing required fields');
+        return res.status(400).json({ error: 'Campos obrigatórios estão faltando.' });
+    }
+
+    try {
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : '';
+        db.run(
+            "INSERT INTO users (name, email, role, password) VALUES (?, ?, ?, ?)",
+            [name, email, role, hashedPassword],
+            function (err) {
+                if (err) {
+                    console.error('POST /api/users - DB Error:', err.message);
+                    if (err.message.includes('UNIQUE constraint failed')) {
+                        return res.status(400).json({ error: 'Este email já está cadastrado.' });
+                    }
+                    return res.status(500).json({ error: err.message });
+                }
+                console.log('POST /api/users - Success, ID:', this.lastID);
+                res.status(201).json({ id: this.lastID, name, email, role });
+            }
+        );
+    } catch (err) {
+        console.error('Erro ao processar senha:', err);
+        res.status(500).json({ error: 'Erro interno ao criar usuário.' });
+    }
+});
+
+app.get('/api/users/:id', (req, res) => {
+    db.get("SELECT id, name, email, role, avatar_url, created_at FROM users WHERE id = ?", [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ error: 'Usuário não encontrado.' });
+        res.json(row);
+    });
+});
+
+app.put('/api/users/:id', async (req, res) => {
+    console.log(`PUT /api/users/${req.params.id} - body:`, { ...req.body, password: '***' });
+    const { name, email, role, password } = req.body;
+
+    try {
+        // If password is provided, hash it; otherwise keep existing
+        if (password && password.trim() !== '') {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            db.run(
+                "UPDATE users SET name = ?, email = ?, role = ?, password = ? WHERE id = ?",
+                [name, email, role, hashedPassword, req.params.id],
+                function (err) {
+                    if (err) {
+                        console.error(`PUT /api/users/${req.params.id} - DB Error:`, err.message);
+                        if (err.message.includes('UNIQUE constraint failed')) {
+                            return res.status(400).json({ error: 'Este email já está sendo usado por outro usuário.' });
+                        }
+                        return res.status(500).json({ error: err.message });
+                    }
+                    console.log(`PUT /api/users/${req.params.id} - Success`);
+                    res.json({ success: true, id: req.params.id, name, email, role });
+                }
+            );
+        } else {
+            // Update without changing password
+            db.run(
+                "UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?",
+                [name, email, role, req.params.id],
+                function (err) {
+                    if (err) {
+                        console.error(`PUT /api/users/${req.params.id} - DB Error:`, err.message);
+                        if (err.message.includes('UNIQUE constraint failed')) {
+                            return res.status(400).json({ error: 'Este email já está sendo usado por outro usuário.' });
+                        }
+                        return res.status(500).json({ error: err.message });
+                    }
+                    console.log(`PUT /api/users/${req.params.id} - Success`);
+                    res.json({ success: true, id: req.params.id, name, email, role });
+                }
+            );
+        }
+    } catch (err) {
+        console.error('Erro ao processar senha:', err);
+        res.status(500).json({ error: 'Erro interno ao atualizar usuário.' });
+    }
+});
+
+// --- User Auth ---
+app.post('/api/login', loginLimiter, (req, res) => {
+    console.log('Tentativa de login:', req.body.email);
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email e senha são obrigatórios.' });
+    }
+
+    db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+        if (err) {
+            console.error('Erro no login (BD):', err.message);
+            return res.status(500).json({ error: 'Erro interno no servidor.' });
+        }
+        if (!user) {
+            return res.status(401).json({ error: 'Email ou senha incorretos.' });
+        }
+
+        try {
+            // Support both bcrypt hashed and legacy plaintext passwords
+            let isValid = false;
+            if (user.password && user.password.startsWith('$2')) {
+                // Bcrypt hash
+                isValid = await bcrypt.compare(password, user.password);
+            } else {
+                // Legacy plaintext comparison (for existing users before migration)
+                isValid = (password === user.password);
+
+                // If valid, upgrade to bcrypt hash
+                if (isValid) {
+                    const hash = await bcrypt.hash(password, 10);
+                    db.run("UPDATE users SET password = ? WHERE id = ?", [hash, user.id]);
+                    console.log(`Senha do usuário ${user.email} migrada para bcrypt.`);
+                }
+            }
+
+            if (!isValid) {
+                return res.status(401).json({ error: 'Email ou senha incorretos.' });
+            }
+
+            console.log('Login bem-sucedido:', user.email);
+            res.json({ id: user.id, name: user.name, email: user.email, role: user.role });
+        } catch (bcryptErr) {
+            console.error('Erro na verificação de senha:', bcryptErr);
+            return res.status(500).json({ error: 'Erro interno no servidor.' });
+        }
+    });
+});
+
+app.delete('/api/users/:id', (req, res) => {
+    db.run("DELETE FROM users WHERE id = ?", [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// For backward compatibility / "My Account" page
+app.get('/api/user', (req, res) => {
+    db.get("SELECT id, name, email, role, avatar_url, created_at FROM users LIMIT 1", [], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(row);
+    });
+});
+
+app.put('/api/user', (req, res) => {
+    const { name, email, role } = req.body;
+    db.run(
+        "UPDATE users SET name = ?, email = ?, role = ? WHERE id = (SELECT id FROM users LIMIT 1)",
+        [name, email, role],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true });
+        }
+    );
+});
+
+// --- Accounts ---
+
+app.get('/api/accounts', (req, res) => {
+    db.all("SELECT * FROM accounts ORDER BY created_at DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/accounts', (req, res) => {
+    const { company_name, type, category, value, due_date, description, observation, status, payment_status, attachment_path, frequency } = req.body;
+    db.run(
+        "INSERT INTO accounts (company_name, type, category, value, due_date, description, observation, status, payment_status, attachment_path, frequency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [company_name, type, category || 'Outros', value || 0, due_date, description, observation, status, payment_status || 'Pendente', attachment_path || null, frequency || 'Mensal'],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ id: this.lastID });
+        }
+    );
+});
+
+app.put('/api/accounts/:id', (req, res) => {
+    const { company_name, type, category, value, due_date, description, observation, status, payment_status, attachment_path, frequency } = req.body;
+    db.run(
+        "UPDATE accounts SET company_name = ?, type = ?, category = ?, value = ?, due_date = ?, description = ?, observation = ?, status = ?, payment_status = ?, attachment_path = ?, frequency = ? WHERE id = ?",
+        [company_name, type, category || 'Outros', value || 0, due_date, description, observation, status, payment_status || 'Pendente', attachment_path || null, frequency || 'Mensal', req.params.id],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, changes: this.changes });
+        }
+    );
+});
+
+app.delete('/api/accounts/:id', (req, res) => {
+    db.run("DELETE FROM accounts WHERE id = ?", [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+// 404 Catch-all para rotas da API
+app.use('/api', (req, res) => {
+    console.warn(`[404 NOT FOUND API] ${req.method} ${req.url}`);
+    res.status(404).json({ error: `Rota da API não encontrada: ${req.method} ${req.url}` });
+});
+
+// Catch-all para o Frontend (SPA) - Redireciona qualquer rota não mapeada para o seu index.html
+app.get(/^(?!\/(api|uploads))/, (req, res, next) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Global error handler for Multer and other errors
+app.use((err, req, res, next) => {
+    console.error('[ERRO GLOBAL]:', err);
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: 'Erro no upload: ' + err.message });
+    } else if (err) {
+        return res.status(400).json({ error: err.message });
+    }
+    next();
+});
+
+app.listen(PORT, () => {
+    console.log(`Servidor rodando em http://localhost:${PORT}`);
+});

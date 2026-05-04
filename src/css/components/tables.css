@@ -1,0 +1,79 @@
+/* Tables Container */
+.table-container {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    position: relative;
+    /* For loading overlay */
+}
+
+/* Base Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+th,
+td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+th {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+
+tbody tr {
+    transition: background 0.3s;
+}
+
+tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+td {
+    color: var(--text-main);
+    font-size: 0.95rem;
+    vertical-align: middle;
+}
+
+/* Optional fixed width for Action columns */
+.action-cell,
+th.action-cell {
+    width: 120px;
+    text-align: right;
+}
+
+/* Loading Table Row */
+.table-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Minimalist Table Variant */
+.table-minimal th {
+    background: transparent;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.table-minimal td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    padding: 1.25rem 1.5rem;
+}
+
+.table-minimal tbody tr:hover {
+    background: transparent;
+}

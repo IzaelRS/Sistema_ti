@@ -1,0 +1,261 @@
+/* Buttons */
+.btn-primary {
+    background: transparent;
+    color: #11ee7c;
+    border: 1px solid #11ee7c;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    background: rgba(17, 238, 124, 0.1);
+    box-shadow: 0 0 10px rgba(17, 238, 124, 0.2);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid #db1a37;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    border-color: #db1a37;
+    color: #db1a37;
+    background: rgba(219, 26, 55, 0.1);
+}
+
+.btn-delete {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #ef4444;
+    transition: opacity 0.3s;
+}
+
+.btn-delete:hover {
+    opacity: 0.7;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.btn-icon:hover {
+    background: var(--card-bg);
+    color: var(--text-main);
+}
+
+.btn-icon svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.btn-icon-large {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.btn-icon-large:hover {
+    background: var(--card-bg);
+}
+
+.btn-icon-large svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+.btn-actions-container {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.btn-icon.edit {
+    color: var(--text-muted);
+}
+
+.btn-icon.edit:hover {
+    color: var(--accent);
+    background: rgba(34, 211, 238, 0.1);
+}
+
+.btn-icon.delete {
+    color: #ef4444;
+}
+
+.btn-icon.delete:hover {
+    color: #ff6b6b;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* Base style for small secondary buttons */
+.btn-secondary-small {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-secondary-small:hover {
+    border-color: var(--accent);
+    color: var(--text-main);
+    background: rgba(34, 211, 238, 0.1);
+}
+
+/* Floating Buttons */
+.btn-floating {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    z-index: 99;
+    border-radius: 50px;
+    padding: 1rem 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.3s, background 0.3s;
+}
+
+.btn-floating:hover {
+    transform: scale(1.05);
+}
+
+.fab {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.3s, background 0.3s;
+    z-index: 100;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    background: var(--primary-hover);
+}
+
+.fab svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+}
+
+/* FAB for editing mode */
+.fab-save {
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    background: #10B981;
+    /* Emerald/Green */
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.3s, background 0.3s;
+}
+
+.fab-save:hover {
+    transform: scale(1.1);
+    background: #059669;
+}
+
+/* View Togglers */
+.view-toggle {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 1.5rem;
+    background: var(--card-bg);
+    padding: 4px;
+    border-radius: 10px;
+    width: fit-content;
+    border: 1px solid var(--glass-border);
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.toggle-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.toggle-btn:hover {
+    color: var(--text-main);
+}
+
+.toggle-btn.active {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
