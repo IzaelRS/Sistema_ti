@@ -11,8 +11,8 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-BMKPpxYL.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Bddct7nz.css">
+  <script type="module" crossorigin src="/assets/index-D2OQlZUS.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BKSRcIs4.css">
 </head>
 
 <body>
@@ -145,22 +145,29 @@
                     </div>
                 </header>
 
-                <section id="timeline-section" class="display-section hidden" style="height: calc(100vh - 80px); padding: 0;">
-                    <div class="account-tabs" style="border-bottom: 1px solid var(--border-color); margin-bottom: 2rem;">
+                <section id="timeline-section" class="display-section hidden" style="height: calc(100vh - 80px); padding: 0; display: flex; flex-direction: column; overflow: hidden;">
+                    <div class="account-tabs" style="flex-shrink: 0;">
                         <button class="account-tab-btn active" data-timeline-tab="visualizacao">Visão Geral</button>
                         <button class="account-tab-btn" data-timeline-tab="attention">Atenção</button>
                         <button class="account-tab-btn role-hidden" id="timeline-tab-anexo" data-timeline-tab="anexo">Gerenciar Evento</button>
+
+                        <!-- Auto-Refresh na barra de abas, lado direito -->
+                        <div id="floating-refresh-control" class="floating-refresh-control">
+                            <label class="refresh-toggle-wrapper" for="auto-refresh-toggle" title="Atualizar dados automaticamente a cada 60 segundos">
+                                <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                </svg>
+                                <span class="refresh-toggle-label">Auto-Refresh</span>
+                                <span class="refresh-toggle-badge">60s</span>
+                                <input type="checkbox" id="auto-refresh-toggle">
+                                <span class="refresh-toggle-switch"></span>
+                            </label>
+                        </div>
                     </div>
 
                     <div id="timeline-panels-container" style="position: relative; flex: 1; overflow-y: auto;">
-                        <!-- Floating Auto-Refresh Toggle -->
-                        <div id="floating-refresh-control" class="floating-refresh-control" style="position: absolute; top: 0; right: 0; z-index: 10;">
-                            <label class="switch-refresh">
-                                <input type="checkbox" id="auto-refresh-toggle">
-                                <span class="slider-refresh round"></span>
-                            </label>
-                            <span class="refresh-label" style="margin-left: 10px;">Auto-Refresh (60s)</span>
-                        </div>
 
                         <!-- Visualização Section -->
                         <div id="view-visualizacao" class="timeline-view-section active">
@@ -242,7 +249,7 @@
                         </div>
 
                         <!-- Attention Section -->
-                        <div id="view-attention" class="timeline-view-section hidden">
+                        <div id="view-attention" class="timeline-view-section">
                             <div class="attention-header" style="margin-bottom: 2rem;">
                                 <h2>Eventos em Ocorrência</h2>
                                 <p style="color: var(--text-secondary);">Abaixo estão listados todos os eventos que não possuem data de encerramento.</p>

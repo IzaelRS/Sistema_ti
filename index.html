@@ -177,6 +177,30 @@
                                     <h2>Atendimento</h2>
                                     <div class="sla-container">SLA: <span id="sla-atendimento">100%</span></div>
                                 </div>
+                                <div class="timeline-filters-wrapper">
+                                    <button class="filters-toggle" onclick="toggleFilters('atendimento')" id="btn-toggle-atendimento">
+                                        <span class="hamburger-icon">☰</span>
+                                        <span>Filtros</span>
+                                        <span class="toggle-arrow">▼</span>
+                                    </button>
+                                    <div class="timeline-filters hidden" id="filters-panel-atendimento">
+                                        <div class="filter-group">
+                                            <label for="filter-start-atendimento">De:</label>
+                                            <input type="datetime-local" id="filter-start-atendimento" min="2026-01-01T00:00" onchange="applyFilters('atendimento')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-end-atendimento">Até:</label>
+                                            <input type="datetime-local" id="filter-end-atendimento" min="2026-01-01T00:00" onchange="applyFilters('atendimento')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-sub-topic-atendimento">Eventos:</label>
+                                            <select id="filter-sub-topic-atendimento" onchange="applyFilters('atendimento')">
+                                                <option value="">Todos</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-clear-filter" onclick="clearFilters('atendimento')" title="Limpar Filtro">×</button>
+                                    </div>
+                                </div>
                                 <div class="timeline-helper-dates">
                                     <span id="min-date-atendimento"></span>
                                     <span id="max-date-atendimento"></span>
@@ -191,6 +215,30 @@
                                     <div class="topic-indicator" style="background-color: var(--topic-internet);"></div>
                                     <h2>Internet</h2>
                                     <div class="sla-container">SLA: <span id="sla-internet">100%</span></div>
+                                </div>
+                                <div class="timeline-filters-wrapper">
+                                    <button class="filters-toggle" onclick="toggleFilters('internet')" id="btn-toggle-internet">
+                                        <span class="hamburger-icon">☰</span>
+                                        <span>Filtros</span>
+                                        <span class="toggle-arrow">▼</span>
+                                    </button>
+                                    <div class="timeline-filters hidden" id="filters-panel-internet">
+                                        <div class="filter-group">
+                                            <label for="filter-start-internet">De:</label>
+                                            <input type="datetime-local" id="filter-start-internet" min="2026-01-01T00:00" onchange="applyFilters('internet')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-end-internet">Até:</label>
+                                            <input type="datetime-local" id="filter-end-internet" min="2026-01-01T00:00" onchange="applyFilters('internet')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-sub-topic-internet">Eventos:</label>
+                                            <select id="filter-sub-topic-internet" onchange="applyFilters('internet')">
+                                                <option value="">Todos</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-clear-filter" onclick="clearFilters('internet')" title="Limpar Filtro">×</button>
+                                    </div>
                                 </div>
                                 <div class="timeline-helper-dates">
                                     <span id="min-date-internet"></span>
@@ -207,6 +255,30 @@
                                     <h2>Infraestrutura</h2>
                                     <div class="sla-container">SLA: <span id="sla-infraestrutura">100%</span></div>
                                 </div>
+                                <div class="timeline-filters-wrapper">
+                                    <button class="filters-toggle" onclick="toggleFilters('infraestrutura')" id="btn-toggle-infraestrutura">
+                                        <span class="hamburger-icon">☰</span>
+                                        <span>Filtros</span>
+                                        <span class="toggle-arrow">▼</span>
+                                    </button>
+                                    <div class="timeline-filters hidden" id="filters-panel-infraestrutura">
+                                        <div class="filter-group">
+                                            <label for="filter-start-infraestrutura">De:</label>
+                                            <input type="datetime-local" id="filter-start-infraestrutura" min="2026-01-01T00:00" onchange="applyFilters('infraestrutura')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-end-infraestrutura">Até:</label>
+                                            <input type="datetime-local" id="filter-end-infraestrutura" min="2026-01-01T00:00" onchange="applyFilters('infraestrutura')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-sub-topic-infraestrutura">Eventos:</label>
+                                            <select id="filter-sub-topic-infraestrutura" onchange="applyFilters('infraestrutura')">
+                                                <option value="">Todos</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-clear-filter" onclick="clearFilters('infraestrutura')" title="Limpar Filtro">×</button>
+                                    </div>
+                                </div>
                                 <div class="timeline-helper-dates">
                                     <span id="min-date-infraestrutura"></span>
                                     <span id="max-date-infraestrutura"></span>
@@ -222,6 +294,30 @@
                                     <h2>Sistema</h2>
                                     <div class="sla-container">SLA: <span id="sla-sistema">100%</span></div>
                                 </div>
+                                <div class="timeline-filters-wrapper">
+                                    <button class="filters-toggle" onclick="toggleFilters('sistema')" id="btn-toggle-sistema">
+                                        <span class="hamburger-icon">☰</span>
+                                        <span>Filtros</span>
+                                        <span class="toggle-arrow">▼</span>
+                                    </button>
+                                    <div class="timeline-filters hidden" id="filters-panel-sistema">
+                                        <div class="filter-group">
+                                            <label for="filter-start-sistema">De:</label>
+                                            <input type="datetime-local" id="filter-start-sistema" min="2026-01-01T00:00" onchange="applyFilters('sistema')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-end-sistema">Até:</label>
+                                            <input type="datetime-local" id="filter-end-sistema" min="2026-01-01T00:00" onchange="applyFilters('sistema')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-sub-topic-sistema">Eventos:</label>
+                                            <select id="filter-sub-topic-sistema" onchange="applyFilters('sistema')">
+                                                <option value="">Todos</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-clear-filter" onclick="clearFilters('sistema')" title="Limpar Filtro">×</button>
+                                    </div>
+                                </div>
                                 <div class="timeline-helper-dates">
                                     <span id="min-date-sistema"></span>
                                     <span id="max-date-sistema"></span>
@@ -236,6 +332,30 @@
                                     <div class="topic-indicator" style="background-color: var(--topic-integracoes);"></div>
                                     <h2>Integrações</h2>
                                     <div class="sla-container">SLA: <span id="sla-integracoes">100%</span></div>
+                                </div>
+                                <div class="timeline-filters-wrapper">
+                                    <button class="filters-toggle" onclick="toggleFilters('integracoes')" id="btn-toggle-integracoes">
+                                        <span class="hamburger-icon">☰</span>
+                                        <span>Filtros</span>
+                                        <span class="toggle-arrow">▼</span>
+                                    </button>
+                                    <div class="timeline-filters hidden" id="filters-panel-integracoes">
+                                        <div class="filter-group">
+                                            <label for="filter-start-integracoes">De:</label>
+                                            <input type="datetime-local" id="filter-start-integracoes" min="2026-01-01T00:00" onchange="applyFilters('integracoes')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-end-integracoes">Até:</label>
+                                            <input type="datetime-local" id="filter-end-integracoes" min="2026-01-01T00:00" onchange="applyFilters('integracoes')">
+                                        </div>
+                                        <div class="filter-group">
+                                            <label for="filter-sub-topic-integracoes">Eventos:</label>
+                                            <select id="filter-sub-topic-integracoes" onchange="applyFilters('integracoes')">
+                                                <option value="">Todos</option>
+                                            </select>
+                                        </div>
+                                        <button class="btn-clear-filter" onclick="clearFilters('integracoes')" title="Limpar Filtro">×</button>
+                                    </div>
                                 </div>
                                 <div class="timeline-helper-dates">
                                     <span id="min-date-integracoes"></span>

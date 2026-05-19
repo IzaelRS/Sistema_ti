@@ -19,8 +19,6 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.static('public'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Integração Timeline (Servir os arquivos estáticos na URL /timeline)
-app.use('/timeline', express.static(path.join(__dirname, 'timeline')));
 
 // Multer storage configuration
 const storage = multer.diskStorage({
