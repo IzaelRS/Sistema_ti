@@ -264,15 +264,31 @@ app.post('/api/upload', uploadLimiter, (req, res) => {
 });
 
 app.post('/api/documents', uploadLimiter, upload.single('document'), (req, res) => {
+    console.log('DEBUG: upload documents req.body =', req.body);
+    console.log('DEBUG: upload documents req.file =', req.file);
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 
     const { filename, originalname, mimetype, size, path: filePath } = req.file;
+    const category = req.body.category || 'Geral';
+    const customName = req.body.customName;
+    
+    let finalName = originalname;
+    if (customName && customName.trim() !== '') {
+        const ext = path.extname(originalname);
+        const customExt = path.extname(customName);
+        if (customExt.toLowerCase() === ext.toLowerCase()) {
+            finalName = customName.trim();
+        } else {
+            finalName = customName.trim() + ext;
+        }
+    }
+
     db.run(
-        "INSERT INTO documents (filename, original_name, mimetype, size, path) VALUES (?, ?, ?, ?, ?)",
-        [filename, originalname, mimetype, size, filePath],
+        "INSERT INTO documents (filename, original_name, mimetype, size, path, category) VALUES (?, ?, ?, ?, ?, ?)",
+        [filename, finalName, mimetype, size, filePath, category],
         function (err) {
             if (err) return res.status(500).json({ error: err.message });
-            res.status(201).json({ id: this.lastID, originalname, filename });
+            res.status(201).json({ id: this.lastID, originalname: finalName, filename, category });
         }
     );
 });

@@ -144,7 +144,7 @@ function applyRolePermissions() {
         el.classList.toggle('role-hidden', !isAdmin);
     });
 
-    ['th-proc-actions', 'th-user-actions', 'th-account-actions'].forEach(id => {
+    ['th-proc-actions', 'th-user-actions', 'th-account-actions', 'th-doc-actions'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.toggle('role-hidden', !isAdmin);
     });
@@ -154,6 +154,9 @@ function applyRolePermissions() {
 
     const btnNewAccount = document.getElementById('btn-new-account');
     if (btnNewAccount) btnNewAccount.classList.toggle('role-hidden', !isAdmin);
+
+    const btnNewDoc = document.getElementById('btn-new-doc');
+    if (btnNewDoc) btnNewDoc.classList.toggle('role-hidden', !isAdmin);
 
     const user = auth.getUser();
     if (user) {
@@ -356,6 +359,58 @@ function setupEventListeners() {
     dom.on('list-search', 'input', (e) => {
         proceduresHandler.search(e.target.value.toLowerCase());
     });
+
+    // Documents Search
+    dom.on('doc-search', 'input', (e) => {
+        docsHandler.search(e.target.value.toLowerCase());
+    });
+
+    // Documents Toggles and Actions
+    dom.on('btn-new-doc', 'click', () => {
+        dom.show('modal-upload');
+    });
+
+    ['geral', 'contratos'].forEach(tab => {
+        dom.on(`tab-doc-${tab}`, 'click', () => {
+            docsHandler.setActiveTab(tab);
+        });
+    });
+
+    // Drop zone binding
+    const dropZone = document.getElementById('drop-zone');
+    const docFile = document.getElementById('doc-file');
+    if (dropZone && docFile) {
+        dropZone.addEventListener('click', (e) => {
+            if (e.target !== docFile) {
+                docFile.click();
+            }
+        });
+        docFile.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        docFile.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                dom.setText('file-name-display', e.target.files[0].name);
+            }
+        });
+        
+        // Drag and drop events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                docFile.files = e.dataTransfer.files;
+                dom.setText('file-name-display', e.dataTransfer.files[0].name);
+            }
+        });
+    }
 
     // View Toggles
     dom.on('toggle-list', 'click', (e) => {

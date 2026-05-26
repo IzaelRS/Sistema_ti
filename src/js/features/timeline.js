@@ -7,12 +7,16 @@
 let events = [];
 let filters = {};
 let autoRefreshInterval = null;
+let chartSlaInstance = null;
+let chartQtyInstance = null;
 
 // DOM references (initialized on init())
 let timelineForm;
 let sectionVisualizacao;
 let sectionAttention;
 let sectionAnexo;
+let sectionRelatorio;
+
 
 // Topic config
 const topicColors = {
@@ -38,6 +42,10 @@ export const timelineHandler = {
         sectionVisualizacao = document.getElementById('view-visualizacao');
         sectionAttention = document.getElementById('view-attention');
         sectionAnexo = document.getElementById('view-anexo');
+        sectionRelatorio = document.getElementById('view-relatorio');
+
+        // Expose timelineHandler globally so inline html event handlers (like onclick) can access it
+        window.timelineHandler = timelineHandler;
 
         // Expose functions for HTML inline handlers
         window.applyFilters = applyFilters;
@@ -103,6 +111,22 @@ export const timelineHandler = {
         if (timelineForm) {
             timelineForm.addEventListener('submit', handleFormSubmit);
         }
+
+        // Report Filters event listeners
+        const repFilterStart = document.getElementById('rep-filter-start');
+        const repFilterEnd = document.getElementById('rep-filter-end');
+        const repFilterTopic = document.getElementById('rep-filter-topic');
+        const repFilterSubtopic = document.getElementById('rep-filter-subtopic');
+
+        if (repFilterStart) repFilterStart.addEventListener('change', () => renderReport());
+        if (repFilterEnd) repFilterEnd.addEventListener('change', () => renderReport());
+        if (repFilterTopic) {
+            repFilterTopic.addEventListener('change', (e) => {
+                updateReportSubtopics(e.target.value);
+                renderReport();
+            });
+        }
+        if (repFilterSubtopic) repFilterSubtopic.addEventListener('change', () => renderReport());
 
         // Re-apply when section changes
         window.addEventListener('SectionChange', (e) => {
@@ -217,6 +241,7 @@ function switchView(viewName) {
         'visualizacao': { section: sectionVisualizacao, button: document.querySelector('[data-timeline-tab="visualizacao"]') },
         'attention': { section: sectionAttention, button: document.querySelector('[data-timeline-tab="attention"]') },
         'anexo': { section: sectionAnexo, button: document.querySelector('[data-timeline-tab="anexo"]') },
+        'relatorio': { section: sectionRelatorio, button: document.querySelector('[data-timeline-tab="relatorio"]') },
     };
 
     Object.values(views).forEach(v => {
@@ -235,6 +260,9 @@ function switchView(viewName) {
     } else if (viewName === 'attention') {
         renderAttentionPanel();
         updateAutoRefreshVisibility(true);
+    } else if (viewName === 'relatorio') {
+        renderReport();
+        updateAutoRefreshVisibility(false);
     } else {
         updateAutoRefreshVisibility(false);
     }
@@ -490,7 +518,7 @@ function renderTimelines() {
             const displaySubTopic = ev.sub_topico ? ev.sub_topico.charAt(0).toUpperCase() + ev.sub_topico.slice(1) : '-';
             point.setAttribute('data-tooltip', `Tópico: ${displayTopic}\nEventos: ${displaySubTopic}\nInício: ${startStr} - Fim: ${endStr}\nDescrição: ${ev.descricao || '-'}`);
 
-            const isInProgress = !ev.fim || ev.em_ocorrencia == 1 || ev.em_ocorrencia === 'true';
+            const isInProgress = !ev.fim;
             if (isInProgress) point.classList.add('pulsing');
 
             if (window.auth && window.auth.isAdmin()) {
@@ -572,7 +600,7 @@ function renderAttentionPanel() {
     if (!container) return;
     container.innerHTML = '';
 
-    const inProgressEvents = events.filter(e => !e.fim || e.em_ocorrencia == 1);
+    const inProgressEvents = events.filter(e => !e.fim);
     const topics = ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'];
 
     topics.forEach(topic => {
@@ -686,6 +714,223 @@ function formatDuration(ms) {
     if (minutes % 60 > 0 || hours > 0) parts.push(`${minutes % 60}m`);
     parts.push(`${seconds % 60}s`);
     return parts.join(' ');
+}
+
+// ============================================================
+// Report Panel Logic
+// ============================================================
+function updateReportSubtopics(topic) {
+    const subTopicSelect = document.getElementById('rep-filter-subtopic');
+    if (!subTopicSelect) return;
+
+    subTopicSelect.innerHTML = '<option value="Todos">Todos</option>';
+    const normalizedTopic = topic ? topic.toLowerCase().trim() : '';
+    if (normalizedTopic && topicOptions[normalizedTopic]) {
+        topicOptions[normalizedTopic].forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.toLowerCase();
+            opt.textContent = option;
+            subTopicSelect.appendChild(opt);
+        });
+    }
+}
+
+function clearReportFilters() {
+    const repFilterStart = document.getElementById('rep-filter-start');
+    const repFilterEnd = document.getElementById('rep-filter-end');
+    const repFilterTopic = document.getElementById('rep-filter-topic');
+    const repFilterSubtopic = document.getElementById('rep-filter-subtopic');
+
+    if (repFilterStart) repFilterStart.value = '';
+    if (repFilterEnd) repFilterEnd.value = '';
+    if (repFilterTopic) repFilterTopic.value = 'Todos';
+    if (repFilterSubtopic) {
+        repFilterSubtopic.innerHTML = '<option value="Todos">Todos</option>';
+        repFilterSubtopic.value = 'Todos';
+    }
+    renderReport();
+}
+
+function renderReport() {
+    let filtered = events;
+    const startStr = document.getElementById('rep-filter-start')?.value;
+    const endStr = document.getElementById('rep-filter-end')?.value;
+    const topicVal = document.getElementById('rep-filter-topic')?.value;
+    const subtopicVal = document.getElementById('rep-filter-subtopic')?.value;
+
+    if (startStr) {
+        const startTime = new Date(startStr + 'T00:00:00').getTime();
+        filtered = filtered.filter(e => {
+            const evStart = new Date(e.inicio).getTime();
+            return evStart >= startTime;
+        });
+    }
+    if (endStr) {
+        const endTime = new Date(endStr + 'T23:59:59').getTime();
+        filtered = filtered.filter(e => {
+            const evStart = new Date(e.inicio).getTime();
+            return evStart <= endTime;
+        });
+    }
+    if (topicVal && topicVal !== 'Todos') {
+        filtered = filtered.filter(e => normalizeTopic(e.topico) === topicVal.toLowerCase());
+    }
+    if (subtopicVal && subtopicVal !== 'Todos') {
+        filtered = filtered.filter(e => e.sub_topico && e.sub_topico.toLowerCase() === subtopicVal.toLowerCase());
+    }
+
+    // Update KPI cards
+    const totalEl = document.getElementById('rep-kpi-total');
+    const activeEl = document.getElementById('rep-kpi-active');
+    const avgTimeEl = document.getElementById('rep-kpi-avg-time');
+
+    if (totalEl) totalEl.textContent = filtered.length;
+    
+    const activeEvents = filtered.filter(e => e.em_ocorrencia == 1 || e.em_ocorrencia === 'true' || !e.fim);
+    if (activeEl) activeEl.textContent = activeEvents.length;
+
+    const resolvedEvents = filtered.filter(e => e.fim);
+    let avgTimeStr = '0h 0m';
+    if (resolvedEvents.length > 0) {
+        const totalMs = resolvedEvents.reduce((acc, e) => acc + (new Date(e.fim).getTime() - new Date(e.inicio).getTime()), 0);
+        const avgMs = totalMs / resolvedEvents.length;
+        const totalMinutes = Math.floor(avgMs / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        avgTimeStr = `${hours}h ${mins}m`;
+    }
+    if (avgTimeEl) avgTimeEl.textContent = avgTimeStr;
+
+    // Charts rendering
+    if (!window.Chart) {
+        console.warn('Chart.js is not loaded.');
+        return;
+    }
+
+    // 1. SLA Availability Chart
+    const topics = ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'];
+    const slaStart = startStr ? new Date(startStr + 'T00:00:00').getTime() : new Date(new Date().getFullYear() + '-01-01T00:00:00').getTime();
+    const slaEnd = endStr ? new Date(endStr + 'T23:59:59').getTime() : Date.now();
+
+    const slaLabels = topics.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+    const slaData = topics.map(topic => {
+        const topicEvents = events.filter(e => normalizeTopic(e.topico) === topic);
+        const totalDuration = slaEnd - slaStart;
+        if (totalDuration <= 0) return 100;
+        const relevantEvents = topicEvents.filter(e => {
+            const start = new Date(e.inicio).getTime();
+            const end = e.fim ? new Date(e.fim).getTime() : Date.now();
+            return end > slaStart && start < slaEnd;
+        });
+        const intervals = relevantEvents.map(e => ({
+            start: Math.max(new Date(e.inicio).getTime(), slaStart),
+            end: Math.min(e.fim ? new Date(e.fim).getTime() : Date.now(), slaEnd)
+        }));
+        intervals.sort((a, b) => a.start - b.start);
+        const mergedIntervals = [];
+        if (intervals.length > 0) {
+            let current = intervals[0];
+            for (let i = 1; i < intervals.length; i++) {
+                const next = intervals[i];
+                if (next.start < current.end) {
+                    current.end = Math.max(current.end, next.end);
+                } else {
+                    mergedIntervals.push(current);
+                    current = next;
+                }
+            }
+            mergedIntervals.push(current);
+        }
+        let downTime = 0;
+        mergedIntervals.forEach(interval => { downTime += (interval.end - interval.start); });
+        const availability = ((totalDuration - downTime) / totalDuration) * 100;
+        return parseFloat(availability.toFixed(4));
+    });
+
+    const topicColorsHex = {
+        'atendimento': '#3b82f6',
+        'internet': '#10b981',
+        'infraestrutura': '#f59e0b',
+        'sistema': '#8b5cf6',
+        'integracoes': '#ec4899'
+    };
+    const backgroundColors = topics.map(t => topicColorsHex[t] || '#6b7280');
+
+    const ctxSla = document.getElementById('chart-rep-sla');
+    if (ctxSla) {
+        if (chartSlaInstance) {
+            chartSlaInstance.destroy();
+        }
+        chartSlaInstance = new window.Chart(ctxSla, {
+            type: 'bar',
+            data: {
+                labels: slaLabels,
+                datasets: [{
+                    label: 'Disponibilidade %',
+                    data: slaData,
+                    backgroundColor: backgroundColors,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        min: Math.max(0, Math.min(...slaData) - 5),
+                        max: 100,
+                        ticks: {
+                            callback: value => value + '%'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Quantity count by Subtopic
+    const qtyMap = {};
+    filtered.forEach(e => {
+        const sub = e.sub_topico ? e.sub_topico.charAt(0).toUpperCase() + e.sub_topico.slice(1).toLowerCase() : 'Não especificado';
+        qtyMap[sub] = (qtyMap[sub] || 0) + 1;
+    });
+    const qtyLabels = Object.keys(qtyMap);
+    const qtyData = Object.values(qtyMap);
+
+    const ctxQty = document.getElementById('chart-rep-qty');
+    if (ctxQty) {
+        if (chartQtyInstance) {
+            chartQtyInstance.destroy();
+        }
+        chartQtyInstance = new window.Chart(ctxQty, {
+            type: 'doughnut',
+            data: {
+                labels: qtyLabels.length > 0 ? qtyLabels : ['Nenhum evento'],
+                datasets: [{
+                    data: qtyData.length > 0 ? qtyData : [0],
+                    backgroundColor: [
+                        '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+                        '#6366f1', '#14b8a6', '#f43f5e', '#a855f7', '#06b6d4'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 // ============================================================

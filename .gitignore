@@ -4,3 +4,7 @@ node_modules/
 intranet.db
 timeline/timeline.db
 .env
+
+# Ignorar arquivos dentro da pasta uploads
+uploads/*
+!uploads/.gitkeep

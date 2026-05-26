@@ -1418,42 +1418,80 @@ export const accountsHandler = {
             }
 
             // Bind upload clicks
-            uploadArea.onclick = () => document.getElementById('ded-acc-file-input').click();
+            uploadArea.onclick = (e) => {
+                const fInput = document.getElementById('ded-acc-file-input');
+                if (fInput && e.target !== fInput) {
+                    fInput.click();
+                }
+            };
+
+            // Drag and drop event listeners
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--accent)';
+                uploadArea.style.background = 'rgba(255, 255, 255, 0.05)';
+            });
+
+            const resetUploadAreaStyle = () => {
+                uploadArea.style.borderColor = 'rgba(255,255,255,0.2)';
+                uploadArea.style.background = 'rgba(0,0,0,0.1)';
+            };
+
+            uploadArea.addEventListener('dragleave', () => {
+                resetUploadAreaStyle();
+            });
+
+            const handleDirectUpload = async (file) => {
+                if (!file) return;
+
+                uploadArea.innerHTML = '<p style="color:var(--accent);">Fazendo upload...</p>';
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        // Link file path to this account entry
+                        await apiClient.put(`/accounts/${item.id}`, { ...item, attachment_path: data.path });
+                        await this.fetch();
+                        this.currentCompanyHistory = allAccounts.filter(a => a.company_name === item.company_name)
+                            .sort((a, b) => new Date(b.due_date || 0) - new Date(a.due_date || 0));
+                        this.selectHistoryItem(item.id); // trigger re-render
+                    } else {
+                        alert(data.error || 'Erro no upload');
+                        this.selectHistoryItem(item.id); // restore original HTML
+                    }
+                } catch (err) {
+                    alert('Falha na comunicação: ' + err.message);
+                    console.error('Upload Error:', err);
+                    this.selectHistoryItem(item.id);
+                }
+            };
+
+            uploadArea.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                resetUploadAreaStyle();
+                
+                if (e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    await handleDirectUpload(file);
+                }
+            });
 
             const fInput = document.getElementById('ded-acc-file-input');
             if (fInput) {
+                fInput.onclick = (e) => {
+                    e.stopPropagation();
+                };
                 fInput.onchange = async (e) => {
                     const file = e.target.files[0];
-                    if (!file) return;
-
-                    uploadArea.innerHTML = '<p style="color:var(--accent);">Fazendo upload...</p>';
-
-                    const formData = new FormData();
-                    formData.append('file', file);
-
-                    try {
-                        const response = await fetch('/api/upload', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        const data = await response.json();
-                        if (response.ok) {
-                            // Link file path to this account entry
-                            await apiClient.put(`/accounts/${item.id}`, { ...item, attachment_path: data.path });
-                            await this.fetch();
-                            this.currentCompanyHistory = allAccounts.filter(a => a.company_name === item.company_name)
-                                .sort((a, b) => new Date(b.due_date || 0) - new Date(a.due_date || 0));
-                            this.selectHistoryItem(item.id); // trigger re-render
-                        } else {
-                            alert(data.error || 'Erro no upload');
-                            this.selectHistoryItem(item.id); // restore original HTML
-                        }
-                    } catch (err) {
-                        alert('Falha na comunicação: ' + err.message);
-                        console.error('Upload Error:', err);
-                        this.selectHistoryItem(item.id);
-                    }
+                    await handleDirectUpload(file);
                 };
             }
         }

@@ -38,9 +38,15 @@ db.serialize(() => {
             mimetype TEXT NOT NULL,
             size INTEGER NOT NULL,
             path TEXT NOT NULL,
+            category TEXT DEFAULT 'Geral',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Migration for existing documents table
+    db.run("ALTER TABLE documents ADD COLUMN category TEXT DEFAULT 'Geral'", () => {
+        // Ignore error if column already exists
+    });
 
     // Table for accounts
     db.run(`

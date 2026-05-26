@@ -3,7 +3,7 @@ const path = require('path');
 const dbPath = path.resolve(__dirname, 'intranet.db');
 const db = new sqlite3.Database(dbPath);
 
-db.all("SELECT id, nome, em_ocorrencia, inicio, fim FROM events", [], (err, rows) => {
+db.all("SELECT id, original_name, category FROM documents", [], (err, rows) => {
     if (err) {
         console.error(err);
         return;
