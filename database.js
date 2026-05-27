@@ -39,12 +39,20 @@ db.serialize(() => {
             size INTEGER NOT NULL,
             path TEXT NOT NULL,
             category TEXT DEFAULT 'Geral',
+            start_date TEXT,
+            end_date TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
     // Migration for existing documents table
     db.run("ALTER TABLE documents ADD COLUMN category TEXT DEFAULT 'Geral'", () => {
+        // Ignore error if column already exists
+    });
+    db.run("ALTER TABLE documents ADD COLUMN start_date TEXT", () => {
+        // Ignore error if column already exists
+    });
+    db.run("ALTER TABLE documents ADD COLUMN end_date TEXT", () => {
         // Ignore error if column already exists
     });
 

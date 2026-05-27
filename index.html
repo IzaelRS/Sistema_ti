@@ -762,11 +762,12 @@
                     <div class="docs-tabs-nav" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 10px;">
                         <button id="tab-doc-geral" class="acc-tab-btn active">Geral</button>
                         <button id="tab-doc-contratos" class="acc-tab-btn">Contratos</button>
+                        <button id="tab-doc-termo-de-uso" class="acc-tab-btn">Termo de Uso</button>
                     </div>
 
                     <div id="doc-list-container" class="table-container glass">
                         <table class="table-minimal">
-                            <thead>
+                            <thead id="doc-list-thead">
                                 <tr>
                                     <th>Nome</th>
                                     <th>Tamanho</th>
@@ -1725,7 +1726,24 @@
                     <select id="doc-category" class="form-control glass" style="width:100%;" required>
                         <option value="Geral">Geral</option>
                         <option value="Contratos">Contratos</option>
+                        <option value="Termo de Uso">Termo de Uso</option>
                     </select>
+                </div>
+                
+                <!-- Date fields for Contratos and Termo de Uso -->
+                <div class="form-group" id="doc-dates-container" style="display: none; margin-bottom: 1.5rem; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label class="form-label" for="doc-start-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Início</label>
+                        <input type="date" id="doc-start-date" class="form-control glass" style="width:100%;">
+                    </div>
+                    <div>
+                        <label class="form-label" for="doc-end-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Fim</label>
+                        <input type="date" id="doc-end-date" class="form-control glass" style="width:100%;">
+                        <div style="margin-top: 5px; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="doc-indefinite" style="cursor: pointer;">
+                            <label for="doc-indefinite" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">Indefinido</label>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 1.5rem;">
                     <label class="form-label" for="doc-display-name" style="display:block; margin-bottom:0.5rem; font-weight:500;">Nome do Documento (Opcional)</label>

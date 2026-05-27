@@ -271,6 +271,8 @@ app.post('/api/documents', uploadLimiter, upload.single('document'), (req, res) 
     const { filename, originalname, mimetype, size, path: filePath } = req.file;
     const category = req.body.category || 'Geral';
     const customName = req.body.customName;
+    const start_date = req.body.startDate || null;
+    const end_date = req.body.endDate || null;
     
     let finalName = originalname;
     if (customName && customName.trim() !== '') {
@@ -284,11 +286,11 @@ app.post('/api/documents', uploadLimiter, upload.single('document'), (req, res) 
     }
 
     db.run(
-        "INSERT INTO documents (filename, original_name, mimetype, size, path, category) VALUES (?, ?, ?, ?, ?, ?)",
-        [filename, finalName, mimetype, size, filePath, category],
+        "INSERT INTO documents (filename, original_name, mimetype, size, path, category, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        [filename, finalName, mimetype, size, filePath, category, start_date, end_date],
         function (err) {
             if (err) return res.status(500).json({ error: err.message });
-            res.status(201).json({ id: this.lastID, originalname: finalName, filename, category });
+            res.status(201).json({ id: this.lastID, originalname: finalName, filename, category, start_date, end_date });
         }
     );
 });

@@ -35,18 +35,47 @@ export const docsHandler = {
         const docListBody = document.getElementById('doc-list-body');
         if (!docListBody) return;
 
+        const docListHead = document.getElementById('doc-list-thead');
+        const showDates = activeTab.toLowerCase() === 'contratos' || activeTab.toLowerCase() === 'termo de uso';
+        const isAdmin = window.auth && window.auth.isAdmin();
+        const roleHiddenClass = isAdmin ? '' : 'class="role-hidden"';
+
+        if (docListHead) {
+            if (showDates) {
+                docListHead.innerHTML = `
+                    <tr>
+                        <th>Nome</th>
+                        <th>Tamanho</th>
+                        <th>Tipo</th>
+                        <th>Início</th>
+                        <th>Fim</th>
+                        <th>Cadastro</th>
+                        <th id="th-doc-actions" ${roleHiddenClass}>Ações</th>
+                    </tr>
+                `;
+            } else {
+                docListHead.innerHTML = `
+                    <tr>
+                        <th>Nome</th>
+                        <th>Tamanho</th>
+                        <th>Tipo</th>
+                        <th>Data</th>
+                        <th id="th-doc-actions" ${roleHiddenClass}>Ações</th>
+                    </tr>
+                `;
+            }
+        }
+
         if (items.length === 0) {
             docListBody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <td colspan="${showDates ? 7 : 5}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                         Nenhum documento encontrado nesta categoria.
                     </td>
                 </tr>
             `;
             return;
         }
-
-        const isAdmin = window.auth && window.auth.isAdmin();
 
         docListBody.innerHTML = items.map(doc => {
             const icon = doc.mimetype === 'application/pdf' ? '📕' : '🖼️';
@@ -57,27 +86,56 @@ export const docsHandler = {
                 ? `<button class="btn-delete" onclick="window.DocsHandler.delete(${doc.id})" style="padding: 4px 10px; font-size: 0.85rem;">Deletar</button>` 
                 : '';
 
-            return `
-                <tr>
-                    <td>
-                        <span style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                            <span>${icon}</span>
-                            <span title="${doc.original_name}">${doc.original_name}</span>
-                        </span>
-                    </td>
-                    <td>${sizeKB}</td>
-                    <td>${displayType}</td>
-                    <td>${formattedDate}</td>
-                    <td>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <a href="${doc.path}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-                                Ver / Baixar
-                            </a>
-                            ${deleteBtn}
-                        </div>
-                    </td>
-                </tr>
-            `;
+            const formattedStart = doc.start_date ? new Date(doc.start_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
+            const formattedEnd = doc.end_date ? (doc.end_date === 'Indefinido' ? 'Indefinido' : new Date(doc.end_date + 'T00:00:00').toLocaleDateString('pt-BR')) : '-';
+
+            if (showDates) {
+                return `
+                    <tr>
+                        <td>
+                            <span style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                <span>${icon}</span>
+                                <span title="${doc.original_name}">${doc.original_name}</span>
+                            </span>
+                        </td>
+                        <td>${sizeKB}</td>
+                        <td>${displayType}</td>
+                        <td>${formattedStart}</td>
+                        <td>${formattedEnd}</td>
+                        <td>${formattedDate}</td>
+                        <td>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <a href="${doc.path}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                                    Ver / Baixar
+                                </a>
+                                ${deleteBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                return `
+                    <tr>
+                        <td>
+                            <span style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                <span>${icon}</span>
+                                <span title="${doc.original_name}">${doc.original_name}</span>
+                            </span>
+                        </td>
+                        <td>${sizeKB}</td>
+                        <td>${displayType}</td>
+                        <td>${formattedDate}</td>
+                        <td>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <a href="${doc.path}" target="_blank" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                                    Ver / Baixar
+                                </a>
+                                ${deleteBtn}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
         }).join('');
     },
 
@@ -92,14 +150,35 @@ export const docsHandler = {
         }
 
         const formData = new FormData();
-        formData.append('category', categoryInput ? categoryInput.value : 'Geral');
+        const category = categoryInput ? categoryInput.value : 'Geral';
+        formData.append('category', category);
         formData.append('customName', nameInput ? nameInput.value : '');
         formData.append('document', docInput.files[0]);
+
+        const categoryLower = category.toLowerCase();
+        if (categoryLower === 'contratos' || categoryLower === 'termo de uso') {
+            const startDateInput = document.getElementById('doc-start-date');
+            const endDateInput = document.getElementById('doc-end-date');
+            const indefiniteInput = document.getElementById('doc-indefinite');
+
+            if (startDateInput && startDateInput.value) {
+                formData.append('startDate', startDateInput.value);
+            }
+            if (indefiniteInput && indefiniteInput.checked) {
+                formData.append('endDate', 'Indefinido');
+            } else if (endDateInput && endDateInput.value) {
+                formData.append('endDate', endDateInput.value);
+            }
+        }
 
         try {
             await apiClient.upload('/documents', formData);
             dom.hide('modal-upload');
             document.getElementById('doc-form').reset();
+            const datesContainer = document.getElementById('doc-dates-container');
+            if (datesContainer) datesContainer.style.display = 'none';
+            const endDateInput = document.getElementById('doc-end-date');
+            if (endDateInput) endDateInput.disabled = false;
             dom.setText('file-name-display', 'Respeite o formato .png ou .pdf');
             this.fetch();
             alert('Documento adicionado com sucesso!');

@@ -370,10 +370,27 @@ function setupEventListeners() {
         dom.show('modal-upload');
     });
 
-    ['geral', 'contratos'].forEach(tab => {
+    ['geral', 'contratos', 'termo-de-uso'].forEach(tab => {
         dom.on(`tab-doc-${tab}`, 'click', () => {
-            docsHandler.setActiveTab(tab);
+            const categoryValue = tab === 'termo-de-uso' ? 'Termo de Uso' : tab;
+            docsHandler.setActiveTab(categoryValue);
         });
+    });
+
+    dom.on('doc-category', 'change', (e) => {
+        const cat = e.target.value.toLowerCase();
+        const datesContainer = document.getElementById('doc-dates-container');
+        if (datesContainer) {
+            datesContainer.style.display = (cat === 'contratos' || cat === 'termo de uso') ? 'grid' : 'none';
+        }
+    });
+
+    dom.on('doc-indefinite', 'change', (e) => {
+        const endDateInput = document.getElementById('doc-end-date');
+        if (endDateInput) {
+            endDateInput.disabled = e.target.checked;
+            if (e.target.checked) endDateInput.value = '';
+        }
     });
 
     // Drop zone binding
