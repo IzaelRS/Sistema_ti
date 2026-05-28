@@ -6,6 +6,7 @@ import { docsHandler } from './features/documents.js';
 import { proceduresHandler } from './features/procedures.js';
 import { accountsHandler } from './features/accounts.js';
 import { timelineHandler } from './features/timeline.js';
+import { telephonyHandler } from './features/telephony.js';
 
 let currentSection = 'list';
 
@@ -81,11 +82,19 @@ function showApp() {
                 btnForm.classList.add('role-hidden');
             }
         }
+        const btnConfig = document.getElementById('timeline-tab-config');
+        if (btnConfig) {
+            if (window.auth.isAdmin()) {
+                btnConfig.classList.remove('role-hidden');
+            } else {
+                btnConfig.classList.add('role-hidden');
+            }
+        }
     }
 }
 
 function updateUI() {
-    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page'].forEach(id => {
+    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section'].forEach(id => {
         dom.hide(id);
     });
 
@@ -124,6 +133,10 @@ function updateUI() {
         case 'timeline':
             dom.show('timeline-section');
             dom.setText('section-title', 'Timeline');
+            break;
+        case 'telephony':
+            dom.show('telephony-section');
+            dom.setText('section-title', 'Telefonia');
             break;
     }
     applyRolePermissions();
@@ -262,6 +275,16 @@ function setupEventListeners() {
     window.DocsHandler = docsHandler;
     window.ProceduresHandler = proceduresHandler;
     window.AccountsHandler = accountsHandler;
+    window.TelephonyHandler = telephonyHandler;
+
+    // Telephony search binding
+    dom.on('telephony-search', 'input', (e) => telephonyHandler.search(e.target.value.toLowerCase()));
+    dom.on('telephony-page-size', 'change', (e) => telephonyHandler.setPageSize(e.target.value));
+    dom.on('telephony-reload-btn', 'click', () => {
+        const searchInput = document.getElementById('telephony-search');
+        if (searchInput) searchInput.value = '';
+        telephonyHandler.fetch();
+    });
 
     // Accounts Search & Filters bindings
     dom.on('accounts-search', 'input', () => accountsHandler.handleSearch());
@@ -290,6 +313,9 @@ function setupEventListeners() {
         dom.setValue('dash-filter-type', 'Todos');
         dom.setValue('dash-filter-status', 'Todos');
         dom.setValue('dash-filter-payment', 'Todos');
+
+        // Reset custom multiselects
+        accountsHandler.resetMultiselects();
 
         // Reset sorting to default 'desc' if needed
         dom.setValue('dash-sort-empresas', 'desc');
@@ -365,14 +391,32 @@ function setupEventListeners() {
         docsHandler.search(e.target.value.toLowerCase());
     });
 
+    // Documents Dashboard Filters
+    dom.on('doc-dash-search', 'input', () => {
+        docsHandler.renderDashboard();
+    });
+    dom.on('doc-dash-filter-category', 'change', () => {
+        docsHandler.renderDashboard();
+    });
+    dom.on('doc-dash-filter-status', 'change', () => {
+        docsHandler.renderDashboard();
+    });
+
     // Documents Toggles and Actions
     dom.on('btn-new-doc', 'click', () => {
         dom.show('modal-upload');
     });
 
-    ['geral', 'contratos', 'termo-de-uso'].forEach(tab => {
+    ['geral', 'contratos', 'termo-de-uso', 'dashboard'].forEach(tab => {
         dom.on(`tab-doc-${tab}`, 'click', () => {
-            const categoryValue = tab === 'termo-de-uso' ? 'Termo de Uso' : tab;
+            let categoryValue;
+            if (tab === 'termo-de-uso') {
+                categoryValue = 'Termo de Uso';
+            } else if (tab === 'dashboard') {
+                categoryValue = 'dashboard';
+            } else {
+                categoryValue = tab;
+            }
             docsHandler.setActiveTab(categoryValue);
         });
     });

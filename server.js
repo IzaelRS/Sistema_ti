@@ -8,6 +8,30 @@ const db = require('./database');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 
+// Carregar variáveis do arquivo .env local, se existir
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+    try {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split(/\r?\n/).forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) return;
+            const index = trimmed.indexOf('=');
+            if (index !== -1) {
+                const key = trimmed.substring(0, index).trim();
+                let val = trimmed.substring(index + 1).trim();
+                if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+                    val = val.substring(1, val.length - 1);
+                }
+                process.env[key] = val;
+            }
+        });
+        console.log('✅ Arquivo .env carregado com sucesso.');
+    } catch (envErr) {
+        console.error('Erro ao ler arquivo .env:', envErr.message);
+    }
+}
+
 const app = express();
 const PORT = 3000;
 
@@ -521,6 +545,110 @@ app.delete('/api/accounts/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
+});
+
+// --- Telefonia (Gnew API Proxy) ---
+let gnewToken = null;
+const GNEW_API_URL = 'https://gnew.drmonitora.com.br';
+const GNEW_USERNAME = process.env.GNEW_USERNAME || 'teste'; // Configure seu usuário aqui ou via env
+const GNEW_PASSWORD = process.env.GNEW_PASSWORD || '123';   // Configure sua senha aqui ou via env
+
+function getMockExtensions() {
+    const mockList = [];
+    const firstNames = ["Ana", "Bruno", "Carlos", "Diana", "Eduardo", "Fernanda", "Gabriel", "Helena", "Igor", "Julia", "Lucas", "Mariana", "Nicolas", "Olivia", "Pedro", "Renata", "Samuel", "Tatiana", "Valter", "Yasmin"];
+    const lastNames = ["Silva", "Santos", "Oliveira", "Souza", "Rodrigues", "Ferreira", "Alves", "Pereira", "Lima", "Gomes", "Costa", "Ribeiro", "Martins", "Carvalho", "Rocha", "Dias", "Moreira", "Pinto", "Teixeira", "Mendes"];
+    const routes = ["Rota Local", "Rota DDD", "Rota Celular", "Rota Internacional", "Rota VIP"];
+    
+    for (let i = 100; i <= 250; i++) {
+        const firstName = firstNames[i % firstNames.length];
+        const lastName = lastNames[(i * 3) % lastNames.length];
+        mockList.push({
+            id: i,
+            exten: `${i}`,
+            nome: `${firstName} ${lastName}`,
+            ddr: `(11) 3709-${String(2000 + i).padStart(4, '0')}`,
+            empresa_id: 1,
+            observacao: i % 7 === 0 ? "Ramal temporário de testes" : i % 5 === 0 ? "Setor Financeiro" : "Suporte N1",
+            extensao_id: i,
+            Username: `ramal_${i}`,
+            Secret: `Pwd@${i * 17 + 1000}`,
+            regra_saida_nome: routes[i % routes.length],
+            Ativo: true
+        });
+    }
+    return mockList;
+}
+
+async function getGnewToken() {
+    if (gnewToken) return gnewToken;
+    
+    console.log(`[TELEFONIA] Autenticando na API Gnew em ${GNEW_API_URL}/api/v2/token/ com usuário: ${GNEW_USERNAME}`);
+    try {
+        const response = await fetch(`${GNEW_API_URL}/api/v2/token/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: GNEW_USERNAME, password: GNEW_PASSWORD })
+        });
+        
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('[TELEFONIA] Erro na autenticação com PABX:', errBody);
+            throw new Error(`Falha na autenticação com o PABX Gnew (Status: ${response.status})`);
+        }
+        
+        const data = await response.json();
+        gnewToken = data.token;
+        console.log('[TELEFONIA] Autenticado com sucesso. Token obtido.');
+        return gnewToken;
+    } catch (err) {
+        console.error('[TELEFONIA] Erro ao autenticar no PABX:', err.message);
+        throw err;
+    }
+}
+
+app.get('/api/telephony/extensions', async (req, res) => {
+    if (req.query.mock === 'true') {
+        return res.json(getMockExtensions());
+    }
+
+    try {
+        let token = await getGnewToken();
+        let allResults = [];
+        let nextPageUrl = `${GNEW_API_URL}/api/v2/sip/?page_size=100`;
+
+        while (nextPageUrl) {
+            let response = await fetch(nextPageUrl, {
+                headers: { 'Authorization': `Token ${token}` }
+            });
+            
+            // Se retornar 401, o token pode ter expirado. Tenta re-autenticar uma vez.
+            if (response.status === 401) {
+                console.warn('[TELEFONIA] Token inválido ou expirado. Tentando re-autenticar...');
+                gnewToken = null;
+                token = await getGnewToken();
+                response = await fetch(nextPageUrl, {
+                    headers: { 'Authorization': `Token ${token}` }
+                });
+            }
+
+            if (!response.ok) {
+                const errBody = await response.text();
+                console.error('[TELEFONIA] Erro ao buscar ramais no PABX:', errBody);
+                return res.status(response.status).json({ error: `Erro no PABX Gnew (Status: ${response.status}): ${errBody}` });
+            }
+
+            const data = await response.json();
+            const results = data.results || [];
+            allResults = allResults.concat(results);
+            nextPageUrl = data.next || null;
+        }
+
+        console.log(`[TELEFONIA] Total de ramais consolidados: ${allResults.length}`);
+        res.json(allResults);
+    } catch (err) {
+        console.error('[TELEFONIA] Erro na rota de ramais:', err.message);
+        res.status(500).json({ error: `Erro no proxy de telefonia: ${err.message}` });
+    }
 });
 
 // 404 Catch-all para rotas da API

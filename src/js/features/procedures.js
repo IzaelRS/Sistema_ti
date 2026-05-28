@@ -11,12 +11,18 @@ let listingViewMode = 'list'; // 'list' or 'cards'
 let draggedElementType = null; // 'summary' or 'container'
 let draggedElementIndex = null;
 let draggedElementParentId = null; // only for containers
+
+let currentPage = 1;
+const ITEMS_PER_PAGE = 10;
+let currentFilteredItems = [];
+
 export const proceduresHandler = {
     getPendingProcId() {
         return pendingProcId;
     },
     async fetch() {
         try {
+            currentPage = 1;
             allFaqs = await apiClient.get('/procedures');
             this.renderTable(allFaqs);
         } catch (err) {
@@ -30,7 +36,8 @@ export const proceduresHandler = {
 
     setListingMode(mode) {
         listingViewMode = mode;
-        this.renderTable(allFaqs);
+        currentPage = 1;
+        this.renderTable(currentFilteredItems.length ? currentFilteredItems : allFaqs);
     },
 
     renderTable(items) {
@@ -40,61 +47,95 @@ export const proceduresHandler = {
 
         if (!tableContainer || !cardsContainer || !tableBody) return;
 
+        currentFilteredItems = items;
+        const totalItems = items.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+        // Adjust currentPage if it's out of bounds
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const paginatedItems = items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
         if (listingViewMode === 'list') {
             dom.show('list-table-container');
             dom.hide('list-cards-container');
-            tableBody.innerHTML = items.map(faq => {
-                const actionsHtml = auth.isAdmin() ? `
-                    <td>
-                        <div class="btn-actions-container">
-                            <button class="btn-icon edit" data-action="edit" data-id="${faq.id}" title="Editar">
-                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            </button>
-                            <button class="btn-icon delete" data-action="delete" data-id="${faq.id}" title="Deletar">
-                                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            </button>
-                        </div>
-                    </td>` : '';
-                return `
-                <tr data-action="open" data-id="${faq.id}" class="draggable-row">
-                    <td style="border-left: 5px solid ${faq.color || '#4F46E5'}"><strong>${faq.name || faq.title || 'Sem título'}</strong></td>
-                    <td>${faq.responsible || 'N/A'}</td>
-                    <td><span class="badge" style="background: var(--accent); color: var(--bg-dark);">${faq.group_name || 'N/A'}</span></td>
-                    <td>${faq.note || '-'}</td>
-                    ${actionsHtml}
-                </tr>`;
-            }).join('');
+            
+            if (paginatedItems.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                            Nenhum procedimento encontrado.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tableBody.innerHTML = paginatedItems.map(faq => {
+                    const actionsHtml = auth.isAdmin() ? `
+                        <td>
+                            <div class="btn-actions-container">
+                                <button class="btn-icon edit" data-action="edit" data-id="${faq.id}" title="Editar">
+                                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </button>
+                                <button class="btn-icon delete" data-action="delete" data-id="${faq.id}" title="Deletar">
+                                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </div>
+                        </td>` : '';
+                    return `
+                    <tr data-action="open" data-id="${faq.id}" class="draggable-row">
+                        <td style="border-left: 5px solid ${faq.color || '#4F46E5'}"><strong>${faq.name || faq.title || 'Sem título'}</strong></td>
+                        <td>${faq.responsible || 'N/A'}</td>
+                        <td><span class="badge" style="background: var(--accent); color: var(--bg-dark);">${faq.group_name || 'N/A'}</span></td>
+                        <td>${faq.note || '-'}</td>
+                        ${actionsHtml}
+                    </tr>`;
+                }).join('');
+            }
         } else {
             dom.hide('list-table-container');
             dom.show('list-cards-container');
-            cardsContainer.innerHTML = items.map(faq => {
-                const actionsHtml = auth.isAdmin() ? `
-                    <div class="card-footer">
-                        <div class="btn-actions-container">
-                            <button class="btn-icon edit" data-action="edit" data-id="${faq.id}" title="Editar">
-                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            </button>
-                            <button class="btn-icon delete" data-action="delete" data-id="${faq.id}" title="Deletar">
-                                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            </button>
-                        </div>
-                    </div>` : '';
-                return `
-                <div class="card draggable-card" data-action="open" data-id="${faq.id}" style="border-top: 5px solid ${faq.color || '#4F46E5'}">
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                            <span class="badge" style="background: var(--accent); color: var(--bg-dark);">${faq.group_name || 'N/A'}</span>
-                        </div>
-                        <h3>${faq.name || faq.title || 'Sem título'}</h3>
-                        <div class="card-details" style="border: none; padding: 0;">
-                            <div style="margin-bottom: 5px;"><strong>Responsável:</strong> ${faq.responsible || 'N/A'}</div>
-                            ${faq.note ? `<div><strong>Nota:</strong> ${faq.note}</div>` : ''}
-                        </div>
+            
+            if (paginatedItems.length === 0) {
+                cardsContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nenhum procedimento encontrado.
                     </div>
-                    ${actionsHtml}
-                </div>`;
-            }).join('');
+                `;
+            } else {
+                cardsContainer.innerHTML = paginatedItems.map(faq => {
+                    const actionsHtml = auth.isAdmin() ? `
+                        <div class="card-footer">
+                            <div class="btn-actions-container">
+                                <button class="btn-icon edit" data-action="edit" data-id="${faq.id}" title="Editar">
+                                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                </button>
+                                <button class="btn-icon delete" data-action="delete" data-id="${faq.id}" title="Deletar">
+                                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </div>
+                        </div>` : '';
+                    return `
+                    <div class="card draggable-card" data-action="open" data-id="${faq.id}" style="border-top: 5px solid ${faq.color || '#4F46E5'}">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                <span class="badge" style="background: var(--accent); color: var(--bg-dark);">${faq.group_name || 'N/A'}</span>
+                            </div>
+                            <h3>${faq.name || faq.title || 'Sem título'}</h3>
+                            <div class="card-details" style="border: none; padding: 0;">
+                                <div style="margin-bottom: 5px;"><strong>Responsável:</strong> ${faq.responsible || 'N/A'}</div>
+                                ${faq.note ? `<div><strong>Nota:</strong> ${faq.note}</div>` : ''}
+                            </div>
+                        </div>
+                        ${actionsHtml}
+                    </div>`;
+                }).join('');
+            }
         }
+
+        // Render pagination controls
+        this.renderPaginationControls('list-pagination', totalPages, totalItems);
 
         // Event delegation for all action buttons and row clicks
         const activeContainer = listingViewMode === 'list' ? tableBody : cardsContainer;
@@ -759,12 +800,78 @@ export const proceduresHandler = {
     },
 
     search(term) {
+        currentPage = 1;
         const filtered = allFaqs.filter(faq =>
             (faq.name || faq.title || '').toLowerCase().includes(term) ||
             (faq.responsible || '').toLowerCase().includes(term) ||
             (faq.group_name || '').toLowerCase().includes(term)
         );
         this.renderTable(filtered);
+    },
+
+    changePage(page) {
+        currentPage = page;
+        this.renderTable(currentFilteredItems);
+    },
+
+    renderPaginationControls(containerId, totalPages, totalItems) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (totalPages === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        
+        // Prev Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === 1 ? 'disabled' : ''} 
+                    onclick="window.ProceduresHandler.changePage(${currentPage - 1})"
+                    title="Página Anterior">
+                &laquo;
+            </button>
+        `;
+
+        // Page buttons
+        let lastPrintedPage = 0;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                if (lastPrintedPage && i - lastPrintedPage > 1) {
+                    html += `<span style="color: var(--text-muted); padding: 0 4px;">...</span>`;
+                }
+                html += `
+                    <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="window.ProceduresHandler.changePage(${i})">
+                        ${i}
+                    </button>
+                `;
+                lastPrintedPage = i;
+            }
+        }
+
+        // Next Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === totalPages ? 'disabled' : ''} 
+                    onclick="window.ProceduresHandler.changePage(${currentPage + 1})"
+                    title="Próxima Página">
+                &raquo;
+            </button>
+        `;
+
+        // Pagination Info
+        const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+        const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+        html += `
+            <span class="pagination-info">
+                Exibindo ${start}-${end} de ${totalItems}
+            </span>
+        `;
+
+        container.innerHTML = html;
     }
 };
 

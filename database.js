@@ -139,6 +139,63 @@ db.serialize(() => {
             // Ignore error if column already exists
         });
     });
+
+    // Table for timeline topics
+    db.run(`CREATE TABLE IF NOT EXISTS timeline_topics (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL,
+        position INTEGER DEFAULT 0
+    )`, () => {
+        // Migration for existing tables
+        db.run("ALTER TABLE timeline_topics ADD COLUMN position INTEGER DEFAULT 0", () => {
+            // Ignore error if column already exists
+        });
+
+        // Seed default topics if table is empty
+        db.get("SELECT COUNT(*) as count FROM timeline_topics", (err, row) => {
+            if (row && row.count === 0) {
+                const defaultTopics = [
+                    { id: 'atendimento', name: 'Atendimento', color: '#3b82f6', position: 0 },
+                    { id: 'internet', name: 'Internet', color: '#10b981', position: 1 },
+                    { id: 'infraestrutura', name: 'Infraestrutura', color: '#f59e0b', position: 2 },
+                    { id: 'sistema', name: 'Sistema', color: '#8b5cf6', position: 3 },
+                    { id: 'integracoes', name: 'Integrações', color: '#ec4899', position: 4 }
+                ];
+                const stmt = db.prepare("INSERT INTO timeline_topics (id, name, color, position) VALUES (?, ?, ?, ?)");
+                defaultTopics.forEach(t => stmt.run(t.id, t.name, t.color, t.position));
+                stmt.finalize();
+                console.log('✅ Tópicos da timeline inicializados.');
+            }
+        });
+    });
+
+    // Table for timeline subtopics
+    db.run(`CREATE TABLE IF NOT EXISTS timeline_subtopics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        FOREIGN KEY(topic_id) REFERENCES timeline_topics(id) ON DELETE CASCADE
+    )`, () => {
+        // Seed default subtopics if table is empty
+        db.get("SELECT COUNT(*) as count FROM timeline_subtopics", (err, row) => {
+            if (row && row.count === 0) {
+                const defaultSubtopics = {
+                    'atendimento': ['Gnew', 'Opa', 'Chat Neo', 'Rota 0', 'Rota 08'],
+                    'internet': ['Americanet', 'Vivo', 'Imaxima', 'Claro', 'Starlink'],
+                    'infraestrutura': ['Eletrica', 'Gerador', 'Nobreak', 'Rede', 'Servidores'],
+                    'sistema': ['Neo', 'AWS', 'GCP', 'Apps', 'Comunicadores'],
+                    'integracoes': ['Infocar', 'Bradesco', 'Autentique', 'Sinch', 'Pluga']
+                };
+                const stmt = db.prepare("INSERT INTO timeline_subtopics (topic_id, name) VALUES (?, ?)");
+                Object.entries(defaultSubtopics).forEach(([topicId, subs]) => {
+                    subs.forEach(sub => stmt.run(topicId, sub));
+                });
+                stmt.finalize();
+                console.log('✅ Sub-tópicos da timeline inicializados.');
+            }
+        });
+    });
 });
 
 module.exports = db;

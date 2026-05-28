@@ -7,15 +7,165 @@ let accountsViewMode = 'list';
 let calendarSubView = 'month';
 let currentCalendarDate = new Date();
 
+let currentPage = 1;
+const ITEMS_PER_PAGE = 10;
+let currentFilteredItems = [];
+
 export const accountsHandler = {
     async fetch() {
         try {
+            currentPage = 1;
             allAccounts = await apiClient.get('/accounts');
+            this.initDashboardMultiselects();
+            this.populateCompanyFilter();
             this.handleSearch();
             this.checkAccountAlerts();
         } catch (err) {
             console.error('Falha ao obter contas', err);
         }
+    },
+
+    populateCompanyFilter() {
+        const container = document.getElementById('dash-filter-company-dynamic-options');
+        if (container) {
+            // Keep track of currently checked companies
+            const checkedCompanies = new Set();
+            container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                checkedCompanies.add(cb.value);
+            });
+
+            // Get unique company names
+            const companies = [...new Set(allAccounts.map(acc => acc.company_name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            
+            let html = '';
+            companies.forEach(company => {
+                const isChecked = checkedCompanies.has(company) ? 'checked' : '';
+                html += `<label class="multiselect-option"><input type="checkbox" value="${company}" ${isChecked}> <span>${company}</span></label>`;
+            });
+            container.innerHTML = html;
+
+            // Re-setup checkbox change listeners for the company name dropdown
+            this.setupMultiselectListeners('dash-filter-company');
+        }
+    },
+
+    setupMultiselectListeners(prefix) {
+        const container = document.getElementById(`${prefix}-container`);
+        if (!container) return;
+
+        const trigger = document.getElementById(`${prefix}-trigger`);
+        const dropdown = document.getElementById(`${prefix}-dropdown`);
+        if (!trigger || !dropdown) return;
+
+        // Toggle dropdown on trigger click
+        if (!trigger.dataset.listenerBound) {
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close all other multiselect dropdowns first
+                document.querySelectorAll('.multiselect-dropdown').forEach(d => {
+                    if (d !== dropdown) d.classList.add('hidden');
+                });
+                dropdown.classList.toggle('hidden');
+            });
+            trigger.dataset.listenerBound = 'true';
+        }
+
+        // Checkbox behaviors
+        const todosCheckbox = dropdown.querySelector('input[value="Todos"]');
+        const otherCheckboxes = Array.from(dropdown.querySelectorAll('input[type="checkbox"]')).filter(cb => cb.value !== 'Todos');
+
+        const updateTriggerLabel = () => {
+            const checkedOptions = otherCheckboxes.filter(cb => cb.checked).map(cb => cb.value);
+            const labelSpan = trigger.querySelector('.trigger-label');
+            if (todosCheckbox.checked || (otherCheckboxes.length > 0 && checkedOptions.length === otherCheckboxes.length)) {
+                todosCheckbox.checked = true;
+                if (labelSpan) labelSpan.innerText = 'Todos';
+            } else if (checkedOptions.length === 0) {
+                if (labelSpan) labelSpan.innerText = 'Nenhum';
+            } else if (checkedOptions.length === 1) {
+                if (labelSpan) labelSpan.innerText = checkedOptions[0];
+            } else {
+                if (labelSpan) labelSpan.innerText = `${checkedOptions.length} selecionados`;
+            }
+        };
+
+        // When "Todos" is clicked
+        if (todosCheckbox && !todosCheckbox.dataset.listenerBound) {
+            todosCheckbox.addEventListener('change', () => {
+                otherCheckboxes.forEach(cb => {
+                    cb.checked = todosCheckbox.checked;
+                });
+                updateTriggerLabel();
+                this.renderDashboard();
+            });
+            todosCheckbox.dataset.listenerBound = 'true';
+        }
+
+        // When any other checkbox is clicked
+        otherCheckboxes.forEach(cb => {
+            if (!cb.dataset.listenerBound) {
+                cb.addEventListener('change', () => {
+                    const allChecked = otherCheckboxes.every(c => c.checked);
+                    if (allChecked) {
+                        todosCheckbox.checked = true;
+                    } else {
+                        todosCheckbox.checked = false;
+                    }
+                    updateTriggerLabel();
+                    this.renderDashboard();
+                });
+                cb.dataset.listenerBound = 'true';
+            }
+        });
+
+        // Initialize label on load
+        updateTriggerLabel();
+    },
+
+    initDashboardMultiselects() {
+        this.setupMultiselectListeners('dash-filter-category');
+
+        // Add document click listener to close dropdowns when clicking outside
+        if (!window.multiselectOutsideClickListenerBound) {
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.custom-multiselect-container')) {
+                    document.querySelectorAll('.multiselect-dropdown').forEach(d => {
+                        d.classList.add('hidden');
+                    });
+                }
+            });
+            window.multiselectOutsideClickListenerBound = true;
+        }
+    },
+
+    getMultiselectValues(prefix) {
+        const dropdown = document.getElementById(`${prefix}-dropdown`);
+        if (!dropdown) return ['Todos'];
+        const todosCheckbox = dropdown.querySelector('input[value="Todos"]');
+        if (todosCheckbox && todosCheckbox.checked) {
+            return ['Todos'];
+        }
+        return Array.from(dropdown.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => cb.value)
+            .filter(val => val !== 'Todos');
+    },
+
+    resetMultiselects() {
+        ['dash-filter-category', 'dash-filter-company'].forEach(prefix => {
+            const dropdown = document.getElementById(`${prefix}-dropdown`);
+            if (dropdown) {
+                const checkboxes = dropdown.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => {
+                    cb.checked = (cb.value === 'Todos');
+                });
+                // Update trigger label
+                const trigger = document.getElementById(`${prefix}-trigger`);
+                if (trigger) {
+                    const labelSpan = trigger.querySelector('.trigger-label');
+                    if (labelSpan) labelSpan.innerText = 'Todos';
+                }
+            }
+        });
     },
 
     getAccounts() {
@@ -78,6 +228,7 @@ export const accountsHandler = {
         });
 
         if (accountsViewMode === 'list') {
+            currentPage = 1;
             const statusFilter = dom.getValue('filter-status') || '';
             const useDateToggle = document.getElementById('filter-date-toggle');
             const useDateFilter = useDateToggle ? useDateToggle.checked : false;
@@ -207,7 +358,6 @@ export const accountsHandler = {
             listBody.appendChild(tr);
         });
     },
-
     renderAccountsList(accounts) {
         const listBody = document.getElementById('accounts-table-body');
         if (!listBody) return;
@@ -216,7 +366,25 @@ export const accountsHandler = {
         // Ensure sidebar mini calendar is rendered even if not in Calendar tab
         this.renderSidebarMiniCalendar();
 
-        accounts.forEach(acc => {
+        currentFilteredItems = accounts;
+        const totalItems = accounts.length;
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+        // Adjust currentPage if it's out of bounds
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const paginatedAccounts = accounts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+        if (paginatedAccounts.length === 0) {
+            listBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 20px;">Nenhuma conta encontrada.</td></tr>';
+            this.renderPaginationControls('accounts-list-pagination', 0, 0);
+            this.renderDashboard();
+            return;
+        }
+
+        paginatedAccounts.forEach(acc => {
             const tr = document.createElement('tr');
             let formattedDate = 'Sem Data';
             if (acc.due_date) {
@@ -275,6 +443,9 @@ export const accountsHandler = {
             listBody.appendChild(tr);
         });
 
+        // Render pagination controls
+        this.renderPaginationControls('accounts-list-pagination', totalPages, totalItems);
+
         // Always refresh dashboard when accounts filter changes
         this.renderDashboard();
     },
@@ -282,11 +453,15 @@ export const accountsHandler = {
     renderDashboard() {
         if (accountsViewMode !== 'dashboard') return;
 
+        this.initDashboardMultiselects();
+
         const fStartStr = dom.getValue('dash-filter-start');
         const fEndStr = dom.getValue('dash-filter-end');
         const fType = dom.getValue('dash-filter-type') || 'Todos';
         const fStatus = dom.getValue('dash-filter-status') || 'Todos';
         const fPayment = dom.getValue('dash-filter-payment') || 'Todos';
+        const fCategories = this.getMultiselectValues('dash-filter-category');
+        const fCompanies = this.getMultiselectValues('dash-filter-company');
 
         // Usar T00:00:00 e T23:59:59 para garantir que pegamos o dia todo pelo fuso local
         let fStart = fStartStr ? new Date(fStartStr + "T00:00:00") : null;
@@ -329,6 +504,17 @@ export const accountsHandler = {
             if (fType !== 'Todos' && acc.type !== fType) return;
             if (fStatus !== 'Todos' && acc.status !== fStatus) return;
             if (fPayment !== 'Todos' && acc.payment_status !== fPayment) return;
+            
+            // Filtros Multi-selecionáveis
+            if (!fCategories.includes('Todos')) {
+                if (fCategories.length === 0) return; // Nothing selected
+                const cat = acc.category || 'Outros';
+                if (!fCategories.includes(cat)) return;
+            }
+            if (!fCompanies.includes('Todos')) {
+                if (fCompanies.length === 0) return; // Nothing selected
+                if (!fCompanies.includes(acc.company_name)) return;
+            }
 
             // Contabilizar ocorrencias no intervalo de datas usando a regra real das recorrentes ou unicas
             let occurrences = 0;
@@ -1535,5 +1721,70 @@ export const accountsHandler = {
         } catch (err) {
             alert('Erro ao excluir conta.');
         }
+    },
+
+    changePage(page) {
+        currentPage = page;
+        this.renderAccountsList(currentFilteredItems);
+    },
+
+    renderPaginationControls(containerId, totalPages, totalItems) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (totalPages === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        
+        // Prev Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === 1 ? 'disabled' : ''} 
+                    onclick="window.AccountsHandler.changePage(${currentPage - 1})"
+                    title="Página Anterior">
+                &laquo;
+            </button>
+        `;
+
+        // Page buttons
+        let lastPrintedPage = 0;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                if (lastPrintedPage && i - lastPrintedPage > 1) {
+                    html += `<span style="color: var(--text-muted); padding: 0 4px;">...</span>`;
+                }
+                html += `
+                    <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="window.AccountsHandler.changePage(${i})">
+                        ${i}
+                    </button>
+                `;
+                lastPrintedPage = i;
+            }
+        }
+
+        // Next Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === totalPages ? 'disabled' : ''} 
+                    onclick="window.AccountsHandler.changePage(${currentPage + 1})"
+                    title="Próxima Página">
+                &raquo;
+            </button>
+        `;
+
+        // Pagination Info
+        const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+        const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+        html += `
+            <span class="pagination-info">
+                Exibindo ${start}-${end} de ${totalItems}
+            </span>
+        `;
+
+        container.innerHTML = html;
     }
 };

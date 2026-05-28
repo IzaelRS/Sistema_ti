@@ -4,7 +4,8 @@ export const apiClient = {
     async get(endpoint) {
         const response = await fetch(`${API_URL}${endpoint}`);
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP error! status: ${response.status}`);
         }
         return await response.json();
     },

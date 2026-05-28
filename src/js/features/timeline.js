@@ -10,30 +10,19 @@ let autoRefreshInterval = null;
 let chartSlaInstance = null;
 let chartQtyInstance = null;
 
+// Dynamic Config State
+let topics = [];
+let subtopics = [];
+let topicColors = {};
+let topicOptions = {};
+
 // DOM references (initialized on init())
 let timelineForm;
 let sectionVisualizacao;
 let sectionAttention;
 let sectionAnexo;
 let sectionRelatorio;
-
-
-// Topic config
-const topicColors = {
-    'atendimento': 'var(--topic-atendimento)',
-    'internet': 'var(--topic-internet)',
-    'infraestrutura': 'var(--topic-infra)',
-    'sistema': 'var(--topic-sistema)',
-    'integracoes': 'var(--topic-integracoes)'
-};
-
-const topicOptions = {
-    'atendimento': ['Gnew', 'Opa', 'Chat Neo', 'Rota 0', 'Rota 08'],
-    'internet': ['Americanet', 'Vivo', 'Imaxima', 'Claro', 'Starlink'],
-    'infraestrutura': ['Eletrica', 'Gerador', 'Nobreak', 'Rede', 'Servidores'],
-    'sistema': ['Neo', 'AWS', 'GCP', 'Apps', 'Comunicadores'],
-    'integracoes': ['Infocar', 'Bradesco', 'Autentique', 'Sinch', 'Pluga']
-};
+let sectionConfig;
 
 export const timelineHandler = {
     init() {
@@ -43,6 +32,7 @@ export const timelineHandler = {
         sectionAttention = document.getElementById('view-attention');
         sectionAnexo = document.getElementById('view-anexo');
         sectionRelatorio = document.getElementById('view-relatorio');
+        sectionConfig = document.getElementById('view-config');
 
         // Expose timelineHandler globally so inline html event handlers (like onclick) can access it
         window.timelineHandler = timelineHandler;
@@ -56,6 +46,21 @@ export const timelineHandler = {
         window.toggleAccordion = toggleAccordion;
         window.handleFormSubmit = handleFormSubmit;
         window.editEvent = editEvent;
+        window.deleteTopic = deleteTopic;
+        window.deleteSubtopic = deleteSubtopic;
+        window.handleTrackDragStart = handleTrackDragStart;
+        window.handleTrackDragOver = handleTrackDragOver;
+        window.handleTrackDragEnd = handleTrackDragEnd;
+
+        // Bind Config Forms
+        const topicForm = document.getElementById('timeline-topic-form');
+        if (topicForm) {
+            topicForm.addEventListener('submit', handleTopicSubmit);
+        }
+        const subtopicForm = document.getElementById('timeline-subtopic-form');
+        if (subtopicForm) {
+            subtopicForm.addEventListener('submit', handleSubtopicSubmit);
+        }
 
         // Topic select change
         const topicSelect = document.getElementById('topico');
@@ -87,9 +92,6 @@ export const timelineHandler = {
                 }
             });
         }
-
-        // Populate filter dropdowns
-        populateFilterOptions();
 
         // Auto-refresh toggle
         const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
@@ -131,14 +133,18 @@ export const timelineHandler = {
         // Re-apply when section changes
         window.addEventListener('SectionChange', (e) => {
             if (e.detail && e.detail.section === 'timeline') {
-                loadEvents();
-                applyRoleAccess();
+                loadConfig().then(() => {
+                    loadEvents();
+                    applyRoleAccess();
+                });
             }
         });
 
         // Load data
-        loadEvents();
-        applyRoleAccess();
+        loadConfig().then(() => {
+            loadEvents();
+            applyRoleAccess();
+        });
     }
 };
 
@@ -183,17 +189,88 @@ function updateSubTopics(topic, selectedSubTopic = null) {
     subTopicSelect.classList.add('has-options');
 }
 
-function populateFilterOptions() {
-    ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'].forEach(topic => {
-        const select = document.getElementById(`filter-sub-topic-${topic}`);
-        if (!select || !topicOptions[topic]) return;
-        topicOptions[topic].forEach(option => {
-            const opt = document.createElement('option');
-            opt.value = option.toLowerCase();
-            opt.textContent = option;
-            select.appendChild(opt);
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/timeline/config');
+        if (!response.ok) throw new Error('Falha ao buscar configurações');
+        const data = await response.json();
+        
+        topics = data.topics || [];
+        subtopics = data.subtopics || [];
+
+        // Rebuild topicColors and topicOptions
+        topicColors = {};
+        topicOptions = {};
+        
+        topics.forEach(t => {
+            topicColors[t.id] = t.color;
+            topicOptions[t.id] = [];
         });
-    });
+
+        subtopics.forEach(st => {
+            const topicId = st.topic_id;
+            if (topicOptions[topicId]) {
+                topicOptions[topicId].push(st.name);
+            }
+        });
+
+        // Update select dropdowns in forms
+        populateFormSelectors();
+        
+        // If we are currently in config view, render config lists
+        const viewConfig = document.getElementById('view-config');
+        if (viewConfig && viewConfig.classList.contains('active')) {
+            renderConfigTab();
+        }
+    } catch (err) {
+        console.error('Error loading config:', err);
+    }
+}
+
+function populateFormSelectors() {
+    // 1. Topic dropdown in event form (#topico)
+    const topicSelect = document.getElementById('topico');
+    if (topicSelect) {
+        const currentValue = topicSelect.value;
+        topicSelect.innerHTML = '<option value="" disabled selected>Selecione um tópico...</option>';
+        topics.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            topicSelect.appendChild(opt);
+        });
+        topicSelect.value = currentValue; // restore value if any
+    }
+
+    // 2. Topic dropdown in report filter (#rep-filter-topic)
+    const repTopicSelect = document.getElementById('rep-filter-topic');
+    if (repTopicSelect) {
+        const currentValue = repTopicSelect.value;
+        repTopicSelect.innerHTML = '<option value="Todos">Todos</option>';
+        topics.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            repTopicSelect.appendChild(opt);
+        });
+        if (currentValue && [...repTopicSelect.options].some(o => o.value === currentValue)) {
+            repTopicSelect.value = currentValue;
+        } else {
+            repTopicSelect.value = 'Todos';
+        }
+    }
+
+    // 3. Topic association select in config panel (#subtopic-topic-id)
+    const subtopicTopicSelect = document.getElementById('subtopic-topic-id');
+    if (subtopicTopicSelect) {
+        subtopicTopicSelect.innerHTML = '<option value="" disabled selected>Selecione um tópico...</option>';
+        topics.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = t.name;
+            subtopicTopicSelect.appendChild(opt);
+        });
+    }
 }
 
 // ============================================================
@@ -222,12 +299,18 @@ function loadEvents() {
 // ============================================================
 function applyRoleAccess() {
     const btnForm = document.getElementById('timeline-tab-anexo');
+    const btnConfig = document.getElementById('timeline-tab-config');
     const isAdmin = window.auth && window.auth.isAdmin();
     if (isAdmin) {
         if (btnForm) btnForm.classList.remove('role-hidden');
+        if (btnConfig) btnConfig.classList.remove('role-hidden');
     } else {
         if (btnForm) btnForm.classList.add('role-hidden');
-        if (sectionAnexo && sectionAnexo.classList.contains('active')) {
+        if (btnConfig) btnConfig.classList.add('role-hidden');
+        
+        const isAnexoActive = sectionAnexo && sectionAnexo.classList.contains('active');
+        const isConfigActive = sectionConfig && sectionConfig.classList.contains('active');
+        if (isAnexoActive || isConfigActive) {
             switchView('visualizacao');
         }
     }
@@ -242,6 +325,7 @@ function switchView(viewName) {
         'attention': { section: sectionAttention, button: document.querySelector('[data-timeline-tab="attention"]') },
         'anexo': { section: sectionAnexo, button: document.querySelector('[data-timeline-tab="anexo"]') },
         'relatorio': { section: sectionRelatorio, button: document.querySelector('[data-timeline-tab="relatorio"]') },
+        'config': { section: sectionConfig, button: document.querySelector('[data-timeline-tab="config"]') },
     };
 
     Object.values(views).forEach(v => {
@@ -262,6 +346,9 @@ function switchView(viewName) {
         updateAutoRefreshVisibility(true);
     } else if (viewName === 'relatorio') {
         renderReport();
+        updateAutoRefreshVisibility(false);
+    } else if (viewName === 'config') {
+        renderConfigTab();
         updateAutoRefreshVisibility(false);
     } else {
         updateAutoRefreshVisibility(false);
@@ -448,10 +535,87 @@ function toggleAccordion(id) {
 // Timeline Rendering
 // ============================================================
 function renderTimelines() {
-    ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'].forEach(topic => {
-        const track = document.getElementById(`track-${topic}`);
-        const minDateEl = document.getElementById(`min-date-${topic}`);
-        const maxDateEl = document.getElementById(`max-date-${topic}`);
+    const container = document.getElementById('timeline-tracks-container');
+    if (!container) return;
+
+    // Check if we need to rebuild the track templates
+    const existingIds = Array.from(container.querySelectorAll('.timeline-container')).map(el => el.dataset.topicId);
+    const configIds = topics.map(t => t.id);
+    
+    const needsRebuild = existingIds.length !== configIds.length || !configIds.every(id => existingIds.includes(id));
+    
+    if (needsRebuild) {
+        container.innerHTML = '';
+        const isAdmin = window.auth && window.auth.isAdmin();
+        const grabStyle = isAdmin ? 'style="cursor: grab;"' : '';
+        topics.forEach(topic => {
+            const trackHTML = `
+                <div class="timeline-container" data-topic-id="${topic.id}" draggable="false"
+                     ondragstart="window.handleTrackDragStart(event, '${topic.id}')"
+                     ondragover="window.handleTrackDragOver(event)"
+                     ondragend="window.handleTrackDragEnd(event)">
+                    <div class="topic-header" ${grabStyle}
+                         ${isAdmin ? `
+                         onmousedown="this.closest('.timeline-container').setAttribute('draggable', 'true')"
+                         onmouseup="this.closest('.timeline-container').setAttribute('draggable', 'false')"
+                         onmouseleave="this.closest('.timeline-container').setAttribute('draggable', 'false')"` : ''}>
+                        <div class="topic-indicator" style="background-color: ${topic.color};"></div>
+                        <h2>${topic.name}</h2>
+                        <div class="sla-container">SLA: <span id="sla-${topic.id}">100%</span></div>
+                    </div>
+                    <div class="timeline-filters-wrapper">
+                        <button class="filters-toggle" onclick="toggleFilters('${topic.id}')" id="btn-toggle-${topic.id}">
+                            <span class="hamburger-icon">☰</span>
+                            <span>Filtros</span>
+                            <span class="toggle-arrow">▼</span>
+                        </button>
+                        <div class="timeline-filters hidden" id="filters-panel-${topic.id}">
+                            <div class="filter-group">
+                                <label for="filter-start-${topic.id}">De:</label>
+                                <input type="datetime-local" id="filter-start-${topic.id}" min="2026-01-01T00:00" onchange="applyFilters('${topic.id}')">
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-end-${topic.id}">Até:</label>
+                                <input type="datetime-local" id="filter-end-${topic.id}" min="2026-01-01T00:00" onchange="applyFilters('${topic.id}')">
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-sub-topic-${topic.id}">Eventos:</label>
+                                <select id="filter-sub-topic-${topic.id}" onchange="applyFilters('${topic.id}')">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <button class="btn-clear-filter" onclick="clearFilters('${topic.id}')" title="Limpar Filtro">×</button>
+                        </div>
+                    </div>
+                    <div class="timeline-helper-dates">
+                        <span id="min-date-${topic.id}"></span>
+                        <span id="max-date-${topic.id}"></span>
+                    </div>
+                    <div class="timeline-track-container">
+                        <div class="timeline-track" id="track-${topic.id}"></div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', trackHTML);
+
+            // Populate the subtopic filter dropdown for this track
+            const select = document.getElementById(`filter-sub-topic-${topic.id}`);
+            if (select && topicOptions[topic.id]) {
+                topicOptions[topic.id].forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.toLowerCase();
+                    opt.textContent = option;
+                    select.appendChild(opt);
+                });
+            }
+        });
+    }
+
+    // Now clear the tracks and draw the bars
+    topics.forEach(t => {
+        const track = document.getElementById(`track-${t.id}`);
+        const minDateEl = document.getElementById(`min-date-${t.id}`);
+        const maxDateEl = document.getElementById(`max-date-${t.id}`);
         if (track) track.innerHTML = '';
         if (minDateEl) minDateEl.textContent = '';
         if (maxDateEl) maxDateEl.textContent = '';
@@ -459,8 +623,8 @@ function renderTimelines() {
 
     if (events.length === 0) return;
 
-    const topics = ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'];
-    topics.forEach(topic => {
+    topics.forEach(t => {
+        const topic = t.id;
         const topicEvents = events.filter(e => normalizeTopic(e.topico) === topic);
 
         let filteredEvents = topicEvents;
@@ -503,7 +667,7 @@ function renderTimelines() {
             bar.className = 'timeline-bar';
             bar.style.left = `${leftPercent}%`;
             bar.style.width = `${widthPercent}%`;
-            bar.style.color = ev.cor && ev.cor !== '#000000' ? ev.cor : topicColors[topic];
+            bar.style.color = ev.cor && ev.cor !== '#000000' ? ev.cor : (topicColors[topic] || '#6b7280');
 
             const visual = document.createElement('div');
             visual.className = 'timeline-bar-visual';
@@ -514,7 +678,8 @@ function renderTimelines() {
 
             const startStr = new Date(ev.inicio).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
             const endStr = ev.fim ? new Date(ev.fim).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Em andamento';
-            const displayTopic = topic.charAt(0).toUpperCase() + topic.slice(1);
+            
+            const displayTopic = t.name;
             const displaySubTopic = ev.sub_topico ? ev.sub_topico.charAt(0).toUpperCase() + ev.sub_topico.slice(1) : '-';
             point.setAttribute('data-tooltip', `Tópico: ${displayTopic}\nEventos: ${displaySubTopic}\nInício: ${startStr} - Fim: ${endStr}\nDescrição: ${ev.descricao || '-'}`);
 
@@ -601,9 +766,9 @@ function renderAttentionPanel() {
     container.innerHTML = '';
 
     const inProgressEvents = events.filter(e => !e.fim);
-    const topics = ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'];
 
-    topics.forEach(topic => {
+    topics.forEach(t => {
+        const topic = t.id;
         const topicEvents = inProgressEvents.filter(e => normalizeTopic(e.topico) === topic);
 
         const accordionItem = document.createElement('div');
@@ -619,10 +784,10 @@ function renderAttentionPanel() {
 
         const indicator = document.createElement('div');
         indicator.className = 'topic-indicator';
-        indicator.style.backgroundColor = topicColors[topic];
+        indicator.style.backgroundColor = t.color;
 
         const h3 = document.createElement('h3');
-        h3.textContent = topic.charAt(0).toUpperCase() + topic.slice(1);
+        h3.textContent = t.name;
 
         const badge = document.createElement('span');
         badge.style.cssText = 'background: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-left: 0.5rem; border: 1px solid #cbd5e1;';
@@ -655,7 +820,7 @@ function renderAttentionPanel() {
             topicEvents.forEach(ev => {
                 const card = document.createElement('div');
                 card.className = 'attention-card';
-                card.style.borderLeftColor = ev.cor && ev.cor !== '#000000' ? ev.cor : topicColors[topic];
+                card.style.borderLeftColor = ev.cor && ev.cor !== '#000000' ? ev.cor : t.color;
 
                 const name = document.createElement('h3');
                 name.textContent = ev.nome;
@@ -808,12 +973,13 @@ function renderReport() {
     }
 
     // 1. SLA Availability Chart
-    const topics = ['atendimento', 'internet', 'infraestrutura', 'sistema', 'integracoes'];
+    const reportTopics = topics;
     const slaStart = startStr ? new Date(startStr + 'T00:00:00').getTime() : new Date(new Date().getFullYear() + '-01-01T00:00:00').getTime();
     const slaEnd = endStr ? new Date(endStr + 'T23:59:59').getTime() : Date.now();
 
-    const slaLabels = topics.map(t => t.charAt(0).toUpperCase() + t.slice(1));
-    const slaData = topics.map(topic => {
+    const slaLabels = reportTopics.map(t => t.name);
+    const slaData = reportTopics.map(t => {
+        const topic = t.id;
         const topicEvents = events.filter(e => normalizeTopic(e.topico) === topic);
         const totalDuration = slaEnd - slaStart;
         if (totalDuration <= 0) return 100;
@@ -841,20 +1007,17 @@ function renderReport() {
             }
             mergedIntervals.push(current);
         }
-        let downTime = 0;
-        mergedIntervals.forEach(interval => { downTime += (interval.end - interval.start); });
-        const availability = ((totalDuration - downTime) / totalDuration) * 100;
+        let downTime = MergedIntervals => {
+            let d = 0;
+            MergedIntervals.forEach(interval => { d += (interval.end - interval.start); });
+            return d;
+        };
+        const downTimeVal = downTime(mergedIntervals);
+        const availability = ((totalDuration - downTimeVal) / totalDuration) * 100;
         return parseFloat(availability.toFixed(4));
     });
 
-    const topicColorsHex = {
-        'atendimento': '#3b82f6',
-        'internet': '#10b981',
-        'infraestrutura': '#f59e0b',
-        'sistema': '#8b5cf6',
-        'integracoes': '#ec4899'
-    };
-    const backgroundColors = topics.map(t => topicColorsHex[t] || '#6b7280');
+    const backgroundColors = reportTopics.map(t => t.color || '#6b7280');
 
     const ctxSla = document.getElementById('chart-rep-sla');
     if (ctxSla) {
@@ -948,4 +1111,252 @@ function closeTeamModal() {
 
 function closeTeamModalOnOutsideClick(event) {
     if (event.target.id === 'team-modal') closeTeamModal();
+}
+
+// ============================================================
+// Configuration Data Tab Handlers
+// ============================================================
+function handleTopicSubmit(e) {
+    e.preventDefault();
+    const idInput = document.getElementById('topic-id');
+    const nameInput = document.getElementById('topic-name');
+    const colorInput = document.getElementById('topic-color');
+
+    if (!idInput || !nameInput || !colorInput) return;
+
+    const topicData = {
+        id: idInput.value.trim().toLowerCase(),
+        name: nameInput.value.trim(),
+        color: colorInput.value
+    };
+
+    if (!topicData.id) {
+        alert('Por favor, defina um ID para o tópico.');
+        return;
+    }
+
+    fetch('/api/timeline/config/topics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(topicData)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao salvar tópico');
+        return response.json();
+    })
+    .then(() => {
+        alert('Tópico salvo com sucesso!');
+        idInput.value = '';
+        nameInput.value = '';
+        colorInput.value = '#3b82f6';
+        loadConfig().then(() => {
+            loadEvents();
+        });
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro: ' + err.message);
+    });
+}
+
+function handleSubtopicSubmit(e) {
+    e.preventDefault();
+    const topicIdSelect = document.getElementById('subtopic-topic-id');
+    const nameInput = document.getElementById('subtopic-name');
+
+    if (!topicIdSelect || !nameInput) return;
+
+    const subtopicData = {
+        topic_id: topicIdSelect.value,
+        name: nameInput.value.trim()
+    };
+
+    if (!subtopicData.topic_id || !subtopicData.name) {
+        alert('Preencha todos os campos do evento.');
+        return;
+    }
+
+    fetch('/api/timeline/config/subtopics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subtopicData)
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao adicionar evento');
+        return response.json();
+    })
+    .then(() => {
+        alert('Evento adicionado!');
+        nameInput.value = '';
+        loadConfig();
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro: ' + err.message);
+    });
+}
+
+function deleteTopic(id) {
+    if (!confirm('Excluir este tópico também removerá todos os seus eventos associados. Deseja continuar?')) return;
+
+    fetch(`/api/timeline/config/topics/${id}`, { method: 'DELETE' })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao excluir tópico');
+        return response.json();
+    })
+    .then(() => {
+        alert('Tópico excluído!');
+        loadConfig().then(() => {
+            loadEvents();
+        });
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro: ' + err.message);
+    });
+}
+
+function deleteSubtopic(id) {
+    if (!confirm('Deseja realmente excluir este evento?')) return;
+
+    fetch(`/api/timeline/config/subtopics/${id}`, { method: 'DELETE' })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao excluir evento');
+        return response.json();
+    })
+    .then(() => {
+        alert('Evento excluído!');
+        loadConfig();
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro: ' + err.message);
+    });
+}
+
+function renderConfigTab() {
+    // 1. Render topics list
+    const topicsList = document.getElementById('config-topics-list');
+    if (topicsList) {
+        topicsList.innerHTML = '';
+        if (topics.length === 0) {
+            topicsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">Nenhum tópico cadastrado.</div>';
+        } else {
+            topics.forEach(t => {
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); margin-bottom: 6px;';
+                div.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="width: 12px; height: 12px; border-radius: 50%; background: ${t.color}; display: inline-block;"></span>
+                        <span style="font-weight: 500; color: var(--text-main);">${t.name} <small style="color: var(--text-muted); font-size: 0.75rem;">(${t.id})</small></span>
+                    </div>
+                    <button type="button" onclick="deleteTopic('${t.id}')" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; font-weight: 600; padding: 4px 8px;">Excluir</button>
+                `;
+                topicsList.appendChild(div);
+            });
+        }
+    }
+
+    // 2. Render subtopics (events) list
+    const subtopicsList = document.getElementById('config-subtopics-list');
+    if (subtopicsList) {
+        subtopicsList.innerHTML = '';
+        if (subtopics.length === 0) {
+            subtopicsList.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">Nenhum evento cadastrado.</div>';
+        } else {
+            subtopics.forEach(st => {
+                const topicObj = topics.find(t => t.id === st.topic_id);
+                const topicName = topicObj ? topicObj.name : st.topic_id;
+                const topicColor = topicObj ? topicObj.color : '#6b7280';
+
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--glass-border); margin-bottom: 6px;';
+                div.innerHTML = `
+                    <div>
+                        <span style="font-weight: 500; color: var(--text-main);">${st.name}</span>
+                        <span style="display: inline-block; margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; background: ${topicColor}22; color: ${topicColor}; font-weight: 600; border: 1px solid ${topicColor}44;">${topicName}</span>
+                    </div>
+                    <button type="button" onclick="deleteSubtopic(${st.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; font-weight: 600; padding: 4px 8px;">Excluir</button>
+                `;
+                subtopicsList.appendChild(div);
+            });
+        }
+    }
+}
+
+// ============================================================
+// Drag and Drop reordering for timeline tracks
+// ============================================================
+let draggedTopicId = null;
+
+function handleTrackDragStart(e, id) {
+    draggedTopicId = id;
+    const container = e.currentTarget;
+    container.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleTrackDragOver(e) {
+    e.preventDefault();
+    const draggingEl = document.querySelector('.timeline-container.dragging');
+    if (!draggingEl) return;
+
+    const container = document.getElementById('timeline-tracks-container');
+    if (!container) return;
+
+    const siblings = [...container.querySelectorAll('.timeline-container:not(.dragging)')];
+
+    const nextSibling = siblings.find(sibling => {
+        const rect = sibling.getBoundingClientRect();
+        return e.clientY <= rect.top + rect.height / 2;
+    });
+
+    if (nextSibling) {
+        container.insertBefore(draggingEl, nextSibling);
+    } else {
+        container.appendChild(draggingEl);
+    }
+}
+
+function handleTrackDragEnd(e) {
+    const draggingEl = document.querySelector('.timeline-container.dragging');
+    if (draggingEl) {
+        draggingEl.classList.remove('dragging');
+    }
+    
+    document.querySelectorAll('.timeline-container').forEach(el => {
+        el.setAttribute('draggable', 'false');
+    });
+
+    // Get the new order from DOM
+    const container = document.getElementById('timeline-tracks-container');
+    if (!container) return;
+
+    const newOrder = Array.from(container.querySelectorAll('.timeline-container')).map(el => el.dataset.topicId);
+    
+    // Call API to save new order
+    saveTopicsOrder(newOrder);
+}
+
+function saveTopicsOrder(order) {
+    fetch('/api/timeline/config/topics/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao salvar nova ordenação');
+        return response.json();
+    })
+    .then(() => {
+        console.log('Ordem dos tópicos atualizada com sucesso.');
+        // Reload config to sync state and trigger re-render
+        loadConfig().then(() => {
+            loadEvents();
+        });
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro ao salvar ordenação: ' + err.message);
+    });
 }
