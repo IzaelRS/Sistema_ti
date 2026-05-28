@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-DDmw0Cim.js"></script>
+  <script type="module" crossorigin src="/assets/index-x0golo7h.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CxmNw4Ml.css">
 </head>
 
@@ -733,13 +733,21 @@
                 </section>
 
                 <section id="telephony-section" class="display-section hidden">
+                    <!-- Navegação das Abas de Telefonia -->
+                    <div class="telephony-tabs-nav" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                        <button id="tab-telephony-extensions" class="acc-tab-btn active">Ramais</button>
+                        <button id="tab-telephony-queues" class="acc-tab-btn">QUEUE (Filas)</button>
+                        <button id="tab-telephony-blf" class="acc-tab-btn">BLF</button>
+                        <button id="tab-telephony-users" class="acc-tab-btn">Usuários</button>
+                    </div>
+
                     <div class="search-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; max-width: none;">
                         <div style="flex: 1;">
                             <input type="text" id="telephony-search" class="form-control glass" placeholder="Pesquisar ramais por número, nome ou usuário...">
                         </div>
                         <div style="display: flex; align-items: center; gap: 15px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <label for="telephony-page-size" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Ramais por página:</label>
+                                <label for="telephony-page-size" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
                                 <select id="telephony-page-size" class="form-control glass" style="width: 100px; padding: 8px; border-radius: 8px; cursor: pointer;">
                                     <option value="100" selected>100</option>
                                     <option value="500">500</option>
@@ -757,28 +765,104 @@
                         </div>
                     </div>
                     
-                    <div class="table-container glass" style="margin-top: 10px;">
-                        <table class="table-minimal">
-                            <thead>
-                                <tr>
-                                    <th>Ramal</th>
-                                    <th>Nome</th>
-                                    <th>DDR</th>
-                                    <th>Usuário SIP</th>
-                                    <th>Senha</th>
-                                    <th>Rota de Saída</th>
-                                    <th>Observação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="telephony-table-body">
-                                <tr>
-                                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                                        Clique no botão "Atualizar" para sincronizar os ramais do servidor.
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <!-- ABA 1: RAMAIS -->
+                    <div id="telephony-view-extensions" class="telephony-tab-content">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>Ramal</th>
+                                        <th>Nome</th>
+                                        <th>DDR</th>
+                                        <th>Usuário SIP</th>
+                                        <th>Senha</th>
+                                        <th>Rota de Saída</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-table-body">
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botão "Atualizar" para sincronizar os ramais do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+
+                    <!-- ABA 2: QUEUE (FILAS) -->
+                    <div id="telephony-view-queues" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>Número</th>
+                                        <th>Fila / Nome</th>
+                                        <th>Estratégia</th>
+                                        <th>Timeout Agente</th>
+                                        <th>Gravação</th>
+                                        <th>Quantidade de Membros</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-queues-table-body">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botão "Atualizar" para sincronizar as filas do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 3: BLF -->
+                    <div id="telephony-view-blf" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Quantidade de Ramais</th>
+                                        <th>Data de Criação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-blf-table-body">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botão "Atualizar" para sincronizar os BLFs do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 4: USUARIOS -->
+                    <div id="telephony-view-users" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>Nome do Usuário</th>
+                                        <th>E-mail</th>
+                                        <th>Perfil / Tipo</th>
+                                        <th>Senha</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-users-table-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botão "Atualizar" para sincronizar os usuários do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <div id="telephony-pagination" class="pagination-container"></div>
                 </section>
 

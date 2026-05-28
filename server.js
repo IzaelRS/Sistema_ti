@@ -606,48 +606,83 @@ async function getGnewToken() {
     }
 }
 
+async function fetchPaginatedGnew(initialUrl) {
+    let token = await getGnewToken();
+    let allResults = [];
+    let nextPageUrl = initialUrl;
+
+    while (nextPageUrl) {
+        let response = await fetch(nextPageUrl, {
+            headers: { 'Authorization': `Token ${token}` }
+        });
+        
+        if (response.status === 401) {
+            console.warn('[TELEFONIA] Token inválido ou expirado. Tentando re-autenticar...');
+            gnewToken = null;
+            token = await getGnewToken();
+            response = await fetch(nextPageUrl, {
+                headers: { 'Authorization': `Token ${token}` }
+            });
+        }
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`Status ${response.status}: ${errBody}`);
+        }
+
+        const data = await response.json();
+        const results = data.results || [];
+        allResults = allResults.concat(results);
+        nextPageUrl = data.next || null;
+    }
+    return allResults;
+}
+
 app.get('/api/telephony/extensions', async (req, res) => {
     if (req.query.mock === 'true') {
         return res.json(getMockExtensions());
     }
 
     try {
-        let token = await getGnewToken();
-        let allResults = [];
-        let nextPageUrl = `${GNEW_API_URL}/api/v2/sip/?page_size=100`;
-
-        while (nextPageUrl) {
-            let response = await fetch(nextPageUrl, {
-                headers: { 'Authorization': `Token ${token}` }
-            });
-            
-            // Se retornar 401, o token pode ter expirado. Tenta re-autenticar uma vez.
-            if (response.status === 401) {
-                console.warn('[TELEFONIA] Token inválido ou expirado. Tentando re-autenticar...');
-                gnewToken = null;
-                token = await getGnewToken();
-                response = await fetch(nextPageUrl, {
-                    headers: { 'Authorization': `Token ${token}` }
-                });
-            }
-
-            if (!response.ok) {
-                const errBody = await response.text();
-                console.error('[TELEFONIA] Erro ao buscar ramais no PABX:', errBody);
-                return res.status(response.status).json({ error: `Erro no PABX Gnew (Status: ${response.status}): ${errBody}` });
-            }
-
-            const data = await response.json();
-            const results = data.results || [];
-            allResults = allResults.concat(results);
-            nextPageUrl = data.next || null;
-        }
-
-        console.log(`[TELEFONIA] Total de ramais consolidados: ${allResults.length}`);
-        res.json(allResults);
+        const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/sip/?page_size=100`);
+        console.log(`[TELEFONIA] Total de ramais consolidados: ${results.length}`);
+        res.json(results);
     } catch (err) {
-        console.error('[TELEFONIA] Erro na rota de ramais:', err.message);
+        console.error('[TELEFONIA] Erro na rota de ramais SIP:', err.message);
         res.status(500).json({ error: `Erro no proxy de telefonia: ${err.message}` });
+    }
+});
+
+app.get('/api/telephony/queues', async (req, res) => {
+    try {
+        const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/queue/?page_size=100`);
+        console.log(`[TELEFONIA] Total de filas consolidadas: ${results.length}`);
+        res.json(results);
+    } catch (err) {
+        console.error('[TELEFONIA] Erro na rota de filas:', err.message);
+        res.status(500).json({ error: `Erro no proxy de filas: ${err.message}` });
+    }
+});
+
+app.get('/api/telephony/blfs', async (req, res) => {
+    try {
+        const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/blf/?page_size=100`);
+        console.log(`[TELEFONIA] Total de BLFs consolidados: ${results.length}`);
+        res.json(results);
+    } catch (err) {
+        console.error('[TELEFONIA] Erro na rota de BLFs:', err.message);
+        res.status(500).json({ error: `Erro no proxy de BLFs: ${err.message}` });
+    }
+});
+
+app.get('/api/telephony/users', async (req, res) => {
+    try {
+        const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/usuarios/?page_size=100`);
+        console.log(`[TELEFONIA] Total de usuários consolidados: ${results.length}`);
+        res.json(results);
+    } catch (err) {
+        console.error('[TELEFONIA] Erro na rota de usuários Gnew:', err.message);
+        res.status(500).json({ error: `Erro no proxy de usuários Gnew: ${err.message}` });
     }
 });
 

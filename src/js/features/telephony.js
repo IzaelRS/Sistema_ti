@@ -2,30 +2,116 @@ import { apiClient } from '../api/client.js';
 import { dom } from '../utils/dom.js';
 
 let allExtensions = [];
+let allQueues = [];
+let allBlfs = [];
+let allUsers = [];
+
+let activeTab = 'extensions'; // 'extensions', 'queues', 'blf', 'users'
 let currentPage = 1;
 let itemsPerPage = 100;
 let currentFilteredItems = [];
 
 export const telephonyHandler = {
-    async fetch() {
-        const tbody = document.getElementById('telephony-table-body');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Carregando ramais...</td></tr>';
+    setActiveTab(tab) {
+        activeTab = tab;
+        currentPage = 1;
+
+        // Reset search input
+        const searchInput = document.getElementById('telephony-search');
+        if (searchInput) {
+            searchInput.value = '';
+            if (tab === 'extensions') {
+                searchInput.placeholder = 'Pesquisar ramais por número, nome ou usuário...';
+            } else if (tab === 'queues') {
+                searchInput.placeholder = 'Pesquisar filas por número ou nome...';
+            } else if (tab === 'blf') {
+                searchInput.placeholder = 'Pesquisar BLF por nome...';
+            } else if (tab === 'users') {
+                searchInput.placeholder = 'Pesquisar usuários por nome ou perfil...';
+            }
         }
+
+        // Toggle Active Classes in navigation buttons
+        const navButtons = document.querySelectorAll('.telephony-tabs-nav .acc-tab-btn');
+        navButtons.forEach(btn => {
+            if (btn.id === `tab-telephony-${tab}`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Show/Hide relevant view divs
+        const tabContents = document.querySelectorAll('.telephony-tab-content');
+        tabContents.forEach(content => {
+            if (content.id === `telephony-view-${tab === 'users' ? 'users' : tab === 'queues' ? 'queues' : tab}`) {
+                content.classList.remove('hidden');
+            } else {
+                content.classList.add('hidden');
+            }
+        });
+
+        // Render appropriate data
+        const currentData = this.getActiveDataList();
+        this.render(currentData);
+    },
+
+    getActiveDataList() {
+        if (activeTab === 'extensions') return allExtensions;
+        if (activeTab === 'queues') return allQueues;
+        if (activeTab === 'blf') return allBlfs;
+        if (activeTab === 'users') return allUsers;
+        return [];
+    },
+
+    async fetch() {
+        const tbody = this.getActiveTableBody();
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--text-muted);">Carregando dados...</td></tr>`;
+        }
+
         try {
             currentPage = 1;
-            allExtensions = await apiClient.get('/telephony/extensions');
-            this.render(allExtensions);
+
+            if (activeTab === 'extensions') {
+                allExtensions = await apiClient.get('/telephony/extensions');
+                this.render(allExtensions);
+            } else if (activeTab === 'queues') {
+                allQueues = await apiClient.get('/telephony/queues');
+                this.render(allQueues);
+            } else if (activeTab === 'blf') {
+                // If extensions are not loaded, fetch them in background so we can resolve names
+                if (allExtensions.length === 0) {
+                    try {
+                        allExtensions = await apiClient.get('/telephony/extensions');
+                    } catch (e) {
+                        console.warn("Could not pre-fetch extensions for BLF mapping:", e);
+                    }
+                }
+                allBlfs = await apiClient.get('/telephony/blfs');
+                this.render(allBlfs);
+            } else if (activeTab === 'users') {
+                allUsers = await apiClient.get('/telephony/users');
+                this.render(allUsers);
+            }
         } catch (err) {
-            console.error('Error fetching telephony extensions:', err);
+            console.error(`Error fetching telephony ${activeTab}:`, err);
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #ef4444;">Erro ao carregar ramais: ${err.message || 'Erro de rede'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 2rem; color: #ef4444;">Erro ao carregar dados: ${err.message || 'Erro de rede'}</td></tr>`;
             }
         }
     },
 
+    getActiveTableBody() {
+        if (activeTab === 'extensions') return document.getElementById('telephony-table-body');
+        if (activeTab === 'queues') return document.getElementById('telephony-queues-table-body');
+        if (activeTab === 'blf') return document.getElementById('telephony-blf-table-body');
+        if (activeTab === 'users') return document.getElementById('telephony-users-table-body');
+        return null;
+    },
+
     render(items) {
-        const tbody = document.getElementById('telephony-table-body');
+        const tbody = this.getActiveTableBody();
         if (!tbody) return;
 
         currentFilteredItems = items;
@@ -40,10 +126,11 @@ export const telephonyHandler = {
         const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage);
 
         if (paginatedItems.length === 0) {
+            const colspan = activeTab === 'extensions' ? 7 : activeTab === 'queues' ? 6 : activeTab === 'blf' ? 4 : 5;
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
-                        Nenhum ramal encontrado.
+                    <td colspan="${colspan}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nenhum registro encontrado.
                     </td>
                 </tr>
             `;
@@ -51,7 +138,21 @@ export const telephonyHandler = {
             return;
         }
 
-        tbody.innerHTML = paginatedItems.map(sip => {
+        if (activeTab === 'extensions') {
+            this.renderExtensionsList(tbody, paginatedItems);
+        } else if (activeTab === 'queues') {
+            this.renderQueuesList(tbody, paginatedItems);
+        } else if (activeTab === 'blf') {
+            this.renderBlfsList(tbody, paginatedItems);
+        } else if (activeTab === 'users') {
+            this.renderUsersList(tbody, paginatedItems);
+        }
+
+        this.renderPaginationControls('telephony-pagination', totalPages, totalItems);
+    },
+
+    renderExtensionsList(tbody, items) {
+        tbody.innerHTML = items.map(sip => {
             const exten = sip.exten || '-';
             const nome = sip.nome || '-';
             const ddr = sip.ddr || '-';
@@ -62,7 +163,6 @@ export const telephonyHandler = {
                 : '-';
             const observacao = sip.observacao || '-';
 
-            // Escape secret to prevent breaking HTML string
             const escapedSecret = secret.replace(/'/g, "\\'");
 
             return `
@@ -94,19 +194,229 @@ export const telephonyHandler = {
                 </tr>
             `;
         }).join('');
+    },
 
-        this.renderPaginationControls('telephony-pagination', totalPages, totalItems);
+    renderQueuesList(tbody, items) {
+        tbody.innerHTML = items.map(q => {
+            const exten = q.exten || '-';
+            const nome = q.nome || '-';
+            const estrategia = q.Estrategia || '-';
+            const timeout = q.TimeoutAgente ? `${q.TimeoutAgente}s` : '-';
+            const gravacao = q.Gravacao 
+                ? `<span class="badge" style="background: rgba(16,185,129,0.1); color: #10b981;">Sim</span>` 
+                : `<span class="badge" style="background: rgba(239,68,68,0.1); color: #ef4444;">Não</span>`;
+            const membersCount = q.membros ? q.membros.length : 0;
+
+            const membersHtml = q.membros && q.membros.length > 0
+                ? q.membros.map(m => `
+                    <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        <span style="font-size: 0.85rem; font-weight: 500;">${m.extensao_numero} - ${m.extensao_nome}</span>
+                    </div>
+                  `).join('')
+                : '<div style="color: var(--text-muted); font-size: 0.85rem;">Nenhum ramal membro nesta fila.</div>';
+
+            return `
+                <tr onclick="window.TelephonyHandler.toggleQueueRow(${q.id})" style="cursor: pointer;" title="Clique para ver os ramais membros">
+                    <td>
+                        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--primary);">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span>${exten}</span>
+                        </span>
+                    </td>
+                    <td><strong>${nome}</strong></td>
+                    <td style="text-transform: capitalize;">${estrategia}</td>
+                    <td>${timeout}</td>
+                    <td>${gravacao}</td>
+                    <td>
+                        <span style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--accent);">
+                            <span>${membersCount} membros</span>
+                            <svg id="queue-arrow-${q.id}" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="transition: transform 0.2s;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </span>
+                    </td>
+                </tr>
+                <tr id="queue-details-${q.id}" class="hidden" style="background: rgba(0,0,0,0.2);">
+                    <td colspan="6" style="padding: 15px 25px; border-bottom: 1px solid var(--glass-border);">
+                        <h4 style="margin: 0 0 12px 0; font-size: 0.9rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Ramais Membros Vinculados:</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                            ${membersHtml}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    renderBlfsList(tbody, items) {
+        tbody.innerHTML = items.map(blf => {
+            const id = blf.id;
+            const nome = blf.Nome || '-';
+            const count = blf.quantidade_extensoes || 0;
+            const dataCriacao = blf.DataCriacao 
+                ? new Date(blf.DataCriacao).toLocaleString('pt-BR') 
+                : '-';
+
+            const extensionsHtml = blf.extensoes_ids && blf.extensoes_ids.length > 0
+                ? blf.extensoes_ids.map(extId => {
+                    const extObj = allExtensions.find(e => e.id === extId || e.extensao_id === extId);
+                    const extNum = extObj ? extObj.exten : `ID ${extId}`;
+                    const extNome = extObj ? extObj.nome : 'Não encontrado';
+                    return `
+                        <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                            <span style="font-size: 0.85rem; font-weight: 500;">${extNum} - ${extNome}</span>
+                        </div>
+                    `;
+                  }).join('')
+                : '<div style="color: var(--text-muted); font-size: 0.85rem;">Nenhum ramal vinculado neste BLF.</div>';
+
+            return `
+                <tr onclick="window.TelephonyHandler.toggleBlfRow(${id})" style="cursor: pointer;" title="Clique para ver os ramais vinculados">
+                    <td>
+                        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--primary);">
+                                <rect x="2" y="2" width="20" height="20" rx="4" ry="4"></rect>
+                                <circle cx="8" cy="8" r="2"></circle>
+                                <circle cx="16" cy="8" r="2"></circle>
+                                <circle cx="8" cy="16" r="2"></circle>
+                                <circle cx="16" cy="16" r="2"></circle>
+                            </svg>
+                            <span>${id}</span>
+                        </span>
+                    </td>
+                    <td><strong>${nome}</strong></td>
+                    <td>
+                        <span style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--accent);">
+                            <span>${count} ramais</span>
+                            <svg id="blf-arrow-${id}" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="transition: transform 0.2s;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </span>
+                    </td>
+                    <td style="color: var(--text-muted);">${dataCriacao}</td>
+                </tr>
+                <tr id="blf-details-${id}" class="hidden" style="background: rgba(0,0,0,0.2);">
+                    <td colspan="4" style="padding: 15px 25px; border-bottom: 1px solid var(--glass-border);">
+                        <h4 style="margin: 0 0 12px 0; font-size: 0.9rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Ramais Vinculados:</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
+                            ${extensionsHtml}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    renderUsersList(tbody, items) {
+        tbody.innerHTML = items.map(u => {
+            const username = u.username || '-';
+            const email = u.email || '-';
+            const tipo = u.Tipo || '-';
+            const status = u.is_active 
+                ? `<span class="badge" style="background: rgba(16,185,129,0.1); color: #10b981;">Ativo</span>` 
+                : `<span class="badge" style="background: rgba(239,68,68,0.1); color: #ef4444;">Inativo</span>`;
+
+            return `
+                <tr>
+                    <td>
+                        <span style="font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--primary);">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <span>${username}</span>
+                        </span>
+                    </td>
+                    <td>${email}</td>
+                    <td style="text-transform: capitalize; font-weight: 600; color: var(--accent);">${tipo}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 140px;">
+                            <span style="font-family: monospace; font-size: 0.9rem; letter-spacing: 0.5px;">••••••••</span>
+                            <button class="btn-icon" onclick="window.TelephonyHandler.toggleUserSecret(${u.id})" title="Mostrar Senha" style="padding: 4px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td>${status}</td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    toggleQueueRow(id) {
+        const detailRow = document.getElementById(`queue-details-${id}`);
+        const arrow = document.getElementById(`queue-arrow-${id}`);
+        if (detailRow) {
+            detailRow.classList.toggle('hidden');
+            if (arrow) {
+                if (detailRow.classList.contains('hidden')) {
+                    arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    arrow.style.transform = 'rotate(180deg)';
+                }
+            }
+        }
+    },
+
+    toggleBlfRow(id) {
+        const detailRow = document.getElementById(`blf-details-${id}`);
+        const arrow = document.getElementById(`blf-arrow-${id}`);
+        if (detailRow) {
+            detailRow.classList.toggle('hidden');
+            if (arrow) {
+                if (detailRow.classList.contains('hidden')) {
+                    arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    arrow.style.transform = 'rotate(180deg)';
+                }
+            }
+        }
+    },
+
+    toggleUserSecret(id) {
+        alert("Por segurança do PABX Gnew, as senhas dos usuários do portal são armazenadas com criptografia unidirecional na base e não podem ser lidas em texto claro.");
     },
 
     search(term) {
         currentPage = 1;
-        const filtered = allExtensions.filter(sip => {
-            return (sip.exten || '').toLowerCase().includes(term) ||
-                (sip.nome || '').toLowerCase().includes(term) ||
-                (sip.Username || '').toLowerCase().includes(term) ||
-                (sip.ddr || '').toLowerCase().includes(term) ||
-                (sip.observacao || '').toLowerCase().includes(term);
+        const currentData = this.getActiveDataList();
+        
+        const filtered = currentData.filter(item => {
+            if (activeTab === 'extensions') {
+                return (item.exten || '').toLowerCase().includes(term) ||
+                    (item.nome || '').toLowerCase().includes(term) ||
+                    (item.Username || '').toLowerCase().includes(term) ||
+                    (item.ddr || '').toLowerCase().includes(term) ||
+                    (item.observacao || '').toLowerCase().includes(term);
+            } else if (activeTab === 'queues') {
+                return (item.exten || '').toLowerCase().includes(term) ||
+                    (item.nome || '').toLowerCase().includes(term) ||
+                    (item.Estrategia || '').toLowerCase().includes(term);
+            } else if (activeTab === 'blf') {
+                return (item.Nome || '').toLowerCase().includes(term);
+            } else if (activeTab === 'users') {
+                return (item.username || '').toLowerCase().includes(term) ||
+                    (item.email || '').toLowerCase().includes(term) ||
+                    (item.Tipo || '').toLowerCase().includes(term);
+            }
+            return false;
         });
+
         this.render(filtered);
     },
 
@@ -128,14 +438,12 @@ export const telephonyHandler = {
 
         if (textSpan.textContent === '••••••••') {
             textSpan.textContent = secret;
-            // Change SVG to "eye-off"
             iconSvg.innerHTML = `
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
                 <line x1="1" y1="1" x2="23" y2="23"></line>
             `;
         } else {
             textSpan.textContent = '••••••••';
-            // Change SVG back to "eye"
             iconSvg.innerHTML = `
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>

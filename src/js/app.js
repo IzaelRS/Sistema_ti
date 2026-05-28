@@ -277,6 +277,11 @@ function setupEventListeners() {
     window.AccountsHandler = accountsHandler;
     window.TelephonyHandler = telephonyHandler;
 
+    // Telephony tabs binding
+    ['extensions', 'queues', 'blf', 'users'].forEach(tab => {
+        dom.on(`tab-telephony-${tab}`, 'click', () => telephonyHandler.setActiveTab(tab));
+    });
+
     // Telephony search binding
     dom.on('telephony-search', 'input', (e) => telephonyHandler.search(e.target.value.toLowerCase()));
     dom.on('telephony-page-size', 'change', (e) => telephonyHandler.setPageSize(e.target.value));
