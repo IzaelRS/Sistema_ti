@@ -107,6 +107,12 @@
                     </svg>
                     <span>Telefonia</span>
                 </button>
+                <button class="nav-btn" data-section="monitoring" title="Monitoramento" id="nav-monitoring">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                    <span>Monitoramento</span>
+                </button>
                 <button class="nav-btn" data-section="users" title="Usuários" id="nav-users">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -394,6 +400,98 @@
                           </div>
                       </div>
                   </section>
+
+                <section id="monitoring-section" class="display-section hidden">
+                    <div class="monitoring-container">
+                        <div class="report-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <h2>Painel de Monitoramento</h2>
+                                <p style="color: var(--text-muted); font-size: 0.95rem;">Alertas e notificações dos sistemas em tempo real.</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div id="monitoring-api-status" class="api-status-badge online">
+                                    <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: currentColor;"></span>
+                                    <span class="status-text">Buscando status...</span>
+                                </div>
+                                <button id="btn-refresh-monitoring" class="btn btn-secondary" style="height: 40px; display: flex; align-items: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                    Atualizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submenu / Abas de Monitoramento -->
+                        <div class="accounts-tabs-nav" style="flex-shrink: 0; margin-bottom: 1.5rem;">
+                            <button class="acc-tab-btn active" id="tab-monitoring-alerts" data-monitoring-tab="alerts">Alertas Ativos</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-disabled" data-monitoring-tab="disabled">Serviços Desativados</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-events" data-monitoring-tab="events">Histórico de Eventos</button>
+                        </div>
+
+                        <!-- ABA 1: ALERTAS ATIVOS -->
+                        <div id="monitoring-tab-content-alerts" class="monitoring-tab-content active">
+                            <!-- KPIs -->
+                            <div class="monitoring-kpis">
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Total de Serviços</div>
+                                    <div class="kpi-value" id="monitor-kpi-total">0</div>
+                                </div>
+                                <div class="kpi-card" style="border-left: 3px solid #10b981;">
+                                    <div class="kpi-label" style="color: #6ee7b7;">Online</div>
+                                    <div class="kpi-value" id="monitor-kpi-info" style="color: #10b981;">0</div>
+                                </div>
+                                <div class="kpi-card" style="border-left: 3px solid #f59e0b;">
+                                    <div class="kpi-label" style="color: #fde047;">Avisos (Offline)</div>
+                                    <div class="kpi-value" id="monitor-kpi-warning" style="color: #f59e0b;">0</div>
+                                </div>
+                            </div>
+
+                            <!-- Filters & Search -->
+                            <div class="monitoring-filters">
+                                <div class="filter-left" style="flex: 1;">
+                                    <input type="text" id="monitoring-search-input" class="monitoring-search" placeholder="Pesquisar por nome do serviço..." style="width: 100%; max-width: 400px;">
+                                </div>
+                                <div class="filter-right">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="monitoring-auto-refresh" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                        <span style="font-size: 0.85rem; color: var(--text-main);">Auto-Refresh (30s)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Grid representing alerts -->
+                            <div class="monitoring-grid" id="monitoring-alerts-grid">
+                                <!-- Cards will be rendered dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <!-- ABA 2: SERVIÇOS DESATIVADOS -->
+                        <div id="monitoring-tab-content-disabled" class="monitoring-tab-content hidden">
+                            <div class="monitoring-filters" style="margin-bottom: 1.5rem;">
+                                <span style="color: var(--text-muted); font-size: 0.95rem;">Serviços desativados (off) ocultados dos alertas e avisos ativos.</span>
+                            </div>
+                            <div class="monitoring-grid" id="monitoring-disabled-grid">
+                                <!-- Hidden services will be rendered dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <!-- ABA 3: HISTÓRICO DE EVENTOS -->
+                        <div id="monitoring-tab-content-events" class="monitoring-tab-content hidden">
+                            <div class="monitoring-filters" style="margin-bottom: 1.5rem;">
+                                <div class="filter-left" style="flex: 1;">
+                                    <input type="text" id="monitoring-events-search-input" class="monitoring-search" placeholder="Filtrar histórico por nome do evento..." style="width: 100%; max-width: 400px;">
+                                </div>
+                            </div>
+                            <!-- Grid representing clean event history cards -->
+                            <div class="monitoring-grid" id="monitoring-events-grid">
+                                <!-- Clean cards will be rendered dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
                 <section id="account-section" class="display-section hidden"
                     style="position: relative; overflow: hidden; padding: 2rem;">

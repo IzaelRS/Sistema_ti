@@ -7,6 +7,7 @@ import { proceduresHandler } from './features/procedures.js';
 import { accountsHandler } from './features/accounts.js';
 import { timelineHandler } from './features/timeline.js';
 import { telephonyHandler } from './features/telephony.js';
+import { monitoringHandler } from './features/monitoring.js';
 
 let currentSection = 'list';
 
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateDateFilters();
     setupEventListeners();
     timelineHandler.init();
+    monitoringHandler.init();
 
     if (auth.init()) {
         console.log('Sessão restaurada:', auth.getUser().email);
@@ -94,7 +96,7 @@ function showApp() {
 }
 
 function updateUI() {
-    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section'].forEach(id => {
+    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section', 'monitoring-section'].forEach(id => {
         dom.hide(id);
     });
 
@@ -137,6 +139,11 @@ function updateUI() {
         case 'telephony':
             dom.show('telephony-section');
             dom.setText('section-title', 'Telefonia');
+            break;
+        case 'monitoring':
+            dom.show('monitoring-section');
+            dom.setText('section-title', 'Monitoramento');
+            monitoringHandler.fetch();
             break;
     }
     applyRolePermissions();
@@ -276,6 +283,7 @@ function setupEventListeners() {
     window.ProceduresHandler = proceduresHandler;
     window.AccountsHandler = accountsHandler;
     window.TelephonyHandler = telephonyHandler;
+    window.monitoringHandler = monitoringHandler;
 
     // Telephony tabs binding
     ['extensions', 'queues', 'blf', 'users'].forEach(tab => {

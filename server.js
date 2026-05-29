@@ -686,6 +686,62 @@ app.get('/api/telephony/users', async (req, res) => {
     }
 });
 
+// --- Monitoramento Proxy ---
+app.get('/api/monitoring/notifications', async (req, res) => {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('http://192.168.3.178/api/monitoring/notifications', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        res.json(data);
+    } catch (err) {
+        console.error('[MONITORAMENTO] Erro ao buscar da API de monitoramento:', err.message);
+        
+        // Retornamos dados de contingência/mock estruturados se a API estiver offline
+        const mockNotifications = [
+            {
+                id: 1,
+                title: "Instabilidade Link Internet",
+                description: "Link da Americanet com alta perda de pacotes no gateway principal.",
+                severity: "warning",
+                source: "Zabbix",
+                created_at: new Date().toISOString()
+            },
+            {
+                id: 2,
+                title: "Uso de CPU Elevado - Servidor BD",
+                description: "Servidor PostgreSQL (192.168.3.15) atingiu 95% de uso de CPU.",
+                severity: "critical",
+                source: "Prometheus",
+                created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString()
+            },
+            {
+                id: 3,
+                title: "Backup Concluído com Sucesso",
+                description: "Backup diário das bases Neo / ERP finalizado sem erros.",
+                severity: "info",
+                source: "CronJob",
+                created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString()
+            }
+        ];
+        
+        res.json({
+            status: "offline",
+            message: "Usando dados locais de contingência. API externa offline.",
+            error: err.message,
+            notifications: mockNotifications
+        });
+    }
+});
+
 // 404 Catch-all para rotas da API
 app.use('/api', (req, res) => {
     console.warn(`[404 NOT FOUND API] ${req.method} ${req.url}`);
