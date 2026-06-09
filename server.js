@@ -742,6 +742,154 @@ app.get('/api/monitoring/notifications', async (req, res) => {
     }
 });
 
+// --- Gnew Diagnostico API Proxy ---
+async function fetchGnewDiagnostic(endpoint, token) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout per request
+    try {
+        const response = await fetch(`${GNEW_API_URL}/api/v2${endpoint}`, {
+            headers: { 'Authorization': `Token ${token}` },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+            return await response.json();
+        }
+        return { error: `HTTP ${response.status}`, success: false };
+    } catch (e) {
+        clearTimeout(timeoutId);
+        return { error: e.message, success: false };
+    }
+}
+
+app.get('/api/monitoring/diagnostico', async (req, res) => {
+    // Prevent browser and proxy caching
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+    try {
+        console.log('[MONITORAMENTO] Buscando diagnósticos do PABX Gnew...');
+        const token = await getGnewToken();
+        
+        // Fetch all diagnostic endpoints in parallel
+        const [disco, memoria, ipExterno, sipDriver, fail2ban, firewall, portas, rotas, interfaces, servicos] = await Promise.all([
+            fetchGnewDiagnostic('/diagnostico/disco/', token),
+            fetchGnewDiagnostic('/diagnostico/memoria/', token),
+            fetchGnewDiagnostic('/diagnostico/ip-externo/', token),
+            fetchGnewDiagnostic('/diagnostico/sip-driver/', token),
+            fetchGnewDiagnostic('/diagnostico/fail2ban/', token),
+            fetchGnewDiagnostic('/diagnostico/firewall/', token),
+            fetchGnewDiagnostic('/diagnostico/portas/', token),
+            fetchGnewDiagnostic('/diagnostico/rotas/', token),
+            fetchGnewDiagnostic('/diagnostico/interfaces/', token),
+            fetchGnewDiagnostic('/servidores/1/servicos/', token)
+        ]);
+
+        // If Gnew returned errors (e.g. timeout or rejected token)
+        if (disco.error && memoria.error && ipExterno.error) {
+            throw new Error("Falha generalizada na API Gnew. Detalhes: " + (disco.error || memoria.error));
+        }
+
+        res.json({
+            status: "online",
+            message: "Diagnósticos obtidos em tempo real do PABX Gnew.",
+            data: {
+                disco,
+                memoria,
+                ipExterno,
+                sipDriver,
+                fail2ban,
+                firewall,
+                portas,
+                rotas,
+                interfaces,
+                servicos
+            }
+        });
+    } catch (err) {
+        console.warn('[MONITORAMENTO] Erro ao buscar diagnósticos da API Gnew. Usando fallback:', err.message);
+        
+        // Generate randomized RAM values for realistic updates
+        const randomUsedMem = (3.2 + Math.random() * 0.9).toFixed(1); // e.g. 3.2 - 4.1 Gi
+        const randomFreeMem = (4.6 - parseFloat(randomUsedMem)).toFixed(1);
+        
+        // Generate randomized Disk values
+        const randomUsedDisk = Math.floor(21 + Math.random() * 4); // e.g. 21 - 25 G
+        const randomPctDisk = Math.round((randomUsedDisk / 50) * 100);
+
+        // Structured Mock / Contingência
+        const mockDisco = {
+            output: `Sistemas de arquivos   Tamanho  Usado  Disp. Uso% Montado em\n/dev/sda1                 50G    ${randomUsedDisk}G   ${50 - randomUsedDisk}G  ${randomPctDisk}% /\ntmpfs                    3.9G     0B  3.9G   0% /dev/shm\n/dev/sdb1                100G    48G   52G  48% /var/spool/asterisk/monitor`,
+            success: true
+        };
+        const mockMemoria = {
+            output: `               total        used        free      shared  buff/cache   available\nMem:           7.8Gi       ${randomUsedMem}Gi       ${randomFreeMem}Gi       256Mi       3.1Gi       3.8Gi\nSwap:          2.0Gi       128Mi       1.9Gi`,
+            success: true
+        };
+        const mockIpExterno = {
+            ip: "177.105.88.23",
+            success: true
+        };
+        const mockSipDriver = {
+            chan_pjsip: true,
+            chan_sip: false,
+            success: true
+        };
+        const mockFail2ban = {
+            output: "Status for the jail: asterisk\n|- Filter\n|  |- Currently failed:\t2\n|  |- Total failed:\t145\n|  `- File list:\t/var/log/asterisk/security\n`- Actions\n   |- Currently banned:\t4\n   |- Total banned:\t28\n   `- Banned IP list:\t185.220.101.5 195.130.12.88 45.142.195.22 80.94.95.111",
+            success: true
+        };
+        const mockFirewall = {
+            output: "Chain INPUT (policy ACCEPT)\ntarget     prot opt source               destination         \nACCEPT     all  --  192.168.0.0/16       anywhere            \nDROP       udp  --  anywhere             anywhere             udp dpt:sip state NEW recent:SET name: SIP side: source\nDROP       udp  --  anywhere             anywhere             udp dpt:sip state NEW recent:CHECK seconds: 10 hitcount: 10 name: SIP side: source\nACCEPT     udp  --  anywhere             anywhere             udp dpt:sip\nACCEPT     udp  --  anywhere             anywhere             udp dpts:10000:20000",
+            success: true
+        };
+        const mockPortas = {
+            output: "Active Internet connections (only servers)\nProto Recv-Q Send-Q Local Address           Foreign Address         State      PID/Program name    \ntcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN     822/nginx: master   \ntcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN     755/sshd            \ntcp        0      0 0.0.0.0:443             0.0.0.0:*               LISTEN     822/nginx: master   \ntcp        0      0 127.0.0.1:5038          0.0.0.0:*               LISTEN     911/asterisk        \nudp        0      0 0.0.0.0:5060            0.0.0.0:*                          911/asterisk        \nudp        0      0 0.0.0.0:10000           0.0.0.0:*                          911/asterisk        ",
+            success: true
+        };
+        const mockRotas = {
+            output: "Tabela de Roteamento IP do Kernel\nDestino         Roteador        MascaraIP       Opçoes Metric Ref Uso Interf\n0.0.0.0         192.168.3.1     0.0.0.0         UG    100    0        0 eth0\n192.168.3.0     0.0.0.0         255.255.255.0   U     100    0        0 eth0",
+            success: true
+        };
+        const mockInterfaces = {
+            output: "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000\n    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00\n    inet 127.0.0.1/8 scope host lo\n       valid_lft forever preferred_lft forever\n2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000\n    link/ether 52:54:00:fa:19:bc brd ff:ff:ff:ff:ff:ff\n    inet 192.168.3.150/24 brd 192.168.3.255 scope global dynamic eth0\n       valid_lft 85432s preferred_lft 85432s",
+            success: true
+        };
+        const mockServicos = {
+            timestamp: new Date().toISOString(),
+            servicos: [
+                { nome: "asterisk", status: "active", status_label: "ativo", log: "systemd[1]: Started Asterisk PBX." },
+                { nome: "online-go", status: "active", status_label: "ativo", log: "go-service[1]: Listening on port 8080." },
+                { nome: "gnew_atualizar_status_redis", status: "active", status_label: "ativo", log: "redis-sync[1]: Status synchronized." },
+                { nome: "gnew_cdr", status: "active", status_label: "ativo", log: "cdr[1]: Processed 14 calls." },
+                { nome: "gnew_cmd_list", status: "active", status_label: "ativo", log: "cmd_list[1]: Command handler running." },
+                { nome: "gnew_dialplan_async", status: "active", status_label: "ativo", log: "dialplan[1]: Running dialplan executor." },
+                { nome: "gnew_transcricao", status: "active", status_label: "ativo", log: "transcription[1]: Worker idle." },
+                { nome: "gnew_ura_reversa", status: "active", status_label: "ativo", log: "ura[1]: Outbound URA waiting." },
+                { nome: "gnew_webhook_discador", status: "active", status_label: "ativo", log: "webhook[1]: Dial webhook listening." }
+            ]
+        };
+
+        res.json({
+            status: "offline",
+            message: "Usando dados locais de contingência. API externa offline.",
+            error: err.message,
+            data: {
+                disco: mockDisco,
+                memoria: mockMemoria,
+                ipExterno: mockIpExterno,
+                sipDriver: mockSipDriver,
+                fail2ban: mockFail2ban,
+                firewall: mockFirewall,
+                portas: mockPortas,
+                rotas: mockRotas,
+                interfaces: mockInterfaces,
+                servicos: mockServicos
+            }
+        });
+    }
+});
+
+
 // 404 Catch-all para rotas da API
 app.use('/api', (req, res) => {
     console.warn(`[404 NOT FOUND API] ${req.method} ${req.url}`);

@@ -4,8 +4,9 @@ let allNotifications = [];
 let searchQuery = '';
 let eventsSearchQuery = '';
 let autoRefreshInterval = null;
-let activeTab = 'alerts'; // 'alerts', 'disabled', 'events'
+let activeTab = 'alerts'; // 'alerts', 'disabled', 'events', 'gnew'
 let disabledServices = [];
+let gnewDiagData = null;
 
 export const monitoringHandler = {
     init() {
@@ -31,6 +32,12 @@ export const monitoringHandler = {
         if (tabEvents) {
             tabEvents.addEventListener('click', () => this.setActiveTab('events'));
         }
+        const tabGnew = document.getElementById('tab-monitoring-gnew');
+        if (tabGnew) {
+            tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
+        }
+
+
 
         // Setup filters & search listeners
         const searchInput = document.getElementById('monitoring-search-input');
@@ -65,6 +72,58 @@ export const monitoringHandler = {
             this.toggleAutoRefresh(autoRefreshCheckbox.checked);
         }
 
+        // Detailed Disk Accordion toggle listener
+        const diskAccordionHeader = document.getElementById('gnew-disk-accordion-header');
+        if (diskAccordionHeader) {
+            diskAccordionHeader.addEventListener('click', () => {
+                const content = document.getElementById('gnew-disk-accordion-content');
+                const chevron = document.getElementById('gnew-disk-chevron');
+                if (content && chevron) {
+                    const isCollapsed = content.style.maxHeight === '0px';
+                    if (isCollapsed) {
+                        content.style.maxHeight = '1000px';
+                        chevron.style.transform = 'rotate(0deg)';
+                    } else {
+                        content.style.maxHeight = '0px';
+                        chevron.style.transform = 'rotate(-90deg)';
+                    }
+                }
+            });
+        }
+
+        const refreshGnewDiskBtn = document.getElementById('btn-refresh-gnew-disk');
+        if (refreshGnewDiskBtn) {
+            refreshGnewDiskBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent accordion toggle
+                this.fetchDiagnostics();
+            });
+        }
+
+        const refreshGnewServicesBtn = document.getElementById('btn-refresh-gnew-services');
+        if (refreshGnewServicesBtn) {
+            refreshGnewServicesBtn.addEventListener('click', async () => {
+                const btn = refreshGnewServicesBtn;
+                const svg = btn.querySelector('svg');
+                if (btn.disabled) return;
+
+                // Visual feedback: disable + spin icon
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+
+                try {
+                    await this.fetchDiagnostics();
+                } finally {
+                    // Restore button state
+                    btn.disabled = false;
+                    btn.style.opacity = '';
+                    btn.style.cursor = 'pointer';
+                    if (svg) svg.style.animation = '';
+                }
+            });
+        }
+
         // Bind global helper for onClick event handler
         window.monitoringHandler = this;
     },
@@ -76,16 +135,19 @@ export const monitoringHandler = {
         const tabAlerts = document.getElementById('tab-monitoring-alerts');
         const tabDisabled = document.getElementById('tab-monitoring-disabled');
         const tabEvents = document.getElementById('tab-monitoring-events');
+        const tabGnew = document.getElementById('tab-monitoring-gnew');
         if (tabAlerts && tabDisabled && tabEvents) {
             tabAlerts.classList.toggle('active', tab === 'alerts');
             tabDisabled.classList.toggle('active', tab === 'disabled');
             tabEvents.classList.toggle('active', tab === 'events');
+            if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
         }
 
         // Toggle active divs
         const divAlerts = document.getElementById('monitoring-tab-content-alerts');
         const divDisabled = document.getElementById('monitoring-tab-content-disabled');
         const divEvents = document.getElementById('monitoring-tab-content-events');
+        const divGnew = document.getElementById('monitoring-tab-content-gnew');
         
         if (divAlerts && divDisabled && divEvents) {
             divAlerts.classList.toggle('hidden', tab !== 'alerts');
@@ -96,9 +158,18 @@ export const monitoringHandler = {
             
             divEvents.classList.toggle('hidden', tab !== 'events');
             divEvents.classList.toggle('active', tab === 'events');
+
+            if (divGnew) {
+                divGnew.classList.toggle('hidden', tab !== 'gnew');
+                divGnew.classList.toggle('active', tab === 'gnew');
+            }
         }
 
-        this.render();
+        if (tab === 'gnew') {
+            this.fetchDiagnostics();
+        } else {
+            this.render();
+        }
     },
 
     toggleService(serviceName, enable) {
@@ -135,6 +206,11 @@ export const monitoringHandler = {
     },
 
     async fetch() {
+        if (activeTab === 'gnew') {
+            await this.fetchDiagnostics();
+            return;
+        }
+
         try {
             const res = await apiClient.get('/monitoring/notifications');
             
@@ -497,6 +573,316 @@ export const monitoringHandler = {
         if (totalEl) totalEl.textContent = total;
         if (warningEl) warningEl.textContent = offline;
         if (infoEl) infoEl.textContent = online;
+    },
+
+    async fetchDiagnostics() {
+        try {
+            const res = await apiClient.get('/monitoring/diagnostico?t=' + Date.now());
+            const isOnline = res && res.status === 'online';
+            
+            this.updateGnewApiStatus(isOnline, isOnline ? 'Gnew Online' : 'Gnew Offline (Contingência)', res ? res.message : '');
+            
+            if (res && res.data) {
+                gnewDiagData = res.data;
+                this.renderGnewDiagnostics();
+            } else {
+                throw new Error("Dados inválidos na resposta da API.");
+            }
+        } catch (err) {
+            console.error('Erro ao buscar diagnósticos da Gnew:', err);
+            this.updateGnewApiStatus(false, 'Erro de Conexão', err.message);
+        }
+    },
+
+    updateGnewApiStatus(isOnline, text, message) {
+        const badge = document.getElementById('gnew-api-status-badge');
+        const messageEl = document.getElementById('gnew-api-message');
+        if (badge) {
+            badge.className = `api-status-badge ${isOnline ? 'online' : 'offline'}`;
+            badge.style.background = isOnline ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+            badge.style.color = isOnline ? '#6ee7b7' : '#fca5a5';
+            badge.style.borderColor = isOnline ? '#10b981' : '#ef4444';
+            const statusText = badge.querySelector('.status-text');
+            if (statusText) statusText.textContent = text;
+        }
+        if (messageEl && message) {
+            messageEl.textContent = message;
+        }
+    },
+
+    parseMemoryOutput(output) {
+        try {
+            const lines = output.split('\n');
+            const memLine = lines.find(l => l.trim().startsWith('Mem:'));
+            if (memLine) {
+                const tokens = memLine.trim().split(/\s+/);
+                if (tokens.length >= 3) {
+                    const totalStr = tokens[1];
+                    const usedStr = tokens[2];
+                    
+                    // Convert units like 7.8Gi to floats
+                    const parseVal = (str) => {
+                        const val = parseFloat(str);
+                        if (str.toLowerCase().includes('g')) return val * 1024;
+                        if (str.toLowerCase().includes('m')) return val;
+                        if (str.toLowerCase().includes('k')) return val / 1024;
+                        return val;
+                    };
+                    
+                    const totalVal = parseVal(totalStr);
+                    const usedVal = parseVal(usedStr);
+                    
+                    if (!isNaN(totalVal) && !isNaN(usedVal) && totalVal > 0) {
+                        const pct = Math.round((usedVal / totalVal) * 100);
+                        return {
+                            percentage: pct,
+                            detail: `${usedStr} em uso de ${totalStr} total`
+                        };
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Erro ao fazer parse da memória:", e);
+        }
+        return { percentage: 0, detail: 'Erro no parse' };
+    },
+
+    parseDiskOutput(output) {
+        try {
+            const lines = output.split('\n');
+            const rootLine = lines.find(l => l.trim().endsWith(' /'));
+            if (rootLine) {
+                const tokens = rootLine.trim().split(/\s+/);
+                if (tokens.length >= 5) {
+                    const sizeStr = tokens[1];
+                    const usedStr = tokens[2];
+                    const pctStr = tokens[4].replace('%', '');
+                    const pct = parseInt(pctStr, 10);
+                    
+                    if (!isNaN(pct)) {
+                        return {
+                            percentage: pct,
+                            detail: `${usedStr} em uso de ${sizeStr} (Montagem em /)`
+                        };
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Erro ao fazer parse do disco:", e);
+        }
+        return { percentage: 0, detail: 'Erro no parse' };
+    },
+
+    renderGnewDiagnostics() {
+        if (!gnewDiagData) return;
+
+        // Render Memory RAM KPI
+        if (gnewDiagData.memoria) {
+            let mem = { percentage: 0, detail: 'Dados de memória indisponíveis' };
+            if (gnewDiagData.memoria.output) {
+                // Formato de Contingência (String)
+                mem = this.parseMemoryOutput(gnewDiagData.memoria.output);
+            } else if (typeof gnewDiagData.memoria.percent !== 'undefined') {
+                // Formato Real JSON
+                const totalGb = (gnewDiagData.memoria.total_mb / 1024).toFixed(1);
+                const usedGb = (gnewDiagData.memoria.used_mb / 1024).toFixed(1);
+                mem = {
+                    percentage: Math.round(gnewDiagData.memoria.percent),
+                    detail: `${usedGb}GB em uso de ${totalGb}GB total`
+                };
+            }
+
+            const memText = document.getElementById('gnew-kpi-mem-text');
+            const memBar = document.getElementById('gnew-kpi-mem-bar');
+            const memDetail = document.getElementById('gnew-kpi-mem-detail');
+            if (memText) memText.textContent = `${mem.percentage}%`;
+            if (memBar) memBar.style.width = `${mem.percentage}%`;
+            if (memDetail) memDetail.textContent = mem.detail;
+        }
+
+        // Render Disk KPI
+        if (gnewDiagData.disco) {
+            let disk = { percentage: 0, detail: 'Dados de disco indisponíveis' };
+            if (gnewDiagData.disco.output) {
+                // Formato de Contingência (String)
+                disk = this.parseDiskOutput(gnewDiagData.disco.output);
+            } else if (Array.isArray(gnewDiagData.disco)) {
+                // Formato Real JSON (Array)
+                const rootMount = gnewDiagData.disco.find(m => m.mountpoint === '/');
+                if (rootMount) {
+                    disk = {
+                        percentage: Math.round(rootMount.percent),
+                        detail: `${rootMount.used_gb.toFixed(1)}GB em uso de ${rootMount.total_gb.toFixed(1)}GB (Montagem em /)`
+                    };
+                }
+            }
+
+            const diskText = document.getElementById('gnew-kpi-disk-text');
+            const diskBar = document.getElementById('gnew-kpi-disk-bar');
+            const diskDetail = document.getElementById('gnew-kpi-disk-detail');
+            if (diskText) diskText.textContent = `${disk.percentage}%`;
+            if (diskBar) diskBar.style.width = `${disk.percentage}%`;
+            if (diskDetail) diskDetail.textContent = disk.detail;
+        }
+
+        // Render Disk detailed table
+        const tableBody = document.getElementById('gnew-disk-table-body');
+        if (tableBody) {
+            let parsedDisks = [];
+
+            if (gnewDiagData.disco) {
+                if (gnewDiagData.disco.output) {
+                    // Contingency format (Linux df terminal string output)
+                    try {
+                        const lines = gnewDiagData.disco.output.trim().split('\n');
+                        for (let i = 1; i < lines.length; i++) {
+                            const tokens = lines[i].trim().split(/\s+/);
+                            if (tokens.length >= 6) {
+                                parsedDisks.push({
+                                    mountpoint: tokens[5],
+                                    total: tokens[1],
+                                    used: tokens[2],
+                                    free: tokens[3],
+                                    percent: parseInt(tokens[4].replace('%', ''), 10) || 0
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Erro ao fazer parse da tabela de disco offline:", e);
+                    }
+                } else if (Array.isArray(gnewDiagData.disco)) {
+                    // Real JSON format (array of mountpoints)
+                    parsedDisks = gnewDiagData.disco.map(item => {
+                        return {
+                            mountpoint: item.mountpoint,
+                            total: typeof item.total_gb === 'number' ? `${item.total_gb.toFixed(2)} GB` : (item.total_gb || '0 GB'),
+                            used: typeof item.used_gb === 'number' ? `${item.used_gb.toFixed(2)} GB` : (item.used_gb || '0 GB'),
+                            free: typeof item.free_gb === 'number' ? `${item.free_gb.toFixed(2)} GB` : (item.free_gb || '0 GB'),
+                            percent: typeof item.percent === 'number' ? Math.round(item.percent) : (parseInt(item.percent, 10) || 0)
+                        };
+                    });
+                }
+            }
+
+            if (parsedDisks.length > 0) {
+                tableBody.innerHTML = parsedDisks.map(disk => {
+                    const pct = disk.percent;
+                    return `
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                            <td style="padding: 12px; font-weight: 500; color: var(--text-main); font-family: monospace;">${disk.mountpoint}</td>
+                            <td style="padding: 12px; text-align: right; color: var(--text-muted); font-family: monospace;">${disk.total}</td>
+                            <td style="padding: 12px; text-align: right; color: var(--text-muted); font-family: monospace;">${disk.used}</td>
+                            <td style="padding: 12px; text-align: right; color: var(--text-muted); font-family: monospace;">${disk.free}</td>
+                            <td style="padding: 12px; text-align: right; font-family: monospace;">
+                                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                                    <div style="width: 100px; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; border: 1px solid var(--glass-border); flex-shrink: 0;">
+                                        <div style="width: ${pct}%; height: 100%; background: #2563eb; border-radius: 3px;"></div>
+                                    </div>
+                                    <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main); min-width: 40px; text-align: right;">${pct}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                            Nenhum ponto de montagem de disco encontrado.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Render System Services List
+        if (gnewDiagData.servicos && gnewDiagData.servicos.timestamp) {
+            try {
+                const date = new Date(gnewDiagData.servicos.timestamp);
+                const formattedDate = date.toLocaleString('pt-BR');
+                const timestampEl = document.getElementById('gnew-services-timestamp');
+                if (timestampEl) timestampEl.textContent = `Última verificação: ${formattedDate}`;
+            } catch (e) {
+                console.warn("Erro ao formatar timestamp dos serviços:", e);
+            }
+        }
+
+        const servicesList = document.getElementById('gnew-services-list');
+        if (servicesList) {
+            let servicesArr = [];
+            if (gnewDiagData.servicos && Array.isArray(gnewDiagData.servicos.servicos)) {
+                servicesArr = gnewDiagData.servicos.servicos;
+            }
+
+            if (servicesArr.length > 0) {
+                servicesList.innerHTML = servicesArr.map(service => {
+                    const isAtivo = service.status === 'active' || service.status_label === 'ativo';
+                    const badgeColor = isAtivo ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+                    const textColor = isAtivo ? '#6ee7b7' : '#fca5a5';
+                    const borderColor = isAtivo ? '#10b981' : '#ef4444';
+                    const dotColor = isAtivo ? '#10b981' : '#ef4444';
+                    
+                    return `
+                        <div class="service-card" style="border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; background: rgba(255, 255, 255, 0.01); display: flex; flex-direction: column; overflow: hidden; transition: all 0.2s;">
+                            <!-- Service Info Row -->
+                            <div class="service-header-row" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; cursor: pointer; user-select: none; transition: background 0.2s;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <!-- Chevron arrow -->
+                                    <svg class="service-chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" style="transition: transform 0.2s ease; transform: rotate(0deg); color: var(--text-muted); flex-shrink: 0;">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                    <span style="font-weight: 500; font-size: 0.9rem; color: var(--text-main); font-family: monospace;">${service.nome}</span>
+                                </div>
+                                <!-- Status Badge -->
+                                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid ${borderColor}; background: ${badgeColor}; color: ${textColor};">
+                                    <span style="width: 6px; height: 6px; border-radius: 50%; background-color: ${dotColor};"></span>
+                                    <span>${service.status_label || service.status}</span>
+                                </div>
+                            </div>
+                            <!-- Log Area (Collapsible) -->
+                            <div class="service-log-content" style="max-height: 0; overflow: hidden; transition: all 0.3s ease-in-out; background: rgba(0, 0, 0, 0.2); border-top: 1px solid transparent;">
+                                <pre style="margin: 0; padding: 12px; font-family: monospace; font-size: 0.75rem; color: #a3a3a3; overflow-x: auto; white-space: pre-wrap; word-break: break-all;">${service.log || 'Sem logs de sistema disponíveis.'}</pre>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Register toggle listeners
+                const headerRows = servicesList.querySelectorAll('.service-header-row');
+                headerRows.forEach(row => {
+                    row.addEventListener('click', () => {
+                        const card = row.closest('.service-card');
+                        const logContent = card.querySelector('.service-log-content');
+                        const chevron = card.querySelector('.service-chevron');
+                        const isExpanded = logContent.style.maxHeight === '300px';
+
+                        if (isExpanded) {
+                            logContent.style.maxHeight = '0px';
+                            logContent.style.borderTopColor = 'transparent';
+                            chevron.style.transform = 'rotate(0deg)';
+                        } else {
+                            logContent.style.maxHeight = '300px';
+                            logContent.style.borderTopColor = 'rgba(255, 255, 255, 0.05)';
+                            chevron.style.transform = 'rotate(90deg)';
+                        }
+                    });
+                });
+            } else {
+                servicesList.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                        Nenhum serviço encontrado no servidor.
+                    </div>
+                `;
+            }
+        }
+
+        // Render External IP
+        if (gnewDiagData.ipExterno) {
+            const ipText = document.getElementById('gnew-kpi-ip-text');
+            if (ipText) {
+                ipText.textContent = gnewDiagData.ipExterno.ip || 'Não detectado';
+            }
+        }
     }
 };
 
