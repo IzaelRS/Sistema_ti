@@ -1,53 +1,21 @@
 import { apiClient } from '../api/client.js';
 
-let allNotifications = [];
-let searchQuery = '';
+let gnewAlerts = []; // alertas sinteticos gerados a partir dos dados Gnew
 let eventsSearchQuery = '';
-let autoRefreshInterval = null;
-let activeTab = 'alerts'; // 'alerts', 'disabled', 'events', 'gnew'
-let disabledServices = [];
+let activeTab = 'alerts'; // 'alerts', 'events', 'gnew'
 let gnewDiagData = null;
 
 export const monitoringHandler = {
     init() {
-        // Load disabled services from localStorage
-        try {
-            const stored = localStorage.getItem('monitoring_disabled_services');
-            disabledServices = stored ? JSON.parse(stored) : [];
-        } catch (e) {
-            console.error('Erro ao ler localStorage:', e);
-            disabledServices = [];
-        }
-
         // Tab switching listeners
         const tabAlerts = document.getElementById('tab-monitoring-alerts');
-        if (tabAlerts) {
-            tabAlerts.addEventListener('click', () => this.setActiveTab('alerts'));
-        }
-        const tabDisabled = document.getElementById('tab-monitoring-disabled');
-        if (tabDisabled) {
-            tabDisabled.addEventListener('click', () => this.setActiveTab('disabled'));
-        }
+        if (tabAlerts) tabAlerts.addEventListener('click', () => this.setActiveTab('alerts'));
         const tabEvents = document.getElementById('tab-monitoring-events');
-        if (tabEvents) {
-            tabEvents.addEventListener('click', () => this.setActiveTab('events'));
-        }
+        if (tabEvents) tabEvents.addEventListener('click', () => this.setActiveTab('events'));
         const tabGnew = document.getElementById('tab-monitoring-gnew');
-        if (tabGnew) {
-            tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
-        }
+        if (tabGnew) tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
 
-
-
-        // Setup filters & search listeners
-        const searchInput = document.getElementById('monitoring-search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                searchQuery = e.target.value.toLowerCase();
-                this.render();
-            });
-        }
-
+        // Search in event history
         const eventsSearchInput = document.getElementById('monitoring-events-search-input');
         if (eventsSearchInput) {
             eventsSearchInput.addEventListener('input', (e) => {
@@ -56,23 +24,13 @@ export const monitoringHandler = {
             });
         }
 
+        // Refresh button (global) - triggers Gnew fetch
         const refreshBtn = document.getElementById('btn-refresh-monitoring');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.fetch();
-            });
+            refreshBtn.addEventListener('click', () => this.fetchDiagnostics());
         }
 
-        const autoRefreshCheckbox = document.getElementById('monitoring-auto-refresh');
-        if (autoRefreshCheckbox) {
-            autoRefreshCheckbox.addEventListener('change', (e) => {
-                this.toggleAutoRefresh(e.target.checked);
-            });
-            // Initial state
-            this.toggleAutoRefresh(autoRefreshCheckbox.checked);
-        }
-
-        // Detailed Disk Accordion toggle listener
+        // Disk Accordion toggle
         const diskAccordionHeader = document.getElementById('gnew-disk-accordion-header');
         if (diskAccordionHeader) {
             diskAccordionHeader.addEventListener('click', () => {
@@ -94,7 +52,7 @@ export const monitoringHandler = {
         const refreshGnewDiskBtn = document.getElementById('btn-refresh-gnew-disk');
         if (refreshGnewDiskBtn) {
             refreshGnewDiskBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // prevent accordion toggle
+                e.stopPropagation();
                 this.fetchDiagnostics();
             });
         }
@@ -105,17 +63,13 @@ export const monitoringHandler = {
                 const btn = refreshGnewServicesBtn;
                 const svg = btn.querySelector('svg');
                 if (btn.disabled) return;
-
-                // Visual feedback: disable + spin icon
                 btn.disabled = true;
                 btn.style.opacity = '0.6';
                 btn.style.cursor = 'not-allowed';
                 if (svg) svg.style.animation = 'spin 0.8s linear infinite';
-
                 try {
                     await this.fetchDiagnostics();
                 } finally {
-                    // Restore button state
                     btn.disabled = false;
                     btn.style.opacity = '';
                     btn.style.cursor = 'pointer';
@@ -124,7 +78,7 @@ export const monitoringHandler = {
             });
         }
 
-        // Bind global helper for onClick event handler
+        // Bind global helper
         window.monitoringHandler = this;
     },
 
@@ -133,36 +87,28 @@ export const monitoringHandler = {
         
         // Toggle active classes on tab buttons
         const tabAlerts = document.getElementById('tab-monitoring-alerts');
-        const tabDisabled = document.getElementById('tab-monitoring-disabled');
         const tabEvents = document.getElementById('tab-monitoring-events');
         const tabGnew = document.getElementById('tab-monitoring-gnew');
-        if (tabAlerts && tabDisabled && tabEvents) {
-            tabAlerts.classList.toggle('active', tab === 'alerts');
-            tabDisabled.classList.toggle('active', tab === 'disabled');
-            tabEvents.classList.toggle('active', tab === 'events');
-            if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
-        }
+        if (tabAlerts) tabAlerts.classList.toggle('active', tab === 'alerts');
+        if (tabEvents) tabEvents.classList.toggle('active', tab === 'events');
+        if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
 
         // Toggle active divs
         const divAlerts = document.getElementById('monitoring-tab-content-alerts');
-        const divDisabled = document.getElementById('monitoring-tab-content-disabled');
         const divEvents = document.getElementById('monitoring-tab-content-events');
         const divGnew = document.getElementById('monitoring-tab-content-gnew');
         
-        if (divAlerts && divDisabled && divEvents) {
+        if (divAlerts) {
             divAlerts.classList.toggle('hidden', tab !== 'alerts');
             divAlerts.classList.toggle('active', tab === 'alerts');
-            
-            divDisabled.classList.toggle('hidden', tab !== 'disabled');
-            divDisabled.classList.toggle('active', tab === 'disabled');
-            
+        }
+        if (divEvents) {
             divEvents.classList.toggle('hidden', tab !== 'events');
             divEvents.classList.toggle('active', tab === 'events');
-
-            if (divGnew) {
-                divGnew.classList.toggle('hidden', tab !== 'gnew');
-                divGnew.classList.toggle('active', tab === 'gnew');
-            }
+        }
+        if (divGnew) {
+            divGnew.classList.toggle('hidden', tab !== 'gnew');
+            divGnew.classList.toggle('active', tab === 'gnew');
         }
 
         if (tab === 'gnew') {
@@ -172,404 +118,148 @@ export const monitoringHandler = {
         }
     },
 
-    toggleService(serviceName, enable) {
-        if (enable) {
-            // Remove from disabled list
-            disabledServices = disabledServices.filter(s => s !== serviceName);
-        } else {
-            // Add to disabled list
-            if (!disabledServices.includes(serviceName)) {
-                disabledServices.push(serviceName);
-            }
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('monitoring_disabled_services', JSON.stringify(disabledServices));
-        
-        this.render();
-    },
-
-    toggleAutoRefresh(enabled) {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-            autoRefreshInterval = null;
-        }
-
-        if (enabled) {
-            autoRefreshInterval = setInterval(() => {
-                const activeNav = document.querySelector('.nav-btn.active');
-                if (activeNav && activeNav.dataset.section === 'monitoring') {
-                    this.fetch();
-                }
-            }, 30000); // 30 seconds
-        }
-    },
-
-    async fetch() {
-        if (activeTab === 'gnew') {
-            await this.fetchDiagnostics();
-            return;
-        }
-
-        try {
-            const res = await apiClient.get('/monitoring/notifications');
-            
-            let rawList = [];
-            let isOffline = false;
-
-            if (Array.isArray(res)) {
-                rawList = res;
-                this.updateApiStatus(true, "API Online (OLIJUS)");
-            } else if (res && Array.isArray(res.notifications)) {
-                rawList = res.notifications;
-                isOffline = res.status === 'offline';
-                this.updateApiStatus(!isOffline, isOffline ? "API Offline (Contingência)" : "API Online (OLIJUS)");
-            } else if (res && Array.isArray(res.data)) {
-                rawList = res.data;
-                this.updateApiStatus(true, "API Online (OLIJUS)");
-            } else {
-                this.updateApiStatus(false, "Resposta Inválida");
-            }
-
-            // Filter to 30 days
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-            allNotifications = rawList
-                .map(item => this.parseNotification(item))
-                .filter(item => {
-                    const itemDate = new Date(item.created_at);
-                    return itemDate >= thirtyDaysAgo;
-                });
-                
-            this.render();
-        } catch (err) {
-            console.error('Erro ao buscar notificações de monitoramento:', err);
-            this.updateApiStatus(false, "Erro de Conexão");
-            
-            const gridAlerts = document.getElementById('monitoring-alerts-grid');
-            if (gridAlerts && allNotifications.length === 0) {
-                gridAlerts.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 3rem; background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.1); border-radius: var(--border-radius);">
-                        <h4 style="color: #ef4444; margin-bottom: 5px;">Erro ao Carregar Monitoramento</h4>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">Não foi possível estabelecer contato com a API. Detalhes: ${err.message}</p>
-                    </div>
-                `;
-            }
-        }
-    },
-
-    parseNotification(item) {
-        // Derive severity
-        let severity = 'info';
-        const msgUpper = (item.message || '').toUpperCase();
-        
-        // If it states the service is restored or resolved, treat as success/restored
-        if (msgUpper.includes('RESTAURADO') || msgUpper.includes('RESTAURADA') || msgUpper.includes('RESOLVIDO') || msgUpper.includes('RESOLVIDA')) {
-            severity = 'success';
-        } else if (msgUpper.includes('FALHA') || msgUpper.includes('DOWN') || msgUpper.includes('ERROR') || msgUpper.includes('DESCONECTADO') || msgUpper.includes('CRITICAL')) {
-            severity = 'critical';
-        } else if (msgUpper.includes('WARNING') || msgUpper.includes('ALERTA') || msgUpper.includes('AVISO') || msgUpper.includes('INSTABILIDADE')) {
-            severity = 'warning';
-        } else if (msgUpper.includes('SUCESSO') || msgUpper.includes('ADICIONADO') || msgUpper.includes('NOVO') || msgUpper.includes('DECOLAGEM')) {
-            severity = 'success';
-        }
-
-        // Extract IP (if available in description or message)
-        let ip = '';
-        const ipMatch = (item.message || '').match(/\((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\)/) || (item.message || '').match(/\(([^)]+)\)/);
-        if (ipMatch) {
-            ip = ipMatch[1].trim();
-        }
-
-        // Parse Title & Description
-        let title = 'Notificação';
-        let description = item.message || '';
-        
-        if (item.message) {
-            const lines = item.message.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            if (lines.length > 0) {
-                title = lines[0];
-                if (lines.length > 1) {
-                    description = lines.slice(1).join('\n');
-                } else {
-                    description = lines[0];
-                    if (title.length > 45) {
-                        title = item.type === 'new_device' ? 'Novo Dispositivo' : 'Alerta de Monitoramento';
-                        description = lines[0];
-                    }
-                }
-            }
-        }
-
-        return {
-            id: item.id || Math.random().toString(),
-            title: title,
-            description: description,
-            severity: severity,
-            source: 'OLIJUS',
-            ip: ip,
-            created_at: item.timestamp || item.created_at || new Date().toISOString()
-        };
-    },
-
-    updateApiStatus(isOnline, text) {
-        const badge = document.getElementById('monitoring-api-status');
-        if (badge) {
-            badge.className = `api-status-badge ${isOnline ? 'online' : 'offline'}`;
-            const statusText = badge.querySelector('.status-text');
-            if (statusText) statusText.textContent = text;
-        }
-    },
-
-    getProcessedServices() {
-        const servicesMap = {};
-
-        allNotifications.forEach(item => {
-            let serviceName = '';
-            let ip = '';
-            
-            // Extract service name and IP from description or title
-            const serviceMatch = (item.description || '').match(/O serviço ([^\(]+)\s*(?:\(([^)]+)\))?/i) || 
-                                 (item.title || '').match(/O serviço ([^\(]+)\s*(?:\(([^)]+)\))?/i);
-            const pingMatch = (item.description || '').match(/dispositivo ([^\(]+)\s*(?:\(([^)]+)\))?/i);
-
-            if (serviceMatch) {
-                serviceName = serviceMatch[1].trim();
-                ip = serviceMatch[2] ? serviceMatch[2].trim() : '';
-            } else if (pingMatch) {
-                serviceName = pingMatch[1].trim();
-                ip = pingMatch[2] ? pingMatch[2].trim() : '';
-            } else {
-                serviceName = item.title;
-            }
-
-            // Clean service name of symbols
-            serviceName = serviceName.replace(/[🚀🛰️🛸🌟🛸]/g, '').trim();
-
-            if (!serviceName) return;
-
-            const key = serviceName.toLowerCase();
-            const isOffline = item.severity === 'critical' || item.severity === 'warning';
-
-            if (!servicesMap[key]) {
-                servicesMap[key] = {
-                    name: serviceName,
-                    ip: ip,
-                    status: isOffline ? 'offline' : 'online',
-                    lastUpdated: item.created_at
-                };
-            } else {
-                // Determine status based on the newest event chronologically
-                const isNewer = new Date(item.created_at) > new Date(servicesMap[key].lastUpdated);
-                if (isNewer) {
-                    servicesMap[key].status = isOffline ? 'offline' : 'online';
-                    servicesMap[key].lastUpdated = item.created_at;
-                }
-                
-                // Retain IP if found
-                if (ip && !servicesMap[key].ip) {
-                    servicesMap[key].ip = ip;
-                }
-            }
-        });
-
-        return Object.values(servicesMap);
-    },
-
     render() {
-        const services = this.getProcessedServices();
-        
-        // Filter out services based on disabled state
-        let activeServices = services.filter(s => !disabledServices.includes(s.name));
-        const disabledServicesList = services.filter(s => disabledServices.includes(s.name));
-
-        // Sort active services based on localStorage drag sequence
-        const savedOrder = JSON.parse(localStorage.getItem('monitoring_services_order') || '[]');
-        if (savedOrder.length > 0) {
-            activeServices.sort((a, b) => {
-                let idxA = savedOrder.indexOf(a.name);
-                let idxB = savedOrder.indexOf(b.name);
-                if (idxA === -1) idxA = 999;
-                if (idxB === -1) idxB = 999;
-                return idxA - idxB;
-            });
-        }
-
-        // Update KPIs with active services only
-        this.updateKPIs(activeServices);
-
+        // Histórico = apenas alertas Gnew (threshold)
         if (activeTab === 'alerts') {
-            this.renderActiveServices(activeServices);
-        } else if (activeTab === 'disabled') {
-            this.renderDisabledServices(disabledServicesList);
+            this.renderGnewServicesStatus();
         } else {
-            this.renderEvents();
+            this.renderEvents(gnewAlerts);
         }
     },
 
-    renderActiveServices(activeList) {
+    // Alertas Ativos: lista compacta de serviços Gnew
+    renderGnewServicesStatus() {
         const grid = document.getElementById('monitoring-alerts-grid');
         if (!grid) return;
 
-        // Apply search query
-        const filtered = activeList.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery));
+        // Troca grid por lista
+        grid.style.display = 'flex';
+        grid.style.flexDirection = 'column';
+        grid.style.gap = '0';
 
-        if (filtered.length === 0) {
+        if (!gnewDiagData || !gnewDiagData.servicos || !Array.isArray(gnewDiagData.servicos.servicos) || gnewDiagData.servicos.servicos.length === 0) {
             grid.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-muted);">
-                    Nenhum serviço ativo encontrado.
+                <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de serviço disponível.</p>
+                    <p style="font-size: 0.85rem;">Acesse a aba <strong>Gnew</strong> para carregar os dados do PABX.</p>
                 </div>
             `;
             return;
         }
 
-        grid.innerHTML = filtered.map(s => {
-            const statusClass = s.status === 'offline' ? 'warning' : 'success';
-            const statusLabel = s.status === 'offline' ? 'Offline' : 'Online';
+        const services = gnewDiagData.servicos.servicos;
+        const total = services.length;
+        const offline = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
+        const online = total - offline;
 
-            return `
-                <div class="notification-card ${statusClass}" draggable="true" data-service="${s.name}" style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 10px; cursor: grab;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; pointer-events: none;">
-                        <div>
-                            <h3 class="notification-title" style="font-size: 1.05rem; font-weight: 600; color: var(--text-main); line-height: 1.4;">${s.name}</h3>
-                            ${s.ip ? `<span style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 4px;">IP: ${s.ip}</span>` : ''}
-                        </div>
-                        <span class="severity-badge ${statusClass}" style="font-size: 0.75rem; padding: 3px 8px;">${statusLabel}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
-                        <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #fca5a5; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
-                                onclick="window.monitoringHandler.toggleService('${s.name}', false)">
-                            Desativar
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        this.setupDragAndDrop(grid);
-    },
-
-    setupDragAndDrop(grid) {
-        const cards = grid.querySelectorAll('.notification-card[draggable="true"]');
-        
-        cards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-                card.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-            });
-            
-            card.addEventListener('dragend', () => {
-                card.classList.remove('dragging');
-                // Persist the actual visual order
-                const orderedCards = Array.from(grid.querySelectorAll('.notification-card[data-service]'));
-                const newOrder = orderedCards.map(c => c.dataset.service);
-                localStorage.setItem('monitoring_services_order', JSON.stringify(newOrder));
-            });
-        });
-
-        if (!grid.dataset.dragOverAttached) {
-            grid.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                const draggingCard = grid.querySelector('.dragging');
-                if (!draggingCard) return;
-
-                const afterElement = getDragAfterElement(grid, e.clientY, e.clientX);
-                if (afterElement == null) {
-                    grid.appendChild(draggingCard);
-                } else {
-                    grid.insertBefore(draggingCard, afterElement);
-                }
-            });
-            grid.dataset.dragOverAttached = 'true';
-        }
-    },
-
-    renderDisabledServices(disabledList) {
-        const grid = document.getElementById('monitoring-disabled-grid');
-        if (!grid) return;
-
-        if (disabledList.length === 0) {
-            grid.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-muted);">
-                    Nenhum serviço desativado.
-                </div>
-            `;
-            return;
-        }
-
-        grid.innerHTML = disabledList.map(s => {
-            return `
-                <div class="notification-card info" style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 10px; opacity: 0.75;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;">
-                        <h3 class="notification-title" style="font-size: 1.05rem; font-weight: 600; color: var(--text-muted); line-height: 1.4; text-decoration: line-through;">${s.name}</h3>
-                        <span class="severity-badge info" style="font-size: 0.75rem; padding: 3px 8px; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);">Desativado</span>
-                    </div>
-                    <div style="display: flex; align-items: center; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 4px;">
-                        <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #6ee7b7; border-radius: 6px; cursor: pointer; transition: all 0.2s;"
-                                onclick="window.monitoringHandler.toggleService('${s.name}', true)">
-                            Ativar
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    },
-
-    renderEvents() {
-        const grid = document.getElementById('monitoring-events-grid');
-        if (!grid) return;
-
-        const filtered = allNotifications.filter(item => {
-            return !eventsSearchQuery || (item.title || '').toLowerCase().includes(eventsSearchQuery);
-        });
-
-        if (filtered.length === 0) {
-            grid.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 4rem; color: var(--text-muted);">
-                    Nenhum evento encontrado no histórico com os filtros atuais.
-                </div>
-            `;
-            return;
-        }
-
-        grid.innerHTML = filtered.map(item => {
-            const timeStr = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : 'Sem data';
-            const severityClass = item.severity || 'info';
-            
-            let severityLabel = 'Info';
-            if (severityClass === 'critical') severityLabel = 'Crítico';
-            else if (severityClass === 'warning') severityLabel = 'Alerta';
-            else if (severityClass === 'success') severityLabel = 'Sucesso';
-
-            return `
-                <div class="notification-card ${severityClass}" style="padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px; width: 100%;">
-                        <div>
-                            <h3 class="notification-title" style="font-size: 1rem; font-weight: 600; line-height: 1.4; margin: 0; word-break: break-word; color: var(--text-main);">${item.title}</h3>
-                            ${item.ip ? `<span style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace; display: block; margin-top: 4px;">IP: ${item.ip}</span>` : ''}
-                        </div>
-                        <span class="severity-badge ${severityClass}" style="font-size: 0.7rem; padding: 3px 8px;">${severityLabel}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 8px; margin-top: 2px;">
-                        <span style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">
-                            ${timeStr}
-                        </span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    },
-
-    updateKPIs(activeServices) {
-        let total = activeServices.length;
-        let offline = activeServices.filter(s => s.status === 'offline').length;
-        let online = activeServices.filter(s => s.status === 'online').length;
-
+        // Update KPIs
         const totalEl = document.getElementById('monitor-kpi-total');
         const warningEl = document.getElementById('monitor-kpi-warning');
         const infoEl = document.getElementById('monitor-kpi-info');
+        if (totalEl) totalEl.textContent = total;
+        if (warningEl) warningEl.textContent = offline;
+        if (infoEl) infoEl.textContent = online;
 
+        grid.innerHTML = `
+            <div class="monitor-list">
+                <div class="monitor-list-header">
+                    <span class="monitor-list-col-name">Serviço</span>
+                    <span class="monitor-list-col-status">Status</span>
+                </div>
+                ${services.map((svc, idx) => {
+                    const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
+                    const dotColor = isAtivo ? '#10b981' : '#ef4444';
+                    const statusLabel = isAtivo ? 'Online' : (svc.status_label || svc.status || 'Offline');
+                    const badgeBg = isAtivo ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+                    const badgeColor = isAtivo ? '#6ee7b7' : '#fca5a5';
+                    const badgeBorder = isAtivo ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+                    const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+                    return `
+                        <div class="monitor-list-row" style="background: ${rowBg};">
+                            <div class="monitor-list-col-name">
+                                <span class="monitor-dot" style="background: ${dotColor};"></span>
+                                <span class="monitor-svc-name">${svc.nome}</span>
+                            </div>
+                            <div class="monitor-list-col-status">
+                                <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            </div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+    },
+
+    renderEvents(eventsToRender) {
+        const grid = document.getElementById('monitoring-events-grid');
+        if (!grid) return;
+
+        // Troca grid por lista
+        grid.style.display = 'flex';
+        grid.style.flexDirection = 'column';
+        grid.style.gap = '0';
+
+        const list = eventsToRender || [];
+        const filtered = list.filter(item =>
+            !eventsSearchQuery || (item.title || '').toLowerCase().includes(eventsSearchQuery)
+        );
+
+        if (filtered.length === 0) {
+            grid.innerHTML = `
+                <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
+                    Nenhum alerta de threshold registrado no momento.
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = `
+            <div class="monitor-list">
+                <div class="monitor-list-header">
+                    <span class="monitor-list-col-name">Evento</span>
+                    <span class="monitor-list-col-sev">Severidade</span>
+                    <span class="monitor-list-col-time">Horário</span>
+                </div>
+                ${filtered.map((item, idx) => {
+                    const severityClass = item.severity || 'info';
+                    let severityLabel = 'Info';
+                    let dotColor = '#3b82f6';
+                    let badgeBg = 'rgba(59,130,246,0.12)';
+                    let badgeColor = '#93c5fd';
+                    let badgeBorder = 'rgba(59,130,246,0.3)';
+                    if (severityClass === 'critical') {
+                        severityLabel = 'Crítico'; dotColor = '#ef4444';
+                        badgeBg = 'rgba(239,68,68,0.12)'; badgeColor = '#fca5a5'; badgeBorder = 'rgba(239,68,68,0.3)';
+                    } else if (severityClass === 'warning') {
+                        severityLabel = 'Alerta'; dotColor = '#f59e0b';
+                        badgeBg = 'rgba(245,158,11,0.12)'; badgeColor = '#fde047'; badgeBorder = 'rgba(245,158,11,0.3)';
+                    } else if (severityClass === 'success') {
+                        severityLabel = 'Ok'; dotColor = '#10b981';
+                        badgeBg = 'rgba(16,185,129,0.12)'; badgeColor = '#6ee7b7'; badgeBorder = 'rgba(16,185,129,0.3)';
+                    }
+                    const timeStr = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-';
+                    const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+                    return `
+                        <div class="monitor-list-row" style="background: ${rowBg};">
+                            <div class="monitor-list-col-name">
+                                <span class="monitor-dot" style="background: ${dotColor};"></span>
+                                <div>
+                                    <span class="monitor-svc-name">${item.title}</span>
+                                    ${item.description ? `<span class="monitor-svc-desc">${item.description}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="monitor-list-col-sev">
+                                <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${severityLabel}</span>
+                            </div>
+                            <div class="monitor-list-col-time">${timeStr}</div>
+                        </div>`;
+                }).join('')}
+            </div>`;
+    },
+
+    updateKPIs(total, offline) {
+        const online = total - offline;
+        const totalEl = document.getElementById('monitor-kpi-total');
+        const warningEl = document.getElementById('monitor-kpi-warning');
+        const infoEl = document.getElementById('monitor-kpi-info');
         if (totalEl) totalEl.textContent = total;
         if (warningEl) warningEl.textContent = offline;
         if (infoEl) infoEl.textContent = online;
@@ -882,6 +572,112 @@ export const monitoringHandler = {
             if (ipText) {
                 ipText.textContent = gnewDiagData.ipExterno.ip || 'Não detectado';
             }
+        }
+
+        // Check thresholds and generate alerts
+        this.checkGnewThresholds();
+    },
+
+    // -----------------------------------------------------------------------
+    // checkGnewThresholds — Verifica limites e injeta alertas no histórico
+    //   RAM    >= 90%  → alerta crítico
+    //   Disco  >= 80%  → alerta de aviso (qualquer ponto de montagem)
+    //   Serviço off    → alerta crítico por serviço
+    // Os alertas ficam ativos até o valor normalizar (são recalculados a cada
+    // chamada e não persistem entre sessões — apenas na memória da tab).
+    // -----------------------------------------------------------------------
+    checkGnewThresholds() {
+        if (!gnewDiagData) return;
+
+        const RAM_THRESHOLD  = 90; // %
+        const DISK_THRESHOLD = 80; // %
+        const now = new Date().toISOString();
+        const newAlerts = [];
+
+        // --- RAM ---
+        let ramPct = 0;
+        if (gnewDiagData.memoria) {
+            if (gnewDiagData.memoria.output) {
+                ramPct = this.parseMemoryOutput(gnewDiagData.memoria.output).percentage;
+            } else if (typeof gnewDiagData.memoria.percent !== 'undefined') {
+                ramPct = Math.round(gnewDiagData.memoria.percent);
+            }
+        }
+        if (ramPct >= RAM_THRESHOLD) {
+            newAlerts.push({
+                id: 'gnew-alert-ram',
+                title: `⚠️ Uso de RAM crítico: ${ramPct}%`,
+                description: `O uso de memória RAM atingiu ${ramPct}%, superando o limite de ${RAM_THRESHOLD}%. Verifique os processos em execução no PABX.`,
+                severity: 'critical',
+                source: 'Gnew Monitor',
+                ip: '',
+                created_at: now,
+                _gnewAlert: true
+            });
+        }
+
+        // --- Disco (todos os pontos de montagem) ---
+        let disks = [];
+        if (gnewDiagData.disco) {
+            if (gnewDiagData.disco.output) {
+                // Parse contingency string
+                try {
+                    const lines = gnewDiagData.disco.output.trim().split('\n');
+                    for (let i = 1; i < lines.length; i++) {
+                        const t = lines[i].trim().split(/\s+/);
+                        if (t.length >= 6) {
+                            disks.push({ mountpoint: t[5], percent: parseInt(t[4].replace('%', ''), 10) || 0 });
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            } else if (Array.isArray(gnewDiagData.disco)) {
+                disks = gnewDiagData.disco.map(d => ({ mountpoint: d.mountpoint, percent: Math.round(d.percent || 0) }));
+            }
+        }
+        disks.forEach(disk => {
+            if (disk.percent >= DISK_THRESHOLD) {
+                newAlerts.push({
+                    id: `gnew-alert-disk-${disk.mountpoint}`,
+                    title: `⚠️ Disco (${disk.mountpoint}): ${disk.percent}%`,
+                    description: `O ponto de montagem "${disk.mountpoint}" está com ${disk.percent}% de uso, superando o limite de ${DISK_THRESHOLD}%. Verifique o espaço disponível.`,
+                    severity: disk.percent >= 95 ? 'critical' : 'warning',
+                    source: 'Gnew Monitor',
+                    ip: '',
+                    created_at: now,
+                    _gnewAlert: true
+                });
+            }
+        });
+
+        // --- Serviços Gnew offline ---
+        if (gnewDiagData.servicos && Array.isArray(gnewDiagData.servicos.servicos)) {
+            gnewDiagData.servicos.servicos.forEach(svc => {
+                const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
+                if (!isAtivo) {
+                    newAlerts.push({
+                        id: `gnew-alert-svc-${svc.nome}`,
+                        title: `🔴 Serviço offline: ${svc.nome}`,
+                        description: `O serviço "${svc.nome}" está com status "${svc.status_label || svc.status}". Verifique o systemd do PABX.`,
+                        severity: 'critical',
+                        source: 'Gnew Monitor',
+                        ip: '',
+                        created_at: now,
+                        _gnewAlert: true
+                    });
+                }
+            });
+        }
+
+        // Substitui alertas Gnew anteriores pelos recém-calculados
+        gnewAlerts = newAlerts;
+
+        // Se há alertas ativos, re-renderiza o histórico caso esteja visível
+        if (activeTab === 'events') {
+            const allEvents = [
+                ...allNotifications,
+                ...gnewAlerts
+            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            this.renderEvents(allEvents);
         }
     }
 };

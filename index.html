@@ -427,7 +427,6 @@
                         <!-- Submenu / Abas de Monitoramento -->
                         <div class="accounts-tabs-nav" style="flex-shrink: 0; margin-bottom: 1.5rem;">
                             <button class="acc-tab-btn active" id="tab-monitoring-alerts" data-monitoring-tab="alerts">Alertas Ativos</button>
-                            <button class="acc-tab-btn" id="tab-monitoring-disabled" data-monitoring-tab="disabled">Serviços Desativados</button>
                             <button class="acc-tab-btn" id="tab-monitoring-events" data-monitoring-tab="events">Histórico de Eventos</button>
                             <button class="acc-tab-btn" id="tab-monitoring-gnew" data-monitoring-tab="gnew">Gnew</button>
                         </div>
@@ -469,15 +468,7 @@
                             </div>
                         </div>
 
-                        <!-- ABA 2: SERVIÇOS DESATIVADOS -->
-                        <div id="monitoring-tab-content-disabled" class="monitoring-tab-content hidden">
-                            <div class="monitoring-filters" style="margin-bottom: 1.5rem;">
-                                <span style="color: var(--text-muted); font-size: 0.95rem;">Serviços desativados (off) ocultados dos alertas e avisos ativos.</span>
-                            </div>
-                            <div class="monitoring-grid" id="monitoring-disabled-grid">
-                                <!-- Hidden services will be rendered dynamically by JS -->
-                            </div>
-                        </div>
+
 
                         <!-- ABA 3: HISTÓRICO DE EVENTOS -->
                         <div id="monitoring-tab-content-events" class="monitoring-tab-content hidden">
