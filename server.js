@@ -735,21 +735,28 @@ app.get('/api/monitoring/diagnostico', async (req, res) => {
             throw new Error("Falha generalizada na API Gnew. Detalhes: " + (disco.error || memoria.error));
         }
 
+        const data = {
+            disco,
+            memoria,
+            ipExterno,
+            sipDriver,
+            fail2ban,
+            firewall,
+            portas,
+            rotas,
+            interfaces,
+            servicos
+        };
+
+        // Run threshold check asynchronously (don't block response)
+        runGnewDiagnosticsCheckFromData(data).catch(err => {
+            console.error('[MONITORAMENTO] Erro ao checar thresholds dos dados reais:', err);
+        });
+
         res.json({
             status: "online",
             message: "Diagnósticos obtidos em tempo real do PABX Gnew.",
-            data: {
-                disco,
-                memoria,
-                ipExterno,
-                sipDriver,
-                fail2ban,
-                firewall,
-                portas,
-                rotas,
-                interfaces,
-                servicos
-            }
+            data
         });
     } catch (err) {
         console.warn('[MONITORAMENTO] Erro ao buscar diagnósticos da API Gnew. Usando fallback:', err.message);
@@ -815,26 +822,213 @@ app.get('/api/monitoring/diagnostico', async (req, res) => {
             ]
         };
 
+        const data = {
+            disco: mockDisco,
+            memoria: mockMemoria,
+            ipExterno: mockIpExterno,
+            sipDriver: mockSipDriver,
+            fail2ban: mockFail2ban,
+            firewall: mockFirewall,
+            portas: mockPortas,
+            rotas: mockRotas,
+            interfaces: mockInterfaces,
+            servicos: mockServicos
+        };
+
+        runGnewDiagnosticsCheckFromData(data).catch(err => {
+            console.error('[MONITORAMENTO] Erro ao checar thresholds dos dados mock:', err);
+        });
+
+        // Log general API offline warning since real Gnew failed
+        logMonitoringEvent({
+            alert_key: 'gnew-api-offline',
+            title: 'API Gnew Offline',
+            description: 'A API externa do PABX Gnew está offline ou inacessível. Usando contingência local. Erro: ' + err.message,
+            severity: 'warning',
+            source: 'Gnew Monitor',
+            value_pct: null
+        }).catch(() => {});
+
         res.json({
             status: "offline",
             message: "Usando dados locais de contingência. API externa offline.",
             error: err.message,
-            data: {
-                disco: mockDisco,
-                memoria: mockMemoria,
-                ipExterno: mockIpExterno,
-                sipDriver: mockSipDriver,
-                fail2ban: mockFail2ban,
-                firewall: mockFirewall,
-                portas: mockPortas,
-                rotas: mockRotas,
-                interfaces: mockInterfaces,
-                servicos: mockServicos
-            }
+            data
         });
     }
 });
 
+
+// Helper to log monitoring events to the database (persistent, deduplicated)
+function logMonitoringEvent({ alert_key, title, description, severity, source, value_pct }) {
+    return new Promise((resolve, reject) => {
+        db.get(
+            `SELECT id FROM monitoring_events 
+             WHERE alert_key = ? AND created_at >= datetime('now', '-2 hours')
+             ORDER BY created_at DESC LIMIT 1`,
+            [alert_key],
+            (err, existing) => {
+                if (err) {
+                    console.error('[MONITORING DB] Erro ao buscar duplicata:', err);
+                    return reject(err);
+                }
+                if (existing) {
+                    return resolve({ id: existing.id, skipped: true });
+                }
+
+                db.run(
+                    `INSERT INTO monitoring_events (alert_key, title, description, severity, source, value_pct)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [alert_key, title, description || '', severity || 'info', source || 'Gnew Monitor', value_pct || null],
+                    function (err2) {
+                        if (err2) {
+                            console.error('[MONITORING DB] Erro ao inserir evento:', err2);
+                            return reject(err2);
+                        }
+                        resolve({ id: this.lastID, skipped: false });
+                    }
+                );
+            }
+        );
+    });
+}
+
+// Helpers to parse memory and disk output on the backend
+function parseMemoryOutputBackend(output) {
+    try {
+        const lines = output.split('\n');
+        const memLine = lines.find(l => l.trim().startsWith('Mem:'));
+        if (memLine) {
+            const tokens = memLine.trim().split(/\s+/);
+            if (tokens.length >= 3) {
+                const totalStr = tokens[1];
+                const usedStr = tokens[2];
+                
+                const parseVal = (str) => {
+                    const val = parseFloat(str);
+                    if (str.toLowerCase().includes('g')) return val * 1024;
+                    if (str.toLowerCase().includes('m')) return val;
+                    if (str.toLowerCase().includes('k')) return val / 1024;
+                    return val;
+                };
+                
+                const totalVal = parseVal(totalStr);
+                const usedVal = parseVal(usedStr);
+                
+                if (!isNaN(totalVal) && !isNaN(usedVal) && totalVal > 0) {
+                    const pct = Math.round((usedVal / totalVal) * 100);
+                    return {
+                        percentage: pct,
+                        detail: `${usedStr} em uso de ${totalStr} total`
+                    };
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Erro ao fazer parse da memória no backend:", e);
+    }
+    return { percentage: 0, detail: 'Erro no parse' };
+}
+
+function parseDiskOutputBackend(output) {
+    try {
+        const lines = output.split('\n');
+        const rootLine = lines.find(l => l.trim().endsWith(' /'));
+        if (rootLine) {
+            const tokens = rootLine.trim().split(/\s+/);
+            if (tokens.length >= 5) {
+                const sizeStr = tokens[1];
+                const usedStr = tokens[2];
+                const pctStr = tokens[4].replace('%', '');
+                const pct = parseInt(pctStr, 10);
+                
+                if (!isNaN(pct)) {
+                    return {
+                        percentage: pct,
+                        detail: `${usedStr} em uso de ${sizeStr} (Montagem em /)`
+                    };
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("Erro ao fazer parse do disco no backend:", e);
+    }
+    return { percentage: 0, detail: 'Erro no parse' };
+}
+
+// Check thresholds for Gnew diagnostics and save alerts
+async function runGnewDiagnosticsCheckFromData(data) {
+    if (!data) return;
+
+    // Evaluate RAM threshold
+    let ramPct = 0;
+    if (data.memoria) {
+        if (data.memoria.output) {
+            ramPct = parseMemoryOutputBackend(data.memoria.output).percentage;
+        } else if (typeof data.memoria.percent !== 'undefined') {
+            ramPct = Math.round(data.memoria.percent);
+        }
+    }
+    if (ramPct >= 90) {
+        await logMonitoringEvent({
+            alert_key: 'gnew-alert-ram',
+            title: `RAM crítica: ${ramPct}%`,
+            description: `Uso de memória RAM atingiu ${ramPct}%, superando o limite de 90%. Verifique os processos em execução no PABX.`,
+            severity: 'critical',
+            source: 'Gnew Monitor',
+            value_pct: ramPct
+        });
+    }
+
+    // Evaluate Disk threshold
+    let disks = [];
+    if (data.disco) {
+        if (data.disco.output) {
+            try {
+                const lines = data.disco.output.trim().split('\n');
+                for (let i = 1; i < lines.length; i++) {
+                    const t = lines[i].trim().split(/\s+/);
+                    if (t.length >= 6) {
+                        disks.push({ mountpoint: t[5], percent: parseInt(t[4].replace('%', ''), 10) || 0 });
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        } else if (Array.isArray(data.disco)) {
+            disks = data.disco.map(d => ({ mountpoint: d.mountpoint, percent: Math.round(d.percent || 0) }));
+        }
+    }
+    for (const disk of disks) {
+        if (disk.percent >= 80) {
+            await logMonitoringEvent({
+                alert_key: `gnew-alert-disk-${disk.mountpoint}`,
+                title: `Disco (${disk.mountpoint}): ${disk.percent}%`,
+                description: `Ponto de montagem "${disk.mountpoint}" está com ${disk.percent}% de uso, superando o limite de 80%.`,
+                severity: disk.percent >= 95 ? 'critical' : 'warning',
+                source: 'Gnew Monitor',
+                value_pct: disk.percent
+            });
+        }
+    }
+
+    // Evaluate Services
+    let servicesArr = [];
+    if (data.servicos && Array.isArray(data.servicos.servicos)) {
+        servicesArr = data.servicos.servicos;
+    }
+    for (const svc of servicesArr) {
+        const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
+        if (!isAtivo) {
+            await logMonitoringEvent({
+                alert_key: `gnew-alert-svc-${svc.nome}`,
+                title: `Serviço offline: ${svc.nome}`,
+                description: `O serviço "${svc.nome}" está com status "${svc.status_label || svc.status}". Verifique o systemd do PABX.`,
+                severity: 'critical',
+                source: 'Gnew Monitor',
+                value_pct: null
+            });
+        }
+    }
+}
 
 // --- Helper tools to check status of external APIs ---
 const dns = require('dns');
@@ -1006,84 +1200,103 @@ function checkDatabaseStatus() {
     });
 }
 
+async function runApisStatusCheck() {
+    const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
+        checkApiStatus('https://gnew.drmonitora.com.br/api/v2/'),
+        checkApiStatus('https://api.infocar.com.br'),
+        checkApiStatus('https://api.autentique.com.br/v2/graphql', 'POST'),
+        checkApiStatus('https://sms.api.sinch.com'),
+        checkApiStatus('https://api.pluga.co'),
+        checkDatabaseStatus()
+    ]);
+
+    const apis = [
+        {
+            id: 'gnew',
+            name: 'PABX Gnew API',
+            url: 'https://gnew.drmonitora.com.br/api/v2/',
+            type: 'REST API',
+            description: 'Integração com PABX para ramais, filas, BLFs e diagnósticos.',
+            online: gnew.online,
+            latency: gnew.latency,
+            message: gnew.message
+        },
+        {
+            id: 'infocar',
+            name: 'Infocar API',
+            url: 'https://api.infocar.com.br',
+            type: 'REST API',
+            description: 'Consulta de dados cadastrais e sinistros de veículos.',
+            online: infocar.online,
+            latency: infocar.latency,
+            message: infocar.message
+        },
+        {
+            id: 'autentique',
+            name: 'Autentique API',
+            url: 'https://api.autentique.com.br/v2/graphql',
+            type: 'GraphQL',
+            description: 'Assinatura digital e gestão de documentos.',
+            online: autentique.online,
+            latency: autentique.latency,
+            message: autentique.message
+        },
+        {
+            id: 'sinch',
+            name: 'Sinch API',
+            url: 'https://sms.api.sinch.com',
+            type: 'REST API',
+            description: 'Serviço de envio de SMS e comunicações.',
+            online: sinch.online,
+            latency: sinch.latency,
+            message: sinch.message
+        },
+        {
+            id: 'pluga',
+            name: 'Pluga API',
+            url: 'https://api.pluga.co',
+            type: 'REST API / Webhooks',
+            description: 'Automação de fluxos de trabalho e webhooks entre ferramentas.',
+            online: pluga.online,
+            latency: pluga.latency,
+            message: pluga.message
+        },
+        {
+            id: 'database',
+            name: 'Banco de Dados Local',
+            url: 'intranet.db (SQLite3)',
+            type: 'SQLite3',
+            description: 'Armazenamento interno da intranet, FAQ e histórico.',
+            online: database.online,
+            latency: database.latency,
+            message: database.message
+        }
+    ];
+
+    // Log offline APIs
+    for (const api of apis) {
+        if (!api.online) {
+            logMonitoringEvent({
+                alert_key: `api-alert-offline-${api.id}`,
+                title: `API Offline: ${api.name}`,
+                description: `A API "${api.name}" (${api.url}) está offline ou inacessível. Detalhe: ${api.message || 'Sem resposta'}`,
+                severity: 'critical',
+                source: 'API Monitor',
+                value_pct: null
+            }).catch(() => {});
+        }
+    }
+
+    return apis;
+}
+
 // GET: Status de todas as APIs integradas no sistema
 app.get('/api/monitoring/apis-status', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     try {
         const start = Date.now();
-        const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
-            checkApiStatus('https://gnew.drmonitora.com.br/api/v2/'),
-            checkApiStatus('https://api.infocar.com.br'),
-            checkApiStatus('https://api.autentique.com.br/v2/graphql', 'POST'),
-            checkApiStatus('https://sms.api.sinch.com'),
-            checkApiStatus('https://api.pluga.co'),
-            checkDatabaseStatus()
-        ]);
-
-        const apis = [
-            {
-                id: 'gnew',
-                name: 'PABX Gnew API',
-                url: 'https://gnew.drmonitora.com.br/api/v2/',
-                type: 'REST API',
-                description: 'Integração com PABX para ramais, filas, BLFs e diagnósticos.',
-                online: gnew.online,
-                latency: gnew.latency,
-                message: gnew.message
-            },
-            {
-                id: 'infocar',
-                name: 'Infocar API',
-                url: 'https://api.infocar.com.br',
-                type: 'REST API',
-                description: 'Consulta de dados cadastrais e sinistros de veículos.',
-                online: infocar.online,
-                latency: infocar.latency,
-                message: infocar.message
-            },
-            {
-                id: 'autentique',
-                name: 'Autentique API',
-                url: 'https://api.autentique.com.br/v2/graphql',
-                type: 'GraphQL',
-                description: 'Assinatura digital e gestão de documentos.',
-                online: autentique.online,
-                latency: autentique.latency,
-                message: autentique.message
-            },
-            {
-                id: 'sinch',
-                name: 'Sinch API',
-                url: 'https://sms.api.sinch.com',
-                type: 'REST API',
-                description: 'Serviço de envio de SMS e comunicações.',
-                online: sinch.online,
-                latency: sinch.latency,
-                message: sinch.message
-            },
-            {
-                id: 'pluga',
-                name: 'Pluga API',
-                url: 'https://api.pluga.co',
-                type: 'REST API / Webhooks',
-                description: 'Automação de fluxos de trabalho e webhooks entre ferramentas.',
-                online: pluga.online,
-                latency: pluga.latency,
-                message: pluga.message
-            },
-            {
-                id: 'database',
-                name: 'Banco de Dados Local',
-                url: 'intranet.db (SQLite3)',
-                type: 'SQLite3',
-                description: 'Armazenamento interno da intranet, FAQ e histórico.',
-                online: database.online,
-                latency: database.latency,
-                message: database.message
-            }
-        ];
-
+        const apis = await runApisStatusCheck();
         res.json({
             success: true,
             elapsed_ms: Date.now() - start,
@@ -1095,6 +1308,59 @@ app.get('/api/monitoring/apis-status', async (req, res) => {
     }
 });
 
+// Periodic background monitor check (every 5 minutes)
+async function runBackgroundMonitoringChecks() {
+    try {
+        console.log('[BACKGROUND MONITOR] Running periodic status checks...');
+        
+        // 1. Check external APIs
+        await runApisStatusCheck();
+
+        // 2. Check Gnew PABX diagnostics if possible
+        const token = await getGnewToken().catch(() => null);
+        if (token) {
+            const [disco, memoria, servicos] = await Promise.all([
+                fetchGnewDiagnostic('/diagnostico/disco/', token).catch(() => ({ error: 'fetch failed' })),
+                fetchGnewDiagnostic('/diagnostico/memoria/', token).catch(() => ({ error: 'fetch failed' })),
+                fetchGnewDiagnostic('/servidores/1/servicos/', token).catch(() => ({ error: 'fetch failed' }))
+            ]);
+
+            if (!disco.error || !memoria.error) {
+                const data = { disco, memoria, servicos };
+                await runGnewDiagnosticsCheckFromData(data);
+            } else {
+                // Log Gnew PABX offline since real Gnew endpoints failed
+                await logMonitoringEvent({
+                    alert_key: 'gnew-api-offline',
+                    title: 'API Gnew Offline',
+                    description: 'A API externa do PABX Gnew está offline ou inacessível.',
+                    severity: 'critical',
+                    source: 'Gnew Monitor',
+                    value_pct: null
+                });
+            }
+        } else {
+            // Log Gnew PABX offline since token fetching failed
+            await logMonitoringEvent({
+                alert_key: 'gnew-api-offline',
+                title: 'API Gnew Offline',
+                description: 'A API externa do PABX Gnew está offline ou com problemas de autenticação.',
+                severity: 'critical',
+                source: 'Gnew Monitor',
+                value_pct: null
+            });
+        }
+    } catch (err) {
+        console.error('[BACKGROUND MONITOR] Error in periodic check:', err);
+    }
+}
+
+// Start periodic checks in the background (every 5 minutes)
+setInterval(runBackgroundMonitoringChecks, 5 * 60 * 1000);
+
+// Run initial check after server starts (with 5 seconds delay)
+setTimeout(runBackgroundMonitoringChecks, 5000);
+
 
 // --- Monitoring Event History ---
 
@@ -1102,7 +1368,10 @@ app.get('/api/monitoring/apis-status', async (req, res) => {
 app.get('/api/monitoring/events', (req, res) => {
     const limit = parseInt(req.query.limit) || 200;
     db.all(
-        "SELECT * FROM monitoring_events ORDER BY created_at DESC LIMIT ?",
+        `SELECT id, alert_key, title, description, severity, source, value_pct,
+                strftime('%Y-%m-%dT%H:%M:%SZ', created_at) as created_at
+         FROM monitoring_events 
+         ORDER BY created_at DESC LIMIT ?`,
         [limit],
         (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });

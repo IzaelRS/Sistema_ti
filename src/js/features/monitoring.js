@@ -2,7 +2,6 @@ import { apiClient } from '../api/client.js';
 
 const PAGE_SIZE = 30;
 
-let gnewAlerts = []; // alertas sinteticos gerados a partir dos dados Gnew
 let eventsSearchQuery = '';
 let eventsFilterSeverity = 'all';
 let eventsFilterDateStart = ''; // YYYY-MM-DD
@@ -11,6 +10,7 @@ let eventsCurrentPage = 1;      // página corrente (1-indexed)
 let eventsTotalFiltered = 0;    // total de registros após filtros
 let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew'
 let gnewDiagData = null;
+let apisStatusData = [];
 let autoRefreshInterval = null;
 
 export const monitoringHandler = {
@@ -32,6 +32,14 @@ export const monitoringHandler = {
                 eventsSearchQuery = e.target.value.toLowerCase();
                 eventsCurrentPage = 1;
                 this.fetchAndRenderEventHistory();
+            });
+        }
+
+        // Search in active alerts (services + apis)
+        const alertsSearchInput = document.getElementById('monitoring-search-input');
+        if (alertsSearchInput) {
+            alertsSearchInput.addEventListener('input', () => {
+                this.renderGnewServicesStatus();
             });
         }
 
@@ -251,19 +259,26 @@ export const monitoringHandler = {
         grid.style.flexDirection = 'column';
         grid.style.gap = '0';
 
-        if (!gnewDiagData || !gnewDiagData.servicos || !Array.isArray(gnewDiagData.servicos.servicos) || gnewDiagData.servicos.servicos.length === 0) {
+        const services = (gnewDiagData && gnewDiagData.servicos && Array.isArray(gnewDiagData.servicos.servicos))
+            ? gnewDiagData.servicos.servicos
+            : [];
+
+        const apis = apisStatusData || [];
+
+        if (services.length === 0 && apis.length === 0) {
             grid.innerHTML = `
                 <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
-                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de serviço disponível.</p>
-                    <p style="font-size: 0.85rem;">Acesse a aba <strong>Gnew</strong> para carregar os dados do PABX.</p>
+                    <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de monitoramento disponível.</p>
+                    <p style="font-size: 0.85rem;">Aguardando carga dos serviços do PABX ou das APIs integradas...</p>
                 </div>
             `;
             return;
         }
 
-        const services = gnewDiagData.servicos.servicos;
-        const total = services.length;
-        const offline = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
+        const total = services.length + apis.length;
+        const offlineServices = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
+        const offlineApis = apis.filter(a => !a.online).length;
+        const offline = offlineServices + offlineApis;
         const online = total - offline;
 
         // Update KPIs
@@ -274,32 +289,76 @@ export const monitoringHandler = {
         if (warningEl) warningEl.textContent = offline;
         if (infoEl) infoEl.textContent = online;
 
-        grid.innerHTML = `
+        // Filter out by search query if search is active
+        const searchInput = document.getElementById('monitoring-search-input');
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        let filteredServices = services;
+        let filteredApis = apis;
+
+        if (query) {
+            filteredServices = services.filter(s => s.nome.toLowerCase().includes(query));
+            filteredApis = apis.filter(a => a.name.toLowerCase().includes(query) || a.description.toLowerCase().includes(query));
+        }
+
+        let html = `
             <div class="monitor-list">
                 <div class="monitor-list-header">
-                    <span class="monitor-list-col-name">Serviço</span>
+                    <span class="monitor-list-col-name">Serviço / API</span>
                     <span class="monitor-list-col-status">Status</span>
                 </div>
-                ${services.map((svc, idx) => {
-                    const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
-                    const dotColor = isAtivo ? '#10b981' : '#ef4444';
-                    const statusLabel = isAtivo ? 'Online' : (svc.status_label || svc.status || 'Offline');
-                    const badgeBg = isAtivo ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-                    const badgeColor = isAtivo ? '#6ee7b7' : '#fca5a5';
-                    const badgeBorder = isAtivo ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
-                    const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
-                    return `
-                        <div class="monitor-list-row" style="background: ${rowBg};">
-                            <div class="monitor-list-col-name">
-                                <span class="monitor-dot" style="background: ${dotColor};"></span>
-                                <span class="monitor-svc-name">${svc.nome}</span>
-                            </div>
-                            <div class="monitor-list-col-status">
-                                <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
-                            </div>
-                        </div>`;
-                }).join('')}
-            </div>`;
+        `;
+
+        let rowIdx = 0;
+
+        // Serviços Gnew
+        filteredServices.forEach(svc => {
+            const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
+            const dotColor = isAtivo ? '#10b981' : '#ef4444';
+            const statusLabel = isAtivo ? 'Online' : (svc.status_label || svc.status || 'Offline');
+            const badgeBg = isAtivo ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+            const badgeColor = isAtivo ? '#6ee7b7' : '#fca5a5';
+            const badgeBorder = isAtivo ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem;">[Serviço PABX] ${svc.nome}</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        // APIs Integradas
+        filteredApis.forEach(api => {
+            const isAtivo = api.online;
+            const dotColor = isAtivo ? '#10b981' : '#ef4444';
+            const statusLabel = isAtivo ? 'Online' : 'Offline';
+            const badgeBg = isAtivo ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+            const badgeColor = isAtivo ? '#6ee7b7' : '#fca5a5';
+            const badgeBorder = isAtivo ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:var(--accent);">[API] ${api.name}</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        html += `</div>`;
+        grid.innerHTML = html;
     },
 
     // -----------------------------------------------------------------------
@@ -574,19 +633,32 @@ export const monitoringHandler = {
 
     async fetchDiagnostics() {
         try {
-            const res = await apiClient.get('/monitoring/diagnostico?t=' + Date.now());
-            const isOnline = res && res.status === 'online';
+            // Buscas em paralelo para otimizar latência de carregamento
+            const [resDiag, resApis] = await Promise.all([
+                apiClient.get('/monitoring/diagnostico?t=' + Date.now()),
+                apiClient.get('/monitoring/apis-status?t=' + Date.now())
+            ]);
             
-            this.updateGnewApiStatus(isOnline, isOnline ? 'Gnew Online' : 'Gnew Offline (Contingência)', res ? res.message : '');
+            const isOnline = resDiag && resDiag.status === 'online';
+            this.updateGnewApiStatus(isOnline, isOnline ? 'Gnew Online' : 'Gnew Offline (Contingência)', resDiag ? resDiag.message : '');
             
-            if (res && res.data) {
-                gnewDiagData = res.data;
+            if (resDiag && resDiag.data) {
+                gnewDiagData = resDiag.data;
                 this.renderGnewDiagnostics();
             } else {
                 throw new Error("Dados inválidos na resposta da API.");
             }
+
+            if (resApis && resApis.success && Array.isArray(resApis.apis)) {
+                apisStatusData = resApis.apis;
+            }
+            
+            // Se estiver na aba de Alertas Ativos, re-renderiza para atualizar
+            if (activeTab === 'alerts') {
+                this.renderGnewServicesStatus();
+            }
         } catch (err) {
-            console.error('Erro ao buscar diagnósticos da Gnew:', err);
+            console.error('Erro ao buscar dados de monitoramento:', err);
             this.updateGnewApiStatus(false, 'Erro de Conexão', err.message);
         }
     },
@@ -873,111 +945,6 @@ export const monitoringHandler = {
                 ipText.textContent = gnewDiagData.ipExterno.ip || 'Não detectado';
             }
         }
-
-        // Check thresholds and generate alerts
-        this.checkGnewThresholds();
-    },
-
-    // -----------------------------------------------------------------------
-    // checkGnewThresholds — Verifica limites, persiste alertas no banco e
-    // atualiza o histórico se a aba estiver visível.
-    //   RAM    >= 90%  → alerta crítico
-    //   Disco  >= 80%  → alerta de aviso (qualquer ponto de montagem)
-    //   Serviço off    → alerta crítico por serviço
-    // -----------------------------------------------------------------------
-    async checkGnewThresholds() {
-        if (!gnewDiagData) return;
-
-        const RAM_THRESHOLD  = 90; // %
-        const DISK_THRESHOLD = 80; // %
-        const newAlerts = [];
-
-        // --- RAM ---
-        let ramPct = 0;
-        if (gnewDiagData.memoria) {
-            if (gnewDiagData.memoria.output) {
-                ramPct = this.parseMemoryOutput(gnewDiagData.memoria.output).percentage;
-            } else if (typeof gnewDiagData.memoria.percent !== 'undefined') {
-                ramPct = Math.round(gnewDiagData.memoria.percent);
-            }
-        }
-        if (ramPct >= RAM_THRESHOLD) {
-            newAlerts.push({
-                alert_key: 'gnew-alert-ram',
-                title: `RAM crítica: ${ramPct}%`,
-                description: `Uso de memória RAM atingiu ${ramPct}%, superando o limite de ${RAM_THRESHOLD}%. Verifique os processos em execução no PABX.`,
-                severity: 'critical',
-                source: 'Gnew Monitor',
-                value_pct: ramPct
-            });
-        }
-
-        // --- Disco (todos os pontos de montagem) ---
-        let disks = [];
-        if (gnewDiagData.disco) {
-            if (gnewDiagData.disco.output) {
-                try {
-                    const lines = gnewDiagData.disco.output.trim().split('\n');
-                    for (let i = 1; i < lines.length; i++) {
-                        const t = lines[i].trim().split(/\s+/);
-                        if (t.length >= 6) {
-                            disks.push({ mountpoint: t[5], percent: parseInt(t[4].replace('%', ''), 10) || 0 });
-                        }
-                    }
-                } catch (e) { /* ignore */ }
-            } else if (Array.isArray(gnewDiagData.disco)) {
-                disks = gnewDiagData.disco.map(d => ({ mountpoint: d.mountpoint, percent: Math.round(d.percent || 0) }));
-            }
-        }
-        disks.forEach(disk => {
-            if (disk.percent >= DISK_THRESHOLD) {
-                newAlerts.push({
-                    alert_key: `gnew-alert-disk-${disk.mountpoint}`,
-                    title: `Disco (${disk.mountpoint}): ${disk.percent}%`,
-                    description: `Ponto de montagem "${disk.mountpoint}" está com ${disk.percent}% de uso, superando o limite de ${DISK_THRESHOLD}%.`,
-                    severity: disk.percent >= 95 ? 'critical' : 'warning',
-                    source: 'Gnew Monitor',
-                    value_pct: disk.percent
-                });
-            }
-        });
-
-        // --- Serviços Gnew offline ---
-        if (gnewDiagData.servicos && Array.isArray(gnewDiagData.servicos.servicos)) {
-            gnewDiagData.servicos.servicos.forEach(svc => {
-                const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
-                if (!isAtivo) {
-                    newAlerts.push({
-                        alert_key: `gnew-alert-svc-${svc.nome}`,
-                        title: `Serviço offline: ${svc.nome}`,
-                        description: `O serviço "${svc.nome}" está com status "${svc.status_label || svc.status}". Verifique o systemd do PABX.`,
-                        severity: 'critical',
-                        source: 'Gnew Monitor',
-                        value_pct: null
-                    });
-                }
-            });
-        }
-
-        // Atualiza lista em memória para uso na aba de Alertas Ativos
-        gnewAlerts = newAlerts;
-
-        // Persiste os alertas detectados no banco (deduplicação server-side)
-        if (newAlerts.length > 0) {
-            const savePromises = newAlerts.map(alert =>
-                fetch('/api/monitoring/events', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(alert)
-                }).catch(() => {})
-            );
-            await Promise.all(savePromises);
-        }
-
-        // Se a aba histórico estiver visível, atualiza
-        if (activeTab === 'events') {
-            this.fetchAndRenderEventHistory();
-        }
     },
 
     async clearEventHistory() {
@@ -1029,6 +996,13 @@ export const monitoringHandler = {
         try {
             const res = await apiClient.get('/monitoring/apis-status?t=' + Date.now());
             if (res && res.success && Array.isArray(res.apis)) {
+                apisStatusData = res.apis;
+                
+                // Se a aba de Alertas Ativos estiver visível, atualiza ela também
+                if (activeTab === 'alerts') {
+                    this.renderGnewServicesStatus();
+                }
+
                 this.renderApisGrid(res.apis);
             } else {
                 throw new Error("Resposta inválida do servidor.");
