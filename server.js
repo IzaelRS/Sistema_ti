@@ -836,6 +836,266 @@ app.get('/api/monitoring/diagnostico', async (req, res) => {
 });
 
 
+// --- Helper tools to check status of external APIs ---
+const dns = require('dns');
+const https = require('https');
+const http = require('http');
+
+function resolveDnsPublic(hostname) {
+    return new Promise((resolve, reject) => {
+        const resolver = new dns.Resolver();
+        resolver.setServers(['8.8.8.8']); // Google Public DNS
+        resolver.resolve4(hostname, (err, addresses) => {
+            if (err || !addresses || !addresses.length) {
+                reject(err || new Error("Nenhum IP retornado por 8.8.8.8"));
+            } else {
+                resolve(addresses[0]);
+            }
+        });
+    });
+}
+
+function checkApiStatusViaIp(ip, hostname, path, isHttps, method) {
+    return new Promise((resolve, reject) => {
+        const lib = isHttps ? https : http;
+        const options = {
+            hostname: ip,
+            port: isHttps ? 443 : 80,
+            path: path,
+            method: method,
+            headers: {
+                'Host': hostname,
+                'User-Agent': 'Mozilla/5.0 (Intranet TI Monitor)'
+            },
+            timeout: 2000
+        };
+        if (isHttps) {
+            options.servername = hostname; // TLS SNI
+        }
+
+        const req = lib.request(options, (res) => {
+            resolve({
+                status: res.statusCode,
+                statusText: res.statusMessage || ''
+            });
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error("Timeout (2s)"));
+        });
+
+        req.on('error', (err) => {
+            reject(err);
+        });
+
+        if (method === 'POST') {
+            req.write('{}');
+        }
+        req.end();
+    });
+}
+
+async function checkApiStatus(url, method = 'GET') {
+    const start = Date.now();
+
+    // Se o domínio for Autentique, ignora o fetch padrão do sistema (que causaria travamento por timeout DNS local)
+    // e executa a chamada usando DNS Público diretamente.
+    if (url.includes('autentique.com.br')) {
+        try {
+            const parsedUrl = new URL(url);
+            const hostname = parsedUrl.hostname;
+            const path = parsedUrl.pathname + parsedUrl.search;
+            const isHttps = parsedUrl.protocol === 'https:';
+            
+            const ip = await resolveDnsPublic(hostname);
+            const res = await checkApiStatusViaIp(ip, hostname, path, isHttps, method);
+            const latency = Date.now() - start;
+            
+            return {
+                online: true,
+                status: res.status,
+                latency,
+                message: `HTTP ${res.status} (via DNS Público)`
+            };
+        } catch (e) {
+            const latency = Date.now() - start;
+            return {
+                online: false,
+                status: null,
+                latency,
+                message: e.message === 'AbortError' ? 'Timeout (2s)' : e.message
+            };
+        }
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    try {
+        const response = await fetch(url, {
+            method,
+            signal: controller.signal,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Intranet TI Monitor)'
+            }
+        });
+        clearTimeout(timeoutId);
+        const latency = Date.now() - start;
+        return {
+            online: true,
+            status: response.status,
+            latency,
+            message: `HTTP ${response.status} ${response.statusText || ''}`.trim()
+        };
+    } catch (e) {
+        clearTimeout(timeoutId);
+        
+        // Se falhou por erro de DNS ou bloqueio local, tenta resolver e conectar usando DNS público
+        const isDnsError = e.message.includes('getaddrinfo') || e.message.includes('fetch failed');
+        if (isDnsError) {
+            try {
+                const parsedUrl = new URL(url);
+                const hostname = parsedUrl.hostname;
+                const path = parsedUrl.pathname + parsedUrl.search;
+                const isHttps = parsedUrl.protocol === 'https:';
+                
+                const ip = await resolveDnsPublic(hostname);
+                const res = await checkApiStatusViaIp(ip, hostname, path, isHttps, method);
+                const latency = Date.now() - start;
+                
+                return {
+                    online: true,
+                    status: res.status,
+                    latency,
+                    message: `HTTP ${res.status} (via DNS Público)`
+                };
+            } catch (fallbackErr) {
+                // Falhou também no fallback público, segue para o erro normal
+            }
+        }
+
+        const latency = Date.now() - start;
+        return {
+            online: false,
+            status: null,
+            latency,
+            message: e.name === 'AbortError' ? 'Timeout (2s)' : e.message
+        };
+    }
+}
+
+function checkDatabaseStatus() {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        db.get("SELECT 1", (err) => {
+            const latency = Date.now() - start;
+            if (err) {
+                resolve({
+                    online: false,
+                    latency,
+                    message: err.message
+                });
+            } else {
+                resolve({
+                    online: true,
+                    latency,
+                    message: "Banco de dados local operando normalmente."
+                });
+            }
+        });
+    });
+}
+
+// GET: Status de todas as APIs integradas no sistema
+app.get('/api/monitoring/apis-status', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+
+    try {
+        const start = Date.now();
+        const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
+            checkApiStatus('https://gnew.drmonitora.com.br/api/v2/'),
+            checkApiStatus('https://api.infocar.com.br'),
+            checkApiStatus('https://api.autentique.com.br/v2/graphql', 'POST'),
+            checkApiStatus('https://sms.api.sinch.com'),
+            checkApiStatus('https://api.pluga.co'),
+            checkDatabaseStatus()
+        ]);
+
+        const apis = [
+            {
+                id: 'gnew',
+                name: 'PABX Gnew API',
+                url: 'https://gnew.drmonitora.com.br/api/v2/',
+                type: 'REST API',
+                description: 'Integração com PABX para ramais, filas, BLFs e diagnósticos.',
+                online: gnew.online,
+                latency: gnew.latency,
+                message: gnew.message
+            },
+            {
+                id: 'infocar',
+                name: 'Infocar API',
+                url: 'https://api.infocar.com.br',
+                type: 'REST API',
+                description: 'Consulta de dados cadastrais e sinistros de veículos.',
+                online: infocar.online,
+                latency: infocar.latency,
+                message: infocar.message
+            },
+            {
+                id: 'autentique',
+                name: 'Autentique API',
+                url: 'https://api.autentique.com.br/v2/graphql',
+                type: 'GraphQL',
+                description: 'Assinatura digital e gestão de documentos.',
+                online: autentique.online,
+                latency: autentique.latency,
+                message: autentique.message
+            },
+            {
+                id: 'sinch',
+                name: 'Sinch API',
+                url: 'https://sms.api.sinch.com',
+                type: 'REST API',
+                description: 'Serviço de envio de SMS e comunicações.',
+                online: sinch.online,
+                latency: sinch.latency,
+                message: sinch.message
+            },
+            {
+                id: 'pluga',
+                name: 'Pluga API',
+                url: 'https://api.pluga.co',
+                type: 'REST API / Webhooks',
+                description: 'Automação de fluxos de trabalho e webhooks entre ferramentas.',
+                online: pluga.online,
+                latency: pluga.latency,
+                message: pluga.message
+            },
+            {
+                id: 'database',
+                name: 'Banco de Dados Local',
+                url: 'intranet.db (SQLite3)',
+                type: 'SQLite3',
+                description: 'Armazenamento interno da intranet, FAQ e histórico.',
+                online: database.online,
+                latency: database.latency,
+                message: database.message
+            }
+        ];
+
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            apis
+        });
+    } catch (err) {
+        console.error('Erro ao verificar status das APIs:', err);
+        res.status(500).json({ error: 'Erro ao verificar status das APIs: ' + err.message });
+    }
+});
+
+
 // --- Monitoring Event History ---
 
 // GET: Lista histórico de eventos de monitoramento (ordem cronológica decrescente)

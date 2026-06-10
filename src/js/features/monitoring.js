@@ -9,7 +9,7 @@ let eventsFilterDateStart = ''; // YYYY-MM-DD
 let eventsFilterDateEnd   = ''; // YYYY-MM-DD
 let eventsCurrentPage = 1;      // página corrente (1-indexed)
 let eventsTotalFiltered = 0;    // total de registros após filtros
-let activeTab = 'alerts'; // 'alerts', 'events', 'gnew'
+let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew'
 let gnewDiagData = null;
 let autoRefreshInterval = null;
 
@@ -20,6 +20,8 @@ export const monitoringHandler = {
         if (tabAlerts) tabAlerts.addEventListener('click', () => this.setActiveTab('alerts'));
         const tabEvents = document.getElementById('tab-monitoring-events');
         if (tabEvents) tabEvents.addEventListener('click', () => this.setActiveTab('events'));
+        const tabApis = document.getElementById('tab-monitoring-apis');
+        if (tabApis) tabApis.addEventListener('click', () => this.setActiveTab('apis'));
         const tabGnew = document.getElementById('tab-monitoring-gnew');
         if (tabGnew) tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
 
@@ -134,6 +136,11 @@ export const monitoringHandler = {
             });
         }
 
+        const refreshApisBtn = document.getElementById('btn-refresh-apis-status');
+        if (refreshApisBtn) {
+            refreshApisBtn.addEventListener('click', () => this.fetchAndRenderApisStatus());
+        }
+
         // Auto-refresh checkbox (alerts tab)
         const autoRefreshChk = document.getElementById('monitoring-auto-refresh');
         if (autoRefreshChk) {
@@ -180,14 +187,17 @@ export const monitoringHandler = {
         // Toggle active classes on tab buttons
         const tabAlerts = document.getElementById('tab-monitoring-alerts');
         const tabEvents = document.getElementById('tab-monitoring-events');
+        const tabApis = document.getElementById('tab-monitoring-apis');
         const tabGnew = document.getElementById('tab-monitoring-gnew');
         if (tabAlerts) tabAlerts.classList.toggle('active', tab === 'alerts');
         if (tabEvents) tabEvents.classList.toggle('active', tab === 'events');
+        if (tabApis) tabApis.classList.toggle('active', tab === 'apis');
         if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
 
         // Toggle active divs
         const divAlerts = document.getElementById('monitoring-tab-content-alerts');
         const divEvents = document.getElementById('monitoring-tab-content-events');
+        const divApis = document.getElementById('monitoring-tab-content-apis');
         const divGnew = document.getElementById('monitoring-tab-content-gnew');
         
         if (divAlerts) {
@@ -197,6 +207,10 @@ export const monitoringHandler = {
         if (divEvents) {
             divEvents.classList.toggle('hidden', tab !== 'events');
             divEvents.classList.toggle('active', tab === 'events');
+        }
+        if (divApis) {
+            divApis.classList.toggle('hidden', tab !== 'apis');
+            divApis.classList.toggle('active', tab === 'apis');
         }
         if (divGnew) {
             divGnew.classList.toggle('hidden', tab !== 'gnew');
@@ -208,6 +222,8 @@ export const monitoringHandler = {
         } else if (tab === 'events') {
             eventsCurrentPage = 1; // sempre começa na página 1 ao abrir a aba
             this.fetchAndRenderEventHistory();
+        } else if (tab === 'apis') {
+            this.fetchAndRenderApisStatus();
         } else {
             this.renderGnewServicesStatus();
         }
@@ -219,6 +235,8 @@ export const monitoringHandler = {
             this.renderGnewServicesStatus();
         } else if (activeTab === 'events') {
             this.fetchAndRenderEventHistory();
+        } else if (activeTab === 'apis') {
+            this.fetchAndRenderApisStatus();
         }
     },
 
@@ -985,5 +1003,105 @@ export const monitoringHandler = {
                 clearBtn.textContent = 'Limpar Histórico';
             }
         }
+    },
+
+    async fetchAndRenderApisStatus() {
+        const grid = document.getElementById('monitoring-apis-grid');
+        if (!grid) return;
+
+        grid.innerHTML = `
+            <div style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 12px; color: var(--text-muted);">
+                <div class="api-loading-spinner" style="width: 28px; height: 28px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span style="font-size: 0.9rem;">Verificando integridade das APIs...</span>
+            </div>
+        `;
+
+        const btn = document.getElementById('btn-refresh-apis-status');
+        let svg = null;
+        if (btn) {
+            svg = btn.querySelector('svg');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+        }
+
+        try {
+            const res = await apiClient.get('/monitoring/apis-status?t=' + Date.now());
+            if (res && res.success && Array.isArray(res.apis)) {
+                this.renderApisGrid(res.apis);
+            } else {
+                throw new Error("Resposta inválida do servidor.");
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status das APIs:', err);
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 2rem; text-align: center; color: #fca5a5;">
+                    <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">Falha ao obter status das APIs</p>
+                    <p style="margin: 6px 0 0 0; font-size: 0.82rem; opacity: 0.85;">${err.message}</p>
+                </div>
+            `;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = 'pointer';
+                if (svg) svg.style.animation = '';
+            }
+        }
+    },
+
+    renderApisGrid(apis) {
+        const grid = document.getElementById('monitoring-apis-grid');
+        if (!grid) return;
+
+        if (apis.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-muted);">
+                    Nenhuma API cadastrada.
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = apis.map(api => {
+            const badgeClass = api.online ? 'online' : 'offline';
+            const badgeBg = api.online ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+            const badgeColor = api.online ? '#6ee7b7' : '#fca5a5';
+            const badgeBorder = api.online ? '#10b981' : '#ef4444';
+            const latencyColor = api.latency < 200 ? '#6ee7b7' : api.latency < 500 ? '#fde047' : '#fca5a5';
+
+            return `
+                <div class="api-status-card glass" data-api-id="${api.id}">
+                    <div class="api-card-header">
+                        <div class="api-info-meta">
+                            <span class="api-type-tag">${api.type}</span>
+                            <h4 class="api-name">${api.name}</h4>
+                        </div>
+                        <span class="api-badge ${badgeClass}" style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">
+                            <span class="status-dot"></span>
+                            ${api.online ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
+                    <div class="api-card-body">
+                        <p class="api-desc">${api.description}</p>
+                        <div class="api-url-wrapper">
+                            <span class="api-url-label">Endpoint:</span>
+                            <code class="api-url-code" title="${api.url}">${api.url}</code>
+                        </div>
+                    </div>
+                    <div class="api-card-footer">
+                        <div class="api-stat">
+                            <span class="stat-label">Latência:</span>
+                            <span class="stat-value" style="color: ${latencyColor}">${api.latency}ms</span>
+                        </div>
+                        <div class="api-stat" style="max-width: 60%;">
+                            <span class="stat-label">Detalhe:</span>
+                            <span class="stat-value detail-value" title="${api.message || '-'}">${api.message || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 };
