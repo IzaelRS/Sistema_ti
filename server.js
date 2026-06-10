@@ -1061,7 +1061,7 @@ function checkApiStatusViaIp(ip, hostname, path, isHttps, method) {
                 'Host': hostname,
                 'User-Agent': 'Mozilla/5.0 (Intranet TI Monitor)'
             },
-            timeout: 2000
+            timeout: 60000
         };
         if (isHttps) {
             options.servername = hostname; // TLS SNI
@@ -1076,7 +1076,7 @@ function checkApiStatusViaIp(ip, hostname, path, isHttps, method) {
 
         req.on('timeout', () => {
             req.destroy();
-            reject(new Error("Timeout (2s)"));
+            reject(new Error("Timeout (60s)"));
         });
 
         req.on('error', (err) => {
@@ -1118,13 +1118,13 @@ async function checkApiStatus(url, method = 'GET') {
                 online: false,
                 status: null,
                 latency,
-                message: e.message === 'AbortError' ? 'Timeout (2s)' : e.message
+                message: e.message === 'AbortError' ? 'Timeout (60s)' : e.message
             };
         }
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
     try {
         const response = await fetch(url, {
             method,
@@ -1173,7 +1173,7 @@ async function checkApiStatus(url, method = 'GET') {
             online: false,
             status: null,
             latency,
-            message: e.name === 'AbortError' ? 'Timeout (2s)' : e.message
+            message: e.name === 'AbortError' ? 'Timeout (60s)' : e.message
         };
     }
 }
@@ -1200,7 +1200,7 @@ function checkDatabaseStatus() {
     });
 }
 
-async function runApisStatusCheck() {
+async function runApisStatusCheckActual() {
     const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
         checkApiStatus('https://gnew.drmonitora.com.br/api/v2/'),
         checkApiStatus('https://api.infocar.com.br'),
@@ -1273,14 +1273,36 @@ async function runApisStatusCheck() {
         }
     ];
 
-    // Log offline APIs
+    // Determine status (online, warning, offline)
+    // Warning status represents high response latency (>= 2000ms)
+    // Offline status represents lack of response (timed out or unreachable)
     for (const api of apis) {
         if (!api.online) {
+            api.status = 'offline';
+        } else if (api.latency >= 2000) {
+            api.status = 'warning';
+        } else {
+            api.status = 'online';
+        }
+    }
+
+    // Log offline/warning APIs to event history
+    for (const api of apis) {
+        if (api.status === 'offline') {
             logMonitoringEvent({
                 alert_key: `api-alert-offline-${api.id}`,
                 title: `API Offline: ${api.name}`,
                 description: `A API "${api.name}" (${api.url}) está offline ou inacessível. Detalhe: ${api.message || 'Sem resposta'}`,
                 severity: 'critical',
+                source: 'API Monitor',
+                value_pct: null
+            }).catch(() => {});
+        } else if (api.status === 'warning') {
+            logMonitoringEvent({
+                alert_key: `api-alert-latency-${api.id}`,
+                title: `Latência Alta: ${api.name}`,
+                description: `A API "${api.name}" (${api.url}) está operando com tempo de resposta alto (${api.latency}ms).`,
+                severity: 'warning',
                 source: 'API Monitor',
                 value_pct: null
             }).catch(() => {});
@@ -1290,13 +1312,46 @@ async function runApisStatusCheck() {
     return apis;
 }
 
+let cachedApisStatus = null;
+let isCheckingApis = false;
+
+async function runApisStatusCheck(forceRefresh = false) {
+    if (cachedApisStatus && !forceRefresh) {
+        // Return cached value immediately and trigger background check if not already checking
+        if (!isCheckingApis) {
+            isCheckingApis = true;
+            runApisStatusCheckActual().then(apis => {
+                cachedApisStatus = apis;
+                isCheckingApis = false;
+            }).catch(err => {
+                console.error('[BACKGROUND MONITOR] Error checking APIs in background:', err);
+                isCheckingApis = false;
+            });
+        }
+        return cachedApisStatus;
+    }
+
+    // Force refresh or first load
+    isCheckingApis = true;
+    try {
+        const apis = await runApisStatusCheckActual();
+        cachedApisStatus = apis;
+        isCheckingApis = false;
+        return apis;
+    } catch (err) {
+        isCheckingApis = false;
+        throw err;
+    }
+}
+
 // GET: Status de todas as APIs integradas no sistema
 app.get('/api/monitoring/apis-status', async (req, res) => {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
     try {
         const start = Date.now();
-        const apis = await runApisStatusCheck();
+        const forceRefresh = req.query.refresh === 'true';
+        const apis = await runApisStatusCheck(forceRefresh);
         res.json({
             success: true,
             elapsed_ms: Date.now() - start,
@@ -1315,6 +1370,11 @@ async function runBackgroundMonitoringChecks() {
         
         // 1. Check external APIs
         await runApisStatusCheck();
+
+        // 1.5. Check Lansweeper switches
+        await runSwitchesStatusCheck().catch(err => {
+            console.error('[BACKGROUND MONITOR] Erro ao monitorar switches:', err.message);
+        });
 
         // 2. Check Gnew PABX diagnostics if possible
         const token = await getGnewToken().catch(() => null);
@@ -1419,6 +1479,349 @@ app.delete('/api/monitoring/events', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true, deleted: this.changes });
     });
+});
+
+// --- Lansweeper Switch Monitoring ---
+
+const querystring = require('querystring');
+const { exec } = require('child_process');
+
+// Disable SSL certificate validation for self-signed certificates in local network requests
+const lansweeperAgent = new https.Agent({
+    rejectUnauthorized: false
+});
+
+let cachedSwitchesStatus = null;
+let isCheckingSwitches = false;
+
+// Helper to get Lansweeper login parameters (ViewState and EventValidation)
+function getLansweeperLoginParams(url) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: '/login.aspx',
+            method: 'GET',
+            agent: lansweeperAgent
+        };
+
+        https.get(options, (res) => {
+            const cookies = res.headers['set-cookie'] || [];
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                const viewstateMatch = data.match(/id="__VIEWSTATE" value="([^"]*)"/);
+                const eventvalMatch = data.match(/id="__EVENTVALIDATION" value="([^"]*)"/);
+                
+                resolve({
+                    cookies: cookies.map(c => c.split(';')[0]).join('; '),
+                    viewstate: viewstateMatch ? viewstateMatch[1] : '',
+                    eventval: eventvalMatch ? eventvalMatch[1] : ''
+                });
+            });
+        }).on('error', reject);
+    });
+}
+
+// Helper to login to Lansweeper and obtain session cookies
+function loginLansweeper(url, username, password, initialCookies, viewstate, eventval) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const postData = querystring.stringify({
+            '__VIEWSTATE': viewstate,
+            '__EVENTVALIDATION': eventval,
+            'NameTextBox': username,
+            'PasswordTextBox': password,
+            'LoginButton': 'Login'
+        });
+
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: '/login.aspx',
+            method: 'POST',
+            agent: lansweeperAgent,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': Buffer.byteLength(postData),
+                'Cookie': initialCookies,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            const newCookies = res.headers['set-cookie'] || [];
+            resolve([initialCookies, ...newCookies.map(c => c.split(';')[0])].join('; '));
+        });
+
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+    });
+}
+
+// Helper to query Lansweeper switches report JSON
+function fetchLansweeperReport(url, cookies) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: '/ReportJson.aspx?det=Web50getdevicebytype&@devicetype=6&top=500&page=1&cache=0',
+            method: 'POST',
+            agent: lansweeperAgent,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'Content-Length': 0,
+                'Cookie': cookies,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode !== 200) {
+                    reject(new Error(`Erro HTTP ${res.statusCode} ao carregar JSON`));
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.Error) {
+                        reject(new Error(parsed.Emsg || 'Erro na resposta do Lansweeper'));
+                    } else {
+                        resolve(parsed);
+                    }
+                } catch (e) {
+                    reject(new Error('Falha no parse do JSON do Lansweeper: ' + e.message));
+                }
+            });
+        });
+
+        req.on('error', reject);
+        req.write('');
+        req.end();
+    });
+}
+
+// Single targeted ping helper to check if a switch is active
+function pingSwitch(ip) {
+    return new Promise((resolve) => {
+        const start = Date.now();
+        const cmd = os.platform() === 'win32'
+            ? `ping -n 1 -w 2000 ${ip}`
+            : `ping -c 1 -W 2 ${ip}`;
+
+        exec(cmd, (err, stdout, stderr) => {
+            const elapsed = Date.now() - start;
+            if (err) {
+                resolve({ online: false, latency: elapsed, message: 'Sem resposta (Offline)' });
+            } else {
+                const match = stdout.match(/(?:time|tempo)[=<](\d+(?:\.\d+)?)\s*ms/i);
+                const latency = match ? Math.round(parseFloat(match[1])) : elapsed;
+                resolve({ online: true, latency, message: 'Operando normalmente' });
+            }
+        });
+    });
+}
+
+// Helper to fetch raw list of switches from Lansweeper without pinging
+async function fetchRawSwitchesList() {
+    const lansweeperUrl = process.env.LANSWEEPER_URL;
+    const username = process.env.LANSWEEPER_USER;
+    const password = process.env.LANSWEEPER_PASS;
+
+    if (!lansweeperUrl || !username || !password) {
+        throw new Error('Configurações do Lansweeper ausentes no arquivo .env');
+    }
+
+    const loginParams = await getLansweeperLoginParams(lansweeperUrl);
+    const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
+    const reportData = await fetchLansweeperReport(lansweeperUrl, cookies);
+
+    if (!reportData || !Array.isArray(reportData.AddedRows)) {
+        throw new Error('Nenhum dado retornado no relatório do Lansweeper');
+    }
+
+    return reportData.AddedRows.map(row => {
+        const stripHtml = (htmlStr) => (htmlStr || '').replace(/<[^>]*>/g, '').trim();
+        const assetId = row[1];
+        const name = stripHtml(row[2]);
+        const type = row[3];
+        const ip = row[6];
+        const model = stripHtml(row[9]);
+        const location = row[10] || 'N/A';
+
+        return { id: assetId, name, type, ip, model, location };
+    }).filter(sw => sw.ip && sw.ip.trim() !== '');
+}
+
+// Main logic to fetch assets from Lansweeper and ping them
+async function runSwitchesStatusCheckActual() {
+    const rawSwitches = await fetchRawSwitchesList();
+
+    const pingPromises = rawSwitches.map(async (sw) => {
+        const pingResult = await pingSwitch(sw.ip);
+        
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `switch-offline-${sw.id}`,
+                title: `Switch Offline: ${sw.name}`,
+                description: `O Switch "${sw.name}" (${sw.ip}) localizado em "${sw.location}" está inativo ou inacessível na rede local.`,
+                severity: 'critical',
+                source: 'Monitor de Rede',
+                value_pct: null
+            }).catch(() => {});
+        }
+
+        return {
+            id: sw.id,
+            name: sw.name,
+            ip: sw.ip,
+            model: sw.model,
+            location: sw.location,
+            online: pingResult.online,
+            latency: pingResult.latency,
+            message: pingResult.message
+        };
+    });
+
+    return await Promise.all(pingPromises);
+}
+
+// Wrapper with background cache behavior
+async function runSwitchesStatusCheck(forceRefresh = false) {
+    if (cachedSwitchesStatus && !forceRefresh) {
+        if (!isCheckingSwitches) {
+            isCheckingSwitches = true;
+            runSwitchesStatusCheckActual().then(data => {
+                cachedSwitchesStatus = data;
+                isCheckingSwitches = false;
+            }).catch(err => {
+                console.error('[SWITCH MONITOR] Erro na verificação em segundo plano:', err.message);
+                isCheckingSwitches = false;
+            });
+        }
+        return cachedSwitchesStatus;
+    }
+
+    isCheckingSwitches = true;
+    try {
+        const data = await runSwitchesStatusCheckActual();
+        cachedSwitchesStatus = data;
+        isCheckingSwitches = false;
+        return data;
+    } catch (err) {
+        isCheckingSwitches = false;
+        throw err;
+    }
+}
+
+// GET: Monitoramento de Switches cadastrados no Lansweeper
+app.get('/api/monitoring/switches', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    try {
+        const start = Date.now();
+        const forceRefresh = req.query.refresh === 'true';
+        const ping = req.query.ping !== 'false';
+
+        if (!ping) {
+            let switches = [];
+            if (cachedSwitchesStatus && !forceRefresh) {
+                switches = cachedSwitchesStatus;
+            } else {
+                const list = await fetchRawSwitchesList();
+                switches = list.map(sw => {
+                    const cached = cachedSwitchesStatus ? cachedSwitchesStatus.find(c => c.id === sw.id) : null;
+                    return {
+                        id: sw.id,
+                        name: sw.name,
+                        ip: sw.ip,
+                        model: sw.model,
+                        location: sw.location,
+                        online: cached ? cached.online : null,
+                        latency: cached ? cached.latency : null,
+                        message: cached ? cached.message : 'Aguardando verificação...'
+                    };
+                });
+                cachedSwitchesStatus = switches;
+            }
+            return res.json({
+                success: true,
+                elapsed_ms: Date.now() - start,
+                switches
+            });
+        }
+
+        const switches = await runSwitchesStatusCheck(forceRefresh);
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            switches
+        });
+    } catch (err) {
+        console.error('Erro ao verificar status dos switches:', err);
+        res.status(500).json({ error: 'Erro ao verificar status dos switches: ' + err.message });
+    }
+});
+
+// GET: Ping individual switch by asset ID
+app.get('/api/monitoring/switches/:id/ping', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    try {
+        const start = Date.now();
+        const assetId = req.params.id;
+
+        // Ensure switches list is loaded
+        if (!cachedSwitchesStatus) {
+            const list = await fetchRawSwitchesList();
+            cachedSwitchesStatus = list.map(sw => ({
+                id: sw.id,
+                name: sw.name,
+                ip: sw.ip,
+                model: sw.model,
+                location: sw.location,
+                online: null,
+                latency: null,
+                message: 'Aguardando verificação...'
+            }));
+        }
+
+        const sw = cachedSwitchesStatus.find(c => c.id === assetId);
+        if (!sw) {
+            return res.status(404).json({ error: 'Switch não encontrado' });
+        }
+
+        const pingResult = await pingSwitch(sw.ip);
+        sw.online = pingResult.online;
+        sw.latency = pingResult.latency;
+        sw.message = pingResult.message;
+
+        // Log event if offline
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `switch-offline-${sw.id}`,
+                title: `Switch Offline: ${sw.name}`,
+                description: `O Switch "${sw.name}" (${sw.ip}) localizado em "${sw.location}" está inativo ou inacessível na rede local.`,
+                severity: 'critical',
+                source: 'Monitor de Rede',
+                value_pct: null
+            }).catch(() => {});
+        }
+
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            switch: sw
+        });
+    } catch (err) {
+        console.error('Erro ao pingar switch:', err);
+        res.status(500).json({ error: 'Erro ao pingar switch: ' + err.message });
+    }
 });
 
 // 404 Catch-all para rotas da API

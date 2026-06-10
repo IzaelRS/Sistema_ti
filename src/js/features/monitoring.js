@@ -8,10 +8,13 @@ let eventsFilterDateStart = ''; // YYYY-MM-DD
 let eventsFilterDateEnd   = ''; // YYYY-MM-DD
 let eventsCurrentPage = 1;      // página corrente (1-indexed)
 let eventsTotalFiltered = 0;    // total de registros após filtros
-let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew'
+let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew', 'infra'
 let gnewDiagData = null;
 let apisStatusData = [];
+let switchesStatusData = [];
 let autoRefreshInterval = null;
+let switchesAutoRefreshInterval = null;
+let isPingingSequentially = false;
 
 export const monitoringHandler = {
     init() {
@@ -24,6 +27,14 @@ export const monitoringHandler = {
         if (tabApis) tabApis.addEventListener('click', () => this.setActiveTab('apis'));
         const tabGnew = document.getElementById('tab-monitoring-gnew');
         if (tabGnew) tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
+        const tabInfra = document.getElementById('tab-monitoring-infra');
+        if (tabInfra) tabInfra.addEventListener('click', () => this.setActiveTab('infra'));
+
+        // Refresh switches button
+        const refreshSwitchesBtn = document.getElementById('btn-refresh-switches-status');
+        if (refreshSwitchesBtn) {
+            refreshSwitchesBtn.addEventListener('click', () => this.fetchAndRenderSwitchesStatus(true));
+        }
 
         // Search in event history
         const eventsSearchInput = document.getElementById('monitoring-events-search-input');
@@ -162,6 +173,19 @@ export const monitoringHandler = {
             // Start immediately if checked
             if (autoRefreshChk.checked) this._startAutoRefresh();
         }
+        
+        // Auto-refresh checkbox (switches tab)
+        const switchesAutoRefreshChk = document.getElementById('switches-auto-refresh');
+        if (switchesAutoRefreshChk) {
+            switchesAutoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startSwitchesAutoRefresh();
+                } else {
+                    this._stopSwitchesAutoRefresh();
+                }
+            });
+            if (switchesAutoRefreshChk.checked) this._startSwitchesAutoRefresh();
+        }
 
         // Bind global helper
         window.monitoringHandler = this;
@@ -183,6 +207,22 @@ export const monitoringHandler = {
         }
     },
 
+    _startSwitchesAutoRefresh() {
+        this._stopSwitchesAutoRefresh();
+        switchesAutoRefreshInterval = setInterval(() => {
+            if (activeTab === 'infra') {
+                this.fetchAndRenderSwitchesStatus(false, true);
+            }
+        }, 60000);
+    },
+
+    _stopSwitchesAutoRefresh() {
+        if (switchesAutoRefreshInterval) {
+            clearInterval(switchesAutoRefreshInterval);
+            switchesAutoRefreshInterval = null;
+        }
+    },
+
     fetch() {
         // Called when section is first loaded
         this.setActiveTab('alerts');
@@ -197,16 +237,19 @@ export const monitoringHandler = {
         const tabEvents = document.getElementById('tab-monitoring-events');
         const tabApis = document.getElementById('tab-monitoring-apis');
         const tabGnew = document.getElementById('tab-monitoring-gnew');
+        const tabInfra = document.getElementById('tab-monitoring-infra');
         if (tabAlerts) tabAlerts.classList.toggle('active', tab === 'alerts');
         if (tabEvents) tabEvents.classList.toggle('active', tab === 'events');
         if (tabApis) tabApis.classList.toggle('active', tab === 'apis');
         if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
+        if (tabInfra) tabInfra.classList.toggle('active', tab === 'infra');
 
         // Toggle active divs
         const divAlerts = document.getElementById('monitoring-tab-content-alerts');
         const divEvents = document.getElementById('monitoring-tab-content-events');
         const divApis = document.getElementById('monitoring-tab-content-apis');
         const divGnew = document.getElementById('monitoring-tab-content-gnew');
+        const divInfra = document.getElementById('monitoring-tab-content-infra');
         
         if (divAlerts) {
             divAlerts.classList.toggle('hidden', tab !== 'alerts');
@@ -224,6 +267,10 @@ export const monitoringHandler = {
             divGnew.classList.toggle('hidden', tab !== 'gnew');
             divGnew.classList.toggle('active', tab === 'gnew');
         }
+        if (divInfra) {
+            divInfra.classList.toggle('hidden', tab !== 'infra');
+            divInfra.classList.toggle('active', tab === 'infra');
+        }
 
         if (tab === 'gnew') {
             this.fetchDiagnostics();
@@ -232,6 +279,8 @@ export const monitoringHandler = {
             this.fetchAndRenderEventHistory();
         } else if (tab === 'apis') {
             this.fetchAndRenderApisStatus();
+        } else if (tab === 'infra') {
+            this.fetchAndRenderSwitchesStatus();
         } else {
             this.renderGnewServicesStatus();
         }
@@ -245,6 +294,8 @@ export const monitoringHandler = {
             this.fetchAndRenderEventHistory();
         } else if (activeTab === 'apis') {
             this.fetchAndRenderApisStatus();
+        } else if (activeTab === 'infra') {
+            this.fetchAndRenderSwitchesStatus();
         }
     },
 
@@ -264,21 +315,23 @@ export const monitoringHandler = {
             : [];
 
         const apis = apisStatusData || [];
+        const switches = switchesStatusData || [];
 
-        if (services.length === 0 && apis.length === 0) {
+        if (services.length === 0 && apis.length === 0 && switches.length === 0) {
             grid.innerHTML = `
                 <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
                     <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de monitoramento disponível.</p>
-                    <p style="font-size: 0.85rem;">Aguardando carga dos serviços do PABX ou das APIs integradas...</p>
+                    <p style="font-size: 0.85rem;">Aguardando carga dos serviços do PABX, das APIs integradas ou da infraestrutura...</p>
                 </div>
             `;
             return;
         }
 
-        const total = services.length + apis.length;
+        const total = services.length + apis.length + switches.length;
         const offlineServices = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
-        const offlineApis = apis.filter(a => !a.online).length;
-        const offline = offlineServices + offlineApis;
+        const offlineApis = apis.filter(a => !a.online || a.status === 'warning').length;
+        const offlineSwitches = switches.filter(s => !s.online).length;
+        const offline = offlineServices + offlineApis + offlineSwitches;
         const online = total - offline;
 
         // Update KPIs
@@ -295,16 +348,18 @@ export const monitoringHandler = {
 
         let filteredServices = services;
         let filteredApis = apis;
+        let filteredSwitches = switches;
 
         if (query) {
             filteredServices = services.filter(s => s.nome.toLowerCase().includes(query));
             filteredApis = apis.filter(a => a.name.toLowerCase().includes(query) || a.description.toLowerCase().includes(query));
+            filteredSwitches = switches.filter(s => s.name.toLowerCase().includes(query) || s.ip.toLowerCase().includes(query));
         }
 
         let html = `
             <div class="monitor-list">
                 <div class="monitor-list-header">
-                    <span class="monitor-list-col-name">Serviço / API</span>
+                    <span class="monitor-list-col-name">Serviço / API / Infraestrutura</span>
                     <span class="monitor-list-col-status">Status</span>
                 </div>
         `;
@@ -336,12 +391,26 @@ export const monitoringHandler = {
 
         // APIs Integradas
         filteredApis.forEach(api => {
-            const isAtivo = api.online;
-            const dotColor = isAtivo ? '#10b981' : '#ef4444';
-            const statusLabel = isAtivo ? 'Online' : 'Offline';
-            const badgeBg = isAtivo ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-            const badgeColor = isAtivo ? '#6ee7b7' : '#fca5a5';
-            const badgeBorder = isAtivo ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+            let dotColor = '#10b981';
+            let statusLabel = 'Online';
+            let badgeBg = 'rgba(16,185,129,0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16,185,129,0.3)';
+
+            if (api.status === 'warning') {
+                dotColor = '#f59e0b';
+                statusLabel = 'Alerta';
+                badgeBg = 'rgba(245,158,11,0.12)';
+                badgeColor = '#fde047';
+                badgeBorder = 'rgba(245,158,11,0.3)';
+            } else if (api.status === 'offline' || !api.online) {
+                dotColor = '#ef4444';
+                statusLabel = 'Offline';
+                badgeBg = 'rgba(239,68,68,0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239,68,68,0.3)';
+            }
+
             const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
             rowIdx++;
 
@@ -350,6 +419,43 @@ export const monitoringHandler = {
                     <div class="monitor-list-col-name">
                         <span class="monitor-dot" style="background: ${dotColor};"></span>
                         <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:var(--accent);">[API] ${api.name}</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        // Infraestrutura (Switches)
+        filteredSwitches.forEach(sw => {
+            let dotColor = '#10b981';
+            let statusLabel = 'Online';
+            let badgeBg = 'rgba(16,185,129,0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16,185,129,0.3)';
+
+            if (sw.online === null) {
+                dotColor = '#94a3b8';
+                statusLabel = 'Aguardando...';
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+            } else if (!sw.online) {
+                dotColor = '#ef4444';
+                statusLabel = 'Offline';
+                badgeBg = 'rgba(239,68,68,0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239,68,68,0.3)';
+            }
+
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#38bdf8;">[Switch] ${sw.name} (${sw.ip})</span>
                     </div>
                     <div class="monitor-list-col-status">
                         <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
@@ -634,9 +740,10 @@ export const monitoringHandler = {
     async fetchDiagnostics() {
         try {
             // Buscas em paralelo para otimizar latência de carregamento
-            const [resDiag, resApis] = await Promise.all([
+            const [resDiag, resApis, resSwitches] = await Promise.all([
                 apiClient.get('/monitoring/diagnostico?t=' + Date.now()),
-                apiClient.get('/monitoring/apis-status?t=' + Date.now())
+                apiClient.get('/monitoring/apis-status?t=' + Date.now()),
+                apiClient.get('/monitoring/switches?t=' + Date.now())
             ]);
             
             const isOnline = resDiag && resDiag.status === 'online';
@@ -651,6 +758,10 @@ export const monitoringHandler = {
 
             if (resApis && resApis.success && Array.isArray(resApis.apis)) {
                 apisStatusData = resApis.apis;
+            }
+
+            if (resSwitches && resSwitches.success && Array.isArray(resSwitches.switches)) {
+                switchesStatusData = resSwitches.switches;
             }
             
             // Se estiver na aba de Alertas Ativos, re-renderiza para atualizar
@@ -994,7 +1105,7 @@ export const monitoringHandler = {
         }
 
         try {
-            const res = await apiClient.get('/monitoring/apis-status?t=' + Date.now());
+            const res = await apiClient.get('/monitoring/apis-status?refresh=true&t=' + Date.now());
             if (res && res.success && Array.isArray(res.apis)) {
                 apisStatusData = res.apis;
                 
@@ -1039,11 +1150,27 @@ export const monitoringHandler = {
         }
 
         grid.innerHTML = apis.map(api => {
-            const badgeClass = api.online ? 'online' : 'offline';
-            const badgeBg = api.online ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-            const badgeColor = api.online ? '#6ee7b7' : '#fca5a5';
-            const badgeBorder = api.online ? '#10b981' : '#ef4444';
-            const latencyColor = api.latency < 200 ? '#6ee7b7' : api.latency < 500 ? '#fde047' : '#fca5a5';
+            let badgeClass = 'online';
+            let badgeBg = 'rgba(16, 185, 129, 0.1)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = '#10b981';
+            let badgeText = 'Online';
+
+            if (api.status === 'warning') {
+                badgeClass = 'warning';
+                badgeBg = 'rgba(245, 158, 11, 0.1)';
+                badgeColor = '#fde047';
+                badgeBorder = '#f59e0b';
+                badgeText = 'Alerta';
+            } else if (api.status === 'offline' || !api.online) {
+                badgeClass = 'offline';
+                badgeBg = 'rgba(239, 68, 68, 0.1)';
+                badgeColor = '#fca5a5';
+                badgeBorder = '#ef4444';
+                badgeText = 'Offline';
+            }
+
+            const latencyColor = api.latency < 500 ? '#6ee7b7' : api.latency < 2000 ? '#fde047' : '#fca5a5';
 
             return `
                 <div class="api-status-card glass" data-api-id="${api.id}">
@@ -1054,7 +1181,7 @@ export const monitoringHandler = {
                         </div>
                         <span class="api-badge ${badgeClass}" style="background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeBorder};">
                             <span class="status-dot"></span>
-                            ${api.online ? 'Online' : 'Offline'}
+                            ${badgeText}
                         </span>
                     </div>
                     <div class="api-card-body">
@@ -1075,6 +1202,225 @@ export const monitoringHandler = {
                         </div>
                     </div>
                 </div>
+            `;
+        }).join('');
+    },
+
+    async fetchAndRenderSwitchesStatus(forceRefresh = false, sequential = false) {
+        const switchesAutoRefreshChk = document.getElementById('switches-auto-refresh');
+        const isSequential = sequential || (switchesAutoRefreshChk && switchesAutoRefreshChk.checked);
+
+        const tbody = document.getElementById('monitoring-switches-tbody');
+        if (!tbody) return;
+
+        const btn = document.getElementById('btn-refresh-switches-status');
+        let svg = null;
+        if (btn) {
+            svg = btn.querySelector('svg');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+        }
+
+        try {
+            if (isSequential) {
+                // Step 1: Fetch raw list of switches without pings
+                const res = await apiClient.get(`/monitoring/switches?ping=false&refresh=${forceRefresh}&t=${Date.now()}`);
+                if (res && res.success && Array.isArray(res.switches)) {
+                    // Render the table with all switches in pending/previous state
+                    this.renderSwitchesTable(res.switches);
+
+                    // Step 2: Show sync icon on all rows
+                    res.switches.forEach(sw => {
+                        const row = document.getElementById(`switch-row-${sw.id}`);
+                        if (row) {
+                            const indicator = row.querySelector('.switch-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+                    });
+
+                    // Step 3: Sequential pinging
+                    isPingingSequentially = true;
+                    for (const sw of res.switches) {
+                        // If user changed tab, we stop
+                        if (activeTab !== 'infra') break;
+
+                        const row = document.getElementById(`switch-row-${sw.id}`);
+                        if (row) {
+                            // Make this switch spinner spin
+                            const indicator = row.querySelector('.switch-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); animation: spin 1s linear infinite;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+
+                        try {
+                            const pingRes = await apiClient.get(`/monitoring/switches/${sw.id}/ping?t=${Date.now()}`);
+                            if (pingRes && pingRes.success && pingRes.switch) {
+                                // Update this row
+                                const updatedSw = pingRes.switch;
+                                const swRow = document.getElementById(`switch-row-${updatedSw.id}`);
+                                if (swRow) {
+                                    let badgeBg = 'rgba(16, 185, 129, 0.12)';
+                                    let badgeColor = '#6ee7b7';
+                                    let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+                                    let statusLabel = 'Online';
+
+                                    if (!updatedSw.online) {
+                                        badgeBg = 'rgba(239, 68, 68, 0.12)';
+                                        badgeColor = '#fca5a5';
+                                        badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                                        statusLabel = 'Offline';
+                                    }
+
+                                    const latencyColor = updatedSw.latency < 50 ? '#6ee7b7' : updatedSw.latency < 150 ? '#fde047' : '#fca5a5';
+                                    const latencyText = updatedSw.online ? `${updatedSw.latency}ms` : '-';
+
+                                    const badgeContainer = swRow.querySelector('.monitor-badge');
+                                    if (badgeContainer) {
+                                        badgeContainer.style.background = badgeBg;
+                                        badgeContainer.style.color = badgeColor;
+                                        badgeContainer.style.borderColor = badgeBorder;
+                                        badgeContainer.textContent = statusLabel;
+                                    }
+
+                                    const latencyContainer = swRow.querySelector('.switch-latency');
+                                    if (latencyContainer) {
+                                        latencyContainer.style.color = latencyColor;
+                                        latencyContainer.textContent = latencyText;
+                                    }
+
+                                    // Clear sync icon with visual confirmation tick
+                                    const indicator = swRow.querySelector('.switch-sync-indicator');
+                                    if (indicator) {
+                                        indicator.innerHTML = `
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        `;
+                                        setTimeout(() => {
+                                            if (indicator.querySelector('polyline')) {
+                                                indicator.innerHTML = '';
+                                            }
+                                        }, 3000);
+                                    }
+                                }
+                            }
+                        } catch (pingErr) {
+                            console.error(`Erro ao pingar switch ${sw.name}:`, pingErr);
+                            const swRow = document.getElementById(`switch-row-${sw.id}`);
+                            if (swRow) {
+                                const badgeContainer = swRow.querySelector('.monitor-badge');
+                                if (badgeContainer) {
+                                    badgeContainer.style.background = 'rgba(239, 68, 68, 0.12)';
+                                    badgeContainer.style.color = '#fca5a5';
+                                    badgeContainer.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    badgeContainer.textContent = 'Erro';
+                                }
+                                const indicator = swRow.querySelector('.switch-sync-indicator');
+                                if (indicator) indicator.innerHTML = '';
+                            }
+                        }
+                    }
+                    isPingingSequentially = false;
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            } else {
+                // Load all at once on backend
+                const url = `/monitoring/switches?refresh=${forceRefresh}&t=${Date.now()}`;
+                const res = await apiClient.get(url);
+                if (res && res.success && Array.isArray(res.switches)) {
+                    this.renderSwitchesTable(res.switches);
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status dos switches:', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #fca5a5; background: rgba(239, 68, 68, 0.07);">
+                        <p style="margin: 0; font-weight: 600;">Falha ao obter status dos switches</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.82rem; opacity: 0.85;">${err.message}</p>
+                    </td>
+                </tr>
+            `;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = 'pointer';
+                if (svg) svg.style.animation = '';
+            }
+        }
+    },
+
+    renderSwitchesTable(switches) {
+        const tbody = document.getElementById('monitoring-switches-tbody');
+        if (!tbody) return;
+
+        if (switches.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nenhum switch encontrado.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = switches.map(sw => {
+            let badgeBg = 'rgba(16, 185, 129, 0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+            let statusLabel = 'Online';
+
+            if (sw.online === null) {
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+                statusLabel = 'Aguardando...';
+            } else if (!sw.online) {
+                badgeBg = 'rgba(239, 68, 68, 0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                statusLabel = 'Offline';
+            }
+
+            const latencyColor = sw.online ? (sw.latency < 50 ? '#6ee7b7' : sw.latency < 150 ? '#fde047' : '#fca5a5') : 'var(--text-muted)';
+            const latencyText = sw.online ? `${sw.latency}ms` : '-';
+
+            return `
+                <tr id="switch-row-${sw.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                    <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${sw.name}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${sw.ip}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${sw.model || '-'}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${sw.location || '-'}</td>
+                    <td style="padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span class="switch-sync-indicator" style="display: inline-flex; align-items: center;"></span>
+                        </div>
+                    </td>
+                    <td class="switch-latency" style="padding: 12px; text-align: right; font-weight: 500; font-family: monospace; color: ${latencyColor};">${latencyText}</td>
+                </tr>
             `;
         }).join('');
     }
