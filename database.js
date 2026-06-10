@@ -196,6 +196,22 @@ db.serialize(() => {
             }
         });
     });
+
+    // Table for monitoring event history (persistent alerts)
+    db.run(`CREATE TABLE IF NOT EXISTS monitoring_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        alert_key TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        severity TEXT DEFAULT 'info',
+        source TEXT DEFAULT 'Gnew Monitor',
+        value_pct INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
+    // Migration for monitoring_events columns
+    db.run("ALTER TABLE monitoring_events ADD COLUMN alert_key TEXT", () => {});
+    db.run("ALTER TABLE monitoring_events ADD COLUMN value_pct INTEGER", () => {});
 });
 
 module.exports = db;

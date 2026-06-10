@@ -836,6 +836,62 @@ app.get('/api/monitoring/diagnostico', async (req, res) => {
 });
 
 
+// --- Monitoring Event History ---
+
+// GET: Lista histórico de eventos de monitoramento (ordem cronológica decrescente)
+app.get('/api/monitoring/events', (req, res) => {
+    const limit = parseInt(req.query.limit) || 200;
+    db.all(
+        "SELECT * FROM monitoring_events ORDER BY created_at DESC LIMIT ?",
+        [limit],
+        (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json(rows);
+        }
+    );
+});
+
+// POST: Registra um novo evento/alerta no histórico
+app.post('/api/monitoring/events', (req, res) => {
+    const { alert_key, title, description, severity, source, value_pct } = req.body;
+    if (!alert_key || !title) {
+        return res.status(400).json({ error: 'alert_key e title são obrigatórios.' });
+    }
+
+    // Evita duplicatas: não insere se já existe um evento igual nas últimas 2 horas
+    db.get(
+        `SELECT id FROM monitoring_events 
+         WHERE alert_key = ? AND created_at >= datetime('now', '-2 hours')
+         ORDER BY created_at DESC LIMIT 1`,
+        [alert_key],
+        (err, existing) => {
+            if (err) return res.status(500).json({ error: err.message });
+            if (existing) {
+                // Alerta já registrado recentemente, retorna sem duplicar
+                return res.status(200).json({ id: existing.id, skipped: true });
+            }
+
+            db.run(
+                `INSERT INTO monitoring_events (alert_key, title, description, severity, source, value_pct)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [alert_key, title, description || '', severity || 'info', source || 'Gnew Monitor', value_pct || null],
+                function (err2) {
+                    if (err2) return res.status(500).json({ error: err2.message });
+                    res.status(201).json({ id: this.lastID });
+                }
+            );
+        }
+    );
+});
+
+// DELETE: Limpa todo o histórico de eventos
+app.delete('/api/monitoring/events', (req, res) => {
+    db.run("DELETE FROM monitoring_events", [], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, deleted: this.changes });
+    });
+});
+
 // 404 Catch-all para rotas da API
 app.use('/api', (req, res) => {
     console.warn(`[404 NOT FOUND API] ${req.method} ${req.url}`);

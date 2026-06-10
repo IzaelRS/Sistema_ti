@@ -1,9 +1,17 @@
 import { apiClient } from '../api/client.js';
 
+const PAGE_SIZE = 30;
+
 let gnewAlerts = []; // alertas sinteticos gerados a partir dos dados Gnew
 let eventsSearchQuery = '';
+let eventsFilterSeverity = 'all';
+let eventsFilterDateStart = ''; // YYYY-MM-DD
+let eventsFilterDateEnd   = ''; // YYYY-MM-DD
+let eventsCurrentPage = 1;      // página corrente (1-indexed)
+let eventsTotalFiltered = 0;    // total de registros após filtros
 let activeTab = 'alerts'; // 'alerts', 'events', 'gnew'
 let gnewDiagData = null;
+let autoRefreshInterval = null;
 
 export const monitoringHandler = {
     init() {
@@ -20,8 +28,56 @@ export const monitoringHandler = {
         if (eventsSearchInput) {
             eventsSearchInput.addEventListener('input', (e) => {
                 eventsSearchQuery = e.target.value.toLowerCase();
-                this.render();
+                eventsCurrentPage = 1;
+                this.fetchAndRenderEventHistory();
             });
+        }
+
+        // Severity filter dropdown
+        const severityFilter = document.getElementById('monitoring-events-severity-filter');
+        if (severityFilter) {
+            severityFilter.addEventListener('change', (e) => {
+                eventsFilterSeverity = e.target.value;
+                eventsCurrentPage = 1;
+                this.fetchAndRenderEventHistory();
+            });
+        }
+
+        // Date range filters
+        const dateStart = document.getElementById('monitoring-events-date-start');
+        const dateEnd   = document.getElementById('monitoring-events-date-end');
+        if (dateStart) {
+            dateStart.addEventListener('change', (e) => {
+                eventsFilterDateStart = e.target.value;
+                eventsCurrentPage = 1;
+                this.fetchAndRenderEventHistory();
+            });
+        }
+        if (dateEnd) {
+            dateEnd.addEventListener('change', (e) => {
+                eventsFilterDateEnd = e.target.value;
+                eventsCurrentPage = 1;
+                this.fetchAndRenderEventHistory();
+            });
+        }
+
+        // Clear date filters button
+        const clearDateBtn = document.getElementById('btn-clear-event-date-filter');
+        if (clearDateBtn) {
+            clearDateBtn.addEventListener('click', () => {
+                eventsFilterDateStart = '';
+                eventsFilterDateEnd   = '';
+                eventsCurrentPage = 1;
+                if (dateStart) dateStart.value = '';
+                if (dateEnd)   dateEnd.value   = '';
+                this.fetchAndRenderEventHistory();
+            });
+        }
+
+        // Clear history button
+        const clearBtn = document.getElementById('btn-clear-event-history');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.clearEventHistory());
         }
 
         // Refresh button (global) - triggers Gnew fetch
@@ -78,8 +134,44 @@ export const monitoringHandler = {
             });
         }
 
+        // Auto-refresh checkbox (alerts tab)
+        const autoRefreshChk = document.getElementById('monitoring-auto-refresh');
+        if (autoRefreshChk) {
+            autoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startAutoRefresh();
+                } else {
+                    this._stopAutoRefresh();
+                }
+            });
+            // Start immediately if checked
+            if (autoRefreshChk.checked) this._startAutoRefresh();
+        }
+
         // Bind global helper
         window.monitoringHandler = this;
+    },
+
+    _startAutoRefresh() {
+        this._stopAutoRefresh();
+        autoRefreshInterval = setInterval(() => {
+            if (activeTab === 'alerts' || activeTab === 'gnew') {
+                this.fetchDiagnostics();
+            }
+        }, 30000);
+    },
+
+    _stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+    },
+
+    fetch() {
+        // Called when section is first loaded
+        this.setActiveTab('alerts');
+        this.fetchDiagnostics();
     },
 
     setActiveTab(tab) {
@@ -113,26 +205,30 @@ export const monitoringHandler = {
 
         if (tab === 'gnew') {
             this.fetchDiagnostics();
+        } else if (tab === 'events') {
+            eventsCurrentPage = 1; // sempre começa na página 1 ao abrir a aba
+            this.fetchAndRenderEventHistory();
         } else {
-            this.render();
+            this.renderGnewServicesStatus();
         }
     },
+
 
     render() {
-        // Histórico = apenas alertas Gnew (threshold)
         if (activeTab === 'alerts') {
             this.renderGnewServicesStatus();
-        } else {
-            this.renderEvents(gnewAlerts);
+        } else if (activeTab === 'events') {
+            this.fetchAndRenderEventHistory();
         }
     },
 
+    // -----------------------------------------------------------------------
     // Alertas Ativos: lista compacta de serviços Gnew
+    // -----------------------------------------------------------------------
     renderGnewServicesStatus() {
         const grid = document.getElementById('monitoring-alerts-grid');
         if (!grid) return;
 
-        // Troca grid por lista
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
         grid.style.gap = '0';
@@ -188,71 +284,264 @@ export const monitoringHandler = {
             </div>`;
     },
 
+    // -----------------------------------------------------------------------
+    // Histórico de Eventos — busca do banco, filtra, pagina e renderiza
+    // -----------------------------------------------------------------------
+    async fetchAndRenderEventHistory() {
+        const grid = document.getElementById('monitoring-events-grid');
+        if (!grid) return;
+
+        // Show loading state
+        grid.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                <div class="event-history-loading">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" style="animation: spin 1s linear infinite; margin-bottom: 0.75rem; opacity: 0.5;">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <p style="font-size: 0.9rem;">Carregando histórico...</p>
+                </div>
+            </div>`;
+
+        try {
+            // Busca todos (até 1000) para filtrar/paginar no cliente
+            let events = await apiClient.get('/monitoring/events?limit=1000');
+
+            // --- Filtro: texto livre ---
+            if (eventsSearchQuery) {
+                events = events.filter(ev =>
+                    (ev.title || '').toLowerCase().includes(eventsSearchQuery) ||
+                    (ev.description || '').toLowerCase().includes(eventsSearchQuery) ||
+                    (ev.source || '').toLowerCase().includes(eventsSearchQuery)
+                );
+            }
+
+            // --- Filtro: severidade ---
+            if (eventsFilterSeverity !== 'all') {
+                events = events.filter(ev => ev.severity === eventsFilterSeverity);
+            }
+
+            // --- Filtro: data início ---
+            if (eventsFilterDateStart) {
+                const startMs = new Date(eventsFilterDateStart + 'T00:00:00').getTime();
+                events = events.filter(ev => {
+                    if (!ev.created_at) return false;
+                    return new Date(ev.created_at).getTime() >= startMs;
+                });
+            }
+
+            // --- Filtro: data fim ---
+            if (eventsFilterDateEnd) {
+                const endMs = new Date(eventsFilterDateEnd + 'T23:59:59').getTime();
+                events = events.filter(ev => {
+                    if (!ev.created_at) return false;
+                    return new Date(ev.created_at).getTime() <= endMs;
+                });
+            }
+
+            eventsTotalFiltered = events.length;
+
+            // Garante que a página atual não ultrapasse o total de páginas
+            const totalPages = Math.max(1, Math.ceil(eventsTotalFiltered / PAGE_SIZE));
+            if (eventsCurrentPage > totalPages) eventsCurrentPage = totalPages;
+
+            // --- Badge de contagem ---
+            const countEl = document.getElementById('event-history-count');
+            if (countEl) {
+                countEl.textContent = eventsTotalFiltered > 0 ? eventsTotalFiltered : '';
+                countEl.style.display = eventsTotalFiltered > 0 ? 'inline-flex' : 'none';
+            }
+
+            // --- Fatia da página corrente (os 30 mais recentes por padrão = página 1) ---
+            const offset = (eventsCurrentPage - 1) * PAGE_SIZE;
+            const pageSlice = events.slice(offset, offset + PAGE_SIZE);
+
+            // Renderiza a lista e a paginação
+            this.renderEvents(pageSlice);
+            this.renderPagination(eventsTotalFiltered, totalPages);
+
+        } catch (err) {
+            console.error('Erro ao buscar histórico de eventos:', err);
+            grid.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <p style="font-size: 0.9rem; color: #fca5a5;">Erro ao carregar o histórico de eventos.</p>
+                    <p style="font-size: 0.8rem; margin-top: 4px;">${err.message}</p>
+                </div>`;
+        }
+    },
+
+    // -----------------------------------------------------------------------
+    // Paginação — renderiza a barra abaixo da lista
+    // -----------------------------------------------------------------------
+    renderPagination(total, totalPages) {
+        const container = document.getElementById('event-history-pagination');
+        if (!container) return;
+
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const page = eventsCurrentPage;
+        const from = (page - 1) * PAGE_SIZE + 1;
+        const to   = Math.min(page * PAGE_SIZE, total);
+
+        // Gera os botões de página (janela de ±2 páginas em relação à corrente)
+        const pageButtons = [];
+        const window_ = 2;
+        let start = Math.max(1, page - window_);
+        let end   = Math.min(totalPages, page + window_);
+
+        if (start > 1) {
+            pageButtons.push(`<button class="eh-page-btn" data-page="1">1</button>`);
+            if (start > 2) pageButtons.push(`<span class="eh-page-ellipsis">…</span>`);
+        }
+        for (let p = start; p <= end; p++) {
+            pageButtons.push(`<button class="eh-page-btn${p === page ? ' active' : ''}" data-page="${p}">${p}</button>`);
+        }
+        if (end < totalPages) {
+            if (end < totalPages - 1) pageButtons.push(`<span class="eh-page-ellipsis">…</span>`);
+            pageButtons.push(`<button class="eh-page-btn" data-page="${totalPages}">${totalPages}</button>`);
+        }
+
+        container.innerHTML = `
+            <div class="eh-pagination">
+                <span class="eh-page-info">Exibindo <strong>${from}–${to}</strong> de <strong>${total}</strong> eventos</span>
+                <div class="eh-page-controls">
+                    <button class="eh-page-btn eh-page-nav" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    ${pageButtons.join('')}
+                    <button class="eh-page-btn eh-page-nav" data-page="${page + 1}" ${page >= totalPages ? 'disabled' : ''}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                </div>
+            </div>`;
+
+        // Registra cliques
+        container.querySelectorAll('.eh-page-btn[data-page]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const p = parseInt(btn.dataset.page, 10);
+                if (!isNaN(p) && p >= 1 && p <= totalPages && p !== eventsCurrentPage) {
+                    eventsCurrentPage = p;
+                    this.fetchAndRenderEventHistory();
+                    // Scroll suave até o topo da lista
+                    const grid = document.getElementById('monitoring-events-grid');
+                    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    },
+
     renderEvents(eventsToRender) {
         const grid = document.getElementById('monitoring-events-grid');
         if (!grid) return;
 
-        // Troca grid por lista
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
         grid.style.gap = '0';
 
         const list = eventsToRender || [];
-        const filtered = list.filter(item =>
-            !eventsSearchQuery || (item.title || '').toLowerCase().includes(eventsSearchQuery)
-        );
 
-        if (filtered.length === 0) {
+        if (list.length === 0) {
             grid.innerHTML = `
-                <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
-                    Nenhum alerta de threshold registrado no momento.
-                </div>
-            `;
+                <div class="event-history-empty">
+                    <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" style="opacity: 0.2; margin-bottom: 1rem;">
+                        <path d="M18 20V10"></path>
+                        <path d="M12 20V4"></path>
+                        <path d="M6 20v-6"></path>
+                    </svg>
+                    <p style="font-size: 0.95rem; font-weight: 500; margin: 0 0 4px;">Nenhum evento registrado</p>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0;">
+                        Alertas de disco, RAM e serviços offline são registrados automaticamente aqui.
+                    </p>
+                </div>`;
             return;
         }
 
-        grid.innerHTML = `
-            <div class="monitor-list">
-                <div class="monitor-list-header">
-                    <span class="monitor-list-col-name">Evento</span>
-                    <span class="monitor-list-col-sev">Severidade</span>
-                    <span class="monitor-list-col-time">Horário</span>
-                </div>
-                ${filtered.map((item, idx) => {
-                    const severityClass = item.severity || 'info';
-                    let severityLabel = 'Info';
-                    let dotColor = '#3b82f6';
-                    let badgeBg = 'rgba(59,130,246,0.12)';
-                    let badgeColor = '#93c5fd';
-                    let badgeBorder = 'rgba(59,130,246,0.3)';
-                    if (severityClass === 'critical') {
-                        severityLabel = 'Crítico'; dotColor = '#ef4444';
-                        badgeBg = 'rgba(239,68,68,0.12)'; badgeColor = '#fca5a5'; badgeBorder = 'rgba(239,68,68,0.3)';
-                    } else if (severityClass === 'warning') {
-                        severityLabel = 'Alerta'; dotColor = '#f59e0b';
-                        badgeBg = 'rgba(245,158,11,0.12)'; badgeColor = '#fde047'; badgeBorder = 'rgba(245,158,11,0.3)';
-                    } else if (severityClass === 'success') {
-                        severityLabel = 'Ok'; dotColor = '#10b981';
-                        badgeBg = 'rgba(16,185,129,0.12)'; badgeColor = '#6ee7b7'; badgeBorder = 'rgba(16,185,129,0.3)';
-                    }
-                    const timeStr = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-';
-                    const rowBg = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
-                    return `
-                        <div class="monitor-list-row" style="background: ${rowBg};">
-                            <div class="monitor-list-col-name">
-                                <span class="monitor-dot" style="background: ${dotColor};"></span>
-                                <div>
-                                    <span class="monitor-svc-name">${item.title}</span>
-                                    ${item.description ? `<span class="monitor-svc-desc">${item.description}</span>` : ''}
-                                </div>
+        // Group events by date
+        const groups = {};
+        list.forEach(item => {
+            const dateKey = item.created_at
+                ? new Date(item.created_at).toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                : 'Data desconhecida';
+            if (!groups[dateKey]) groups[dateKey] = [];
+            groups[dateKey].push(item);
+        });
+
+        const rowsHtml = Object.entries(groups).map(([dateLabel, items]) => {
+            const itemsHtml = items.map((item) => {
+                const sev = item.severity || 'info';
+                let severityLabel = 'Info';
+                let dotColor = '#3b82f6';
+                let badgeBg = 'rgba(59,130,246,0.12)';
+                let badgeColor = '#93c5fd';
+                let badgeBorder = 'rgba(59,130,246,0.3)';
+                let leftAccent = '#3b82f6';
+
+                if (sev === 'critical') {
+                    severityLabel = 'Crítico'; dotColor = '#ef4444'; leftAccent = '#ef4444';
+                    badgeBg = 'rgba(239,68,68,0.12)'; badgeColor = '#fca5a5'; badgeBorder = 'rgba(239,68,68,0.3)';
+                } else if (sev === 'warning') {
+                    severityLabel = 'Alerta'; dotColor = '#f59e0b'; leftAccent = '#f59e0b';
+                    badgeBg = 'rgba(245,158,11,0.12)'; badgeColor = '#fde047'; badgeBorder = 'rgba(245,158,11,0.3)';
+                } else if (sev === 'success') {
+                    severityLabel = 'Ok'; dotColor = '#10b981'; leftAccent = '#10b981';
+                    badgeBg = 'rgba(16,185,129,0.12)'; badgeColor = '#6ee7b7'; badgeBorder = 'rgba(16,185,129,0.3)';
+                }
+
+                const dt = item.created_at ? new Date(item.created_at) : null;
+                const timeStr = dt ? dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
+                const relStr = dt ? this._relativeTime(dt) : '';
+                const valuePct = item.value_pct != null ? `${item.value_pct}%` : null;
+
+                return `
+                    <div class="event-history-row" style="border-left: 3px solid ${leftAccent};">
+                        <div class="event-history-row-left">
+                            <span class="monitor-dot" style="background: ${dotColor}; flex-shrink: 0;"></span>
+                            <div class="event-history-row-info">
+                                <span class="event-history-row-title">${item.title}</span>
+                                ${item.description ? `<span class="event-history-row-desc">${item.description}</span>` : ''}
                             </div>
-                            <div class="monitor-list-col-sev">
-                                <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${severityLabel}</span>
+                        </div>
+                        <div class="event-history-row-meta">
+                            ${valuePct ? `<span class="event-history-row-value">${valuePct}</span>` : ''}
+                            <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder}; flex-shrink: 0;">${severityLabel}</span>
+                            <div class="event-history-row-time">
+                                <span class="event-time-clock">${timeStr}</span>
+                                ${relStr ? `<span class="event-time-rel">${relStr}</span>` : ''}
                             </div>
-                            <div class="monitor-list-col-time">${timeStr}</div>
-                        </div>`;
-                }).join('')}
-            </div>`;
+                        </div>
+                    </div>`;
+            }).join('');
+
+            return `
+                <div class="event-history-date-group">
+                    <div class="event-history-date-header">
+                        <span class="event-history-date-line"></span>
+                        <span class="event-history-date-label">${dateLabel}</span>
+                        <span class="event-history-date-line"></span>
+                    </div>
+                    ${itemsHtml}
+                </div>`;
+        }).join('');
+
+        grid.innerHTML = `<div class="event-history-list">${rowsHtml}</div>`;
+    },
+
+    _relativeTime(date) {
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffH = Math.floor(diffMin / 60);
+        const diffD = Math.floor(diffH / 24);
+
+        if (diffMs < 60000) return 'agora mesmo';
+        if (diffMin < 60) return `${diffMin}min atrás`;
+        if (diffH < 24) return `${diffH}h atrás`;
+        if (diffD === 1) return 'ontem';
+        return `${diffD} dias atrás`;
     },
 
     updateKPIs(total, offline) {
@@ -310,7 +599,6 @@ export const monitoringHandler = {
                     const totalStr = tokens[1];
                     const usedStr = tokens[2];
                     
-                    // Convert units like 7.8Gi to floats
                     const parseVal = (str) => {
                         const val = parseFloat(str);
                         if (str.toLowerCase().includes('g')) return val * 1024;
@@ -370,10 +658,8 @@ export const monitoringHandler = {
         if (gnewDiagData.memoria) {
             let mem = { percentage: 0, detail: 'Dados de memória indisponíveis' };
             if (gnewDiagData.memoria.output) {
-                // Formato de Contingência (String)
                 mem = this.parseMemoryOutput(gnewDiagData.memoria.output);
             } else if (typeof gnewDiagData.memoria.percent !== 'undefined') {
-                // Formato Real JSON
                 const totalGb = (gnewDiagData.memoria.total_mb / 1024).toFixed(1);
                 const usedGb = (gnewDiagData.memoria.used_mb / 1024).toFixed(1);
                 mem = {
@@ -394,10 +680,8 @@ export const monitoringHandler = {
         if (gnewDiagData.disco) {
             let disk = { percentage: 0, detail: 'Dados de disco indisponíveis' };
             if (gnewDiagData.disco.output) {
-                // Formato de Contingência (String)
                 disk = this.parseDiskOutput(gnewDiagData.disco.output);
             } else if (Array.isArray(gnewDiagData.disco)) {
-                // Formato Real JSON (Array)
                 const rootMount = gnewDiagData.disco.find(m => m.mountpoint === '/');
                 if (rootMount) {
                     disk = {
@@ -422,7 +706,6 @@ export const monitoringHandler = {
 
             if (gnewDiagData.disco) {
                 if (gnewDiagData.disco.output) {
-                    // Contingency format (Linux df terminal string output)
                     try {
                         const lines = gnewDiagData.disco.output.trim().split('\n');
                         for (let i = 1; i < lines.length; i++) {
@@ -441,7 +724,6 @@ export const monitoringHandler = {
                         console.warn("Erro ao fazer parse da tabela de disco offline:", e);
                     }
                 } else if (Array.isArray(gnewDiagData.disco)) {
-                    // Real JSON format (array of mountpoints)
                     parsedDisks = gnewDiagData.disco.map(item => {
                         return {
                             mountpoint: item.mountpoint,
@@ -579,19 +861,17 @@ export const monitoringHandler = {
     },
 
     // -----------------------------------------------------------------------
-    // checkGnewThresholds — Verifica limites e injeta alertas no histórico
+    // checkGnewThresholds — Verifica limites, persiste alertas no banco e
+    // atualiza o histórico se a aba estiver visível.
     //   RAM    >= 90%  → alerta crítico
     //   Disco  >= 80%  → alerta de aviso (qualquer ponto de montagem)
     //   Serviço off    → alerta crítico por serviço
-    // Os alertas ficam ativos até o valor normalizar (são recalculados a cada
-    // chamada e não persistem entre sessões — apenas na memória da tab).
     // -----------------------------------------------------------------------
-    checkGnewThresholds() {
+    async checkGnewThresholds() {
         if (!gnewDiagData) return;
 
         const RAM_THRESHOLD  = 90; // %
         const DISK_THRESHOLD = 80; // %
-        const now = new Date().toISOString();
         const newAlerts = [];
 
         // --- RAM ---
@@ -605,14 +885,12 @@ export const monitoringHandler = {
         }
         if (ramPct >= RAM_THRESHOLD) {
             newAlerts.push({
-                id: 'gnew-alert-ram',
-                title: `⚠️ Uso de RAM crítico: ${ramPct}%`,
-                description: `O uso de memória RAM atingiu ${ramPct}%, superando o limite de ${RAM_THRESHOLD}%. Verifique os processos em execução no PABX.`,
+                alert_key: 'gnew-alert-ram',
+                title: `RAM crítica: ${ramPct}%`,
+                description: `Uso de memória RAM atingiu ${ramPct}%, superando o limite de ${RAM_THRESHOLD}%. Verifique os processos em execução no PABX.`,
                 severity: 'critical',
                 source: 'Gnew Monitor',
-                ip: '',
-                created_at: now,
-                _gnewAlert: true
+                value_pct: ramPct
             });
         }
 
@@ -620,7 +898,6 @@ export const monitoringHandler = {
         let disks = [];
         if (gnewDiagData.disco) {
             if (gnewDiagData.disco.output) {
-                // Parse contingency string
                 try {
                     const lines = gnewDiagData.disco.output.trim().split('\n');
                     for (let i = 1; i < lines.length; i++) {
@@ -637,14 +914,12 @@ export const monitoringHandler = {
         disks.forEach(disk => {
             if (disk.percent >= DISK_THRESHOLD) {
                 newAlerts.push({
-                    id: `gnew-alert-disk-${disk.mountpoint}`,
-                    title: `⚠️ Disco (${disk.mountpoint}): ${disk.percent}%`,
-                    description: `O ponto de montagem "${disk.mountpoint}" está com ${disk.percent}% de uso, superando o limite de ${DISK_THRESHOLD}%. Verifique o espaço disponível.`,
+                    alert_key: `gnew-alert-disk-${disk.mountpoint}`,
+                    title: `Disco (${disk.mountpoint}): ${disk.percent}%`,
+                    description: `Ponto de montagem "${disk.mountpoint}" está com ${disk.percent}% de uso, superando o limite de ${DISK_THRESHOLD}%.`,
                     severity: disk.percent >= 95 ? 'critical' : 'warning',
                     source: 'Gnew Monitor',
-                    ip: '',
-                    created_at: now,
-                    _gnewAlert: true
+                    value_pct: disk.percent
                 });
             }
         });
@@ -655,47 +930,60 @@ export const monitoringHandler = {
                 const isAtivo = svc.status === 'active' || svc.status_label === 'ativo';
                 if (!isAtivo) {
                     newAlerts.push({
-                        id: `gnew-alert-svc-${svc.nome}`,
-                        title: `🔴 Serviço offline: ${svc.nome}`,
+                        alert_key: `gnew-alert-svc-${svc.nome}`,
+                        title: `Serviço offline: ${svc.nome}`,
                         description: `O serviço "${svc.nome}" está com status "${svc.status_label || svc.status}". Verifique o systemd do PABX.`,
                         severity: 'critical',
                         source: 'Gnew Monitor',
-                        ip: '',
-                        created_at: now,
-                        _gnewAlert: true
+                        value_pct: null
                     });
                 }
             });
         }
 
-        // Substitui alertas Gnew anteriores pelos recém-calculados
+        // Atualiza lista em memória para uso na aba de Alertas Ativos
         gnewAlerts = newAlerts;
 
-        // Se há alertas ativos, re-renderiza o histórico caso esteja visível
+        // Persiste os alertas detectados no banco (deduplicação server-side)
+        if (newAlerts.length > 0) {
+            const savePromises = newAlerts.map(alert =>
+                fetch('/api/monitoring/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(alert)
+                }).catch(() => {})
+            );
+            await Promise.all(savePromises);
+        }
+
+        // Se a aba histórico estiver visível, atualiza
         if (activeTab === 'events') {
-            const allEvents = [
-                ...allNotifications,
-                ...gnewAlerts
-            ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            this.renderEvents(allEvents);
+            this.fetchAndRenderEventHistory();
+        }
+    },
+
+    async clearEventHistory() {
+        const clearBtn = document.getElementById('btn-clear-event-history');
+        if (!confirm('Tem certeza que deseja limpar todo o histórico de eventos? Esta ação não pode ser desfeita.')) return;
+
+        try {
+            if (clearBtn) {
+                clearBtn.disabled = true;
+                clearBtn.textContent = 'Limpando...';
+            }
+            await fetch('/api/monitoring/events', { method: 'DELETE' });
+            await this.fetchAndRenderEventHistory();
+
+            const countEl = document.getElementById('event-history-count');
+            if (countEl) countEl.style.display = 'none';
+        } catch (err) {
+            console.error('Erro ao limpar histórico:', err);
+            alert('Erro ao limpar o histórico. Tente novamente.');
+        } finally {
+            if (clearBtn) {
+                clearBtn.disabled = false;
+                clearBtn.textContent = 'Limpar Histórico';
+            }
         }
     }
 };
-
-// Helper for finding position in multi-line grids
-function getDragAfterElement(container, y, x) {
-    const draggableElements = [...container.querySelectorAll('.notification-card[draggable="true"]:not(.dragging)')];
-
-    return draggableElements.reduce((closest, child) => {
-        const box = child.getBoundingClientRect();
-        const centerX = box.left + box.width / 2;
-        const centerY = box.top + box.height / 2;
-        const distance = Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2);
-
-        if (distance < closest.distance) {
-            return { distance: distance, element: child };
-        } else {
-            return closest;
-        }
-    }, { distance: Number.POSITIVE_INFINITY }).element;
-}
