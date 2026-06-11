@@ -99,18 +99,18 @@ Para proteger o backend Express contra abusos de requisições e ataques de for�
 Crie um arquivo `.env` na raiz do projeto e configure os dados:
 ```env
 # Banco de Dados PostgreSQL
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=intranet_ti
+DB_USER=seu_usuario
+DB_PASSWORD=sua_senha
+DB_NAME=nome_do_banco
 
 # Integração PABX Gnew
-GNEW_USERNAME=usuario_gnew
-GNEW_PASSWORD=senha_gnew
+GNEW_USERNAME=seu_usuario_gnew
+GNEW_PASSWORD=sua_senha_gnew
 
 # Integração Lansweeper
-LANSWEEPER_URL=https://192.168.0.92
-LANSWEEPER_USER=admin
-LANSWEEPER_PASS=senha_lansweeper
+LANSWEEPER_URL=url_do_seu_lansweeper
+LANSWEEPER_USER=seu_usuario_lansweeper
+LANSWEEPER_PASS=sua_senha_lansweeper
 ```
 
 ---
