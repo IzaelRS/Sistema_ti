@@ -10,6 +10,11 @@ let autoRefreshInterval = null;
 let chartSlaInstance = null;
 let chartQtyInstance = null;
 
+// Submit guards to prevent duplication
+let isSavingEvent = false;
+let isSavingTopic = false;
+let isSavingSubtopic = false;
+
 // Dynamic Config State
 let topics = [];
 let subtopics = [];
@@ -55,25 +60,25 @@ export const timelineHandler = {
         // Bind Config Forms
         const topicForm = document.getElementById('timeline-topic-form');
         if (topicForm) {
-            topicForm.addEventListener('submit', handleTopicSubmit);
+            topicForm.onsubmit = handleTopicSubmit;
         }
         const subtopicForm = document.getElementById('timeline-subtopic-form');
         if (subtopicForm) {
-            subtopicForm.addEventListener('submit', handleSubtopicSubmit);
+            subtopicForm.onsubmit = handleSubtopicSubmit;
         }
 
         // Topic select change
         const topicSelect = document.getElementById('topico');
         if (topicSelect) {
-            topicSelect.addEventListener('change', (e) => {
+            topicSelect.onchange = (e) => {
                 updateSubTopics(e.target.value);
-            });
+            };
         }
 
         // Em Ocorrência toggle
         const emOcorrenciaToggle = document.getElementById('em-ocorrencia');
         if (emOcorrenciaToggle) {
-            emOcorrenciaToggle.addEventListener('change', (e) => {
+            emOcorrenciaToggle.onchange = (e) => {
                 const fimInput = document.getElementById('fim');
                 const inicioInput = document.getElementById('inicio');
                 if (e.target.checked) {
@@ -90,28 +95,28 @@ export const timelineHandler = {
                     fimInput.value = now.toISOString().slice(0, 16);
                     fimInput.required = true;
                 }
-            });
+            };
         }
 
         // Auto-refresh toggle
         const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
         if (autoRefreshToggle) {
-            autoRefreshToggle.addEventListener('change', (e) => {
+            autoRefreshToggle.onchange = (e) => {
                 toggleAutoRefresh(e.target.checked);
-            });
+            };
         }
 
         // Tab navigation
         document.querySelectorAll('[data-timeline-tab]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.onclick = (e) => {
                 const tabName = e.currentTarget.getAttribute('data-timeline-tab');
                 switchView(tabName);
-            });
+            };
         });
 
         // Form submit
         if (timelineForm) {
-            timelineForm.addEventListener('submit', handleFormSubmit);
+            timelineForm.onsubmit = handleFormSubmit;
         }
 
         // Report Filters event listeners
@@ -120,25 +125,29 @@ export const timelineHandler = {
         const repFilterTopic = document.getElementById('rep-filter-topic');
         const repFilterSubtopic = document.getElementById('rep-filter-subtopic');
 
-        if (repFilterStart) repFilterStart.addEventListener('change', () => renderReport());
-        if (repFilterEnd) repFilterEnd.addEventListener('change', () => renderReport());
+        if (repFilterStart) repFilterStart.onchange = () => renderReport();
+        if (repFilterEnd) repFilterEnd.onchange = () => renderReport();
         if (repFilterTopic) {
-            repFilterTopic.addEventListener('change', (e) => {
+            repFilterTopic.onchange = (e) => {
                 updateReportSubtopics(e.target.value);
                 renderReport();
-            });
+            };
         }
-        if (repFilterSubtopic) repFilterSubtopic.addEventListener('change', () => renderReport());
+        if (repFilterSubtopic) repFilterSubtopic.onchange = () => renderReport();
 
-        // Re-apply when section changes
-        window.addEventListener('SectionChange', (e) => {
+        // Re-apply when section changes (prevent double binding under HMR)
+        if (window._timelineSectionChangeHandler) {
+            window.removeEventListener('SectionChange', window._timelineSectionChangeHandler);
+        }
+        window._timelineSectionChangeHandler = (e) => {
             if (e.detail && e.detail.section === 'timeline') {
                 loadConfig().then(() => {
                     loadEvents();
                     applyRoleAccess();
                 });
             }
-        });
+        };
+        window.addEventListener('SectionChange', window._timelineSectionChangeHandler);
 
         // Load data
         loadConfig().then(() => {
@@ -148,10 +157,14 @@ export const timelineHandler = {
     }
 };
 
-// Auto-refresh when window regains focus
-window.addEventListener('focus', () => {
+// Auto-refresh when window regains focus (prevent double binding under HMR)
+if (window._timelineFocusHandler) {
+    window.removeEventListener('focus', window._timelineFocusHandler);
+}
+window._timelineFocusHandler = () => {
     if (sectionVisualizacao) loadEvents();
-});
+};
+window.addEventListener('focus', window._timelineFocusHandler);
 
 // ============================================================
 // Helper Functions
@@ -389,6 +402,12 @@ function toggleAutoRefresh(enable) {
 // ============================================================
 function handleFormSubmit(e) {
     e.preventDefault();
+    if (isSavingEvent) {
+        console.warn('[Timeline] O salvamento já está em andamento. Ignorando envio duplicado.');
+        return;
+    }
+    isSavingEvent = true;
+
     const submitBtn = timelineForm.querySelector('button[type="submit"]');
     if (submitBtn) { submitBtn.textContent = 'Salvando...'; submitBtn.disabled = true; }
 
@@ -427,6 +446,7 @@ function handleFormSubmit(e) {
         })
         .finally(() => {
             if (submitBtn) { submitBtn.textContent = 'Salvar Evento'; submitBtn.disabled = false; }
+            isSavingEvent = false;
         });
 }
 
@@ -1118,11 +1138,17 @@ function closeTeamModalOnOutsideClick(event) {
 // ============================================================
 function handleTopicSubmit(e) {
     e.preventDefault();
+    if (isSavingTopic) return;
+    isSavingTopic = true;
+
     const idInput = document.getElementById('topic-id');
     const nameInput = document.getElementById('topic-name');
     const colorInput = document.getElementById('topic-color');
 
-    if (!idInput || !nameInput || !colorInput) return;
+    if (!idInput || !nameInput || !colorInput) {
+        isSavingTopic = false;
+        return;
+    }
 
     const topicData = {
         id: idInput.value.trim().toLowerCase(),
@@ -1132,6 +1158,7 @@ function handleTopicSubmit(e) {
 
     if (!topicData.id) {
         alert('Por favor, defina um ID para o tópico.');
+        isSavingTopic = false;
         return;
     }
 
@@ -1149,22 +1176,31 @@ function handleTopicSubmit(e) {
         idInput.value = '';
         nameInput.value = '';
         colorInput.value = '#3b82f6';
-        loadConfig().then(() => {
+        return loadConfig().then(() => {
             loadEvents();
         });
     })
     .catch(err => {
         console.error(err);
         alert('Erro: ' + err.message);
+    })
+    .finally(() => {
+        isSavingTopic = false;
     });
 }
 
 function handleSubtopicSubmit(e) {
     e.preventDefault();
+    if (isSavingSubtopic) return;
+    isSavingSubtopic = true;
+
     const topicIdSelect = document.getElementById('subtopic-topic-id');
     const nameInput = document.getElementById('subtopic-name');
 
-    if (!topicIdSelect || !nameInput) return;
+    if (!topicIdSelect || !nameInput) {
+        isSavingSubtopic = false;
+        return;
+    }
 
     const subtopicData = {
         topic_id: topicIdSelect.value,
@@ -1173,6 +1209,7 @@ function handleSubtopicSubmit(e) {
 
     if (!subtopicData.topic_id || !subtopicData.name) {
         alert('Preencha todos os campos do evento.');
+        isSavingSubtopic = false;
         return;
     }
 
@@ -1188,11 +1225,14 @@ function handleSubtopicSubmit(e) {
     .then(() => {
         alert('Evento adicionado!');
         nameInput.value = '';
-        loadConfig();
+        return loadConfig();
     })
     .catch(err => {
         console.error(err);
         alert('Erro: ' + err.message);
+    })
+    .finally(() => {
+        isSavingSubtopic = false;
     });
 }
 

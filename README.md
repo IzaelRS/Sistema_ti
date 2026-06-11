@@ -1,173 +1,246 @@
-# Documentação da Intranet TI
+# Intranet TI - Documentação do Projeto
 
-Este documento detalha as configurações técnicas de segurança, monitoramento e criação de logs configurados no backend (`server.js`).
-
-## 🛡️ Segurança e Rate Limit (Anti-Spam)
-
-Para proteger a aplicação contra abusos, ataques de força bruta (tentativas infinitas de senha) e sobrecarga do servidor, existem políticas de bloqueio ("Rate Limit") baseadas no IP de quem acessa:
-
-| Funcionalidade | Rota | Limite de Requisições | Tempo de Bloqueio | Comportamento após o limite |
-| :--- | :--- | :--- | :--- | :--- |
-| **Tentativas de Login** | `POST /api/login` | **10** | **15 Minutos** | Retorna Erro `429`: "Muitas tentativas de login. Tente novamente em 15 minutos." |
-| **Upload de Arquivos** | `POST /api/upload` e `POST /api/documents` | **20** | **1 Hora** | Retorna Erro `429`: "Limite de uploads atingido. Tente novamente em 1 hora." |
-| **Navegação Geral na API** | Todas em `/api/*` | **200** | **1 Minuto** | Retorna Erro `429`: "Muitas requisições. Aguarde um momento." |
-
-> *A configuração destes recursos está disponível no arquivo `server.js` na seção de comentários `// --- Rate Limiters ---`.*
+Este projeto é um portal corporativo de TI estruturado como um **monorepo** com Workspaces do NPM. Ele gerencia bases de conhecimento (procedimentos), documentações estáticas, controle financeiro de contas, incidentes em tempo real (timeline) e monitoramento de saúde de servidores, APIs e redes.
 
 ---
 
-## 📊 Logs e Rastreabilidade
+## 🚀 Arquitetura e Estrutura do Monorepo
 
-O servidor utiliza o pacote `morgan` para registrar todas as requisições que chegam. Elas são gravadas de duas formas:
-1. **Console (Terminal):** Ao executar o servidor em desenvolvimento, as informações ficam limpas e coloridas no prompt de comando. Dados sigilosos submetidos pelo usuário (como a `password`) recebem censura e são exibidos como `***`.
-2. **Arquivo (Disco):** Todo acesso é inserido como histórico no arquivo localizado em `logs/access.log`. A pasta `logs/` está definida para não ir para o controle de versão.
+O projeto está estruturado em `/apps` contendo:
+
+- **Frontend (`apps/frontend`)**: Single Page Application (SPA) moderna e rápida desenvolvida em HTML, CSS Vanilla (altamente customizado com variáveis dinâmicas e design premium) e JavaScript. Em produção, é construída através do **Vite** e servida de forma performática pelo servidor **Nginx**.
+- **Backend (`apps/backend`)**: API RESTful desenvolvida em **Node.js** com **TypeScript** e **Express**. Utiliza o **TypeORM** como ORM integrado ao banco de dados relacional **PostgreSQL**, gerenciando conexões, consultas tipadas e migrações estruturadas.
 
 ---
 
-## 🩺 Monitoramento (Health Check)
+## 🛠️ Tecnologias Principais
 
-Para conferir o estado do servidor sem precisar olhar o console — ideal para criar dashboards de estabilidade — utilize este endpoint.
-
-**Rota:** `GET /api/health`
-
-**Responde com:** O tempo em que o servidor está rodando (uptime) e estatísticas em tempo real de consumo da memória e da CPU, nesse formato e exemplo:
-
-```json
-{
-    "status": "ok",
-    "timestamp": "2026-04-18T12:00:00.000Z",
-    "uptime": "120 minutos",
-    "memory": {
-        "used": "45 MB",
-        "total": "90 MB"
-    },
-    "system": {
-        "platform": "win32",
-        "freeMemory": "1500 MB",
-        "cpuLoad": "1.5"
-    }
-}
-```
+- **Frontend**: Vite, JavaScript (ES6+), Nginx (Produção), CSS Vanilla (com design responsivo, animações sutis e paletas de cores refinadas).
+- **Backend**: Node.js, TypeScript, Express, TypeORM, bcrypt (segurança de credenciais), multer (gestão de uploads), morgan (sistema de logs de acesso com censura automática de senhas no console).
+- **Banco de Dados**: PostgreSQL 15.
+- **Orquestração**: Docker & Docker Compose.
 
 ---
 
 ## 🖥️ Módulos e Telas da Aplicação
 
-O sistema Intranet TI é composto pelas seguintes interfaces (Single Page Application), acessíveis pelo menu lateral:
-
-### 1. Listagem Geral (Procedimentos e FAQs)
-- **Objetivo:** Central Base de Conhecimento da equipe de TI.
-- **Funcionalidade:** Permite aos usuários cadastrarem, buscarem e visualizarem guias práticos, tutoriais e manuais. Possui alternância entre visualização em Tabela e Cards. Ao abrir um procedimento, possui um poderoso editor visual em blocos e sumários.
-
-### 2. Documentos
-- **Objetivo:** Repositório de arquivos estáticos.
-- **Funcionalidade:** Interface voltada para *upload*, listagem e exclusão de arquivos como PDF, PNG, JPG ou WEBP. Ideal para guardar formulários da empresa, drivers ou manuais não editáveis.
-
-### 3. Contas (Gestão Financeira/Contratos)
-- **Objetivo:** Controle de faturas, contratos e licenças técnicas atreladas à TI.
-- **Funcionalidade:** O módulo consolida contas recorrentes e avulsas com 3 visualizações (Lista, Calendário e Dashboard). Conta com alerta automático inteligente (aba Notificações) que alerta sobre contas pendentes, vencidas ou prestes a vencer.
-
-### 4. Timeline (Painel de Ocorrências)
-- **Objetivo:** Painel de monitoramento situacional de incidentes ou demandas em andamento.
-- **Funcionalidade:** Relógio visual que acompanha eventos técnicos da TI classificados por categoria (Atendimento, Internet, Infra, Sistemas, Integrações). Eventos *Em Ocorrência* pulsam em vermelho contínuo na tela, servindo como uma ótima ferramenta para projetar em monitores e acompanhar interrupções de sistemas e seus SLAs.
-
-### 5. Usuários (Apenas Administradores)
-- **Objetivo:** ACL e controle de acesso da plataforma.
-- **Funcionalidade:** Interface restrita à gerência para criação, visualização e deleção de novos usuários com suporte a perfis de acesso. A gestão de senhas já conta com algoritmo de segurança `bcrypt` no banco de dados.
-
-### 6. Minha Conta
-- **Objetivo:** Perfil do usuário logado.
-- **Funcionalidade:** Permite ao próprio usuário visualizar/editar os dados básicos do seu perfil da sessão ativa, bem como realizar a mudança da sua senha de acesso.
+1. **Listagem Geral (Procedimentos e FAQs)**:
+   - Central de base de conhecimento com busca inteligente.
+   - Alternância entre visualização em Tabela e Cards.
+   - Editor visual em blocos e sumário dinâmico.
+2. **Documentos**:
+   - Repositório corporativo para upload de arquivos estáticos (PDFs, imagens PNG/JPG/WEBP).
+   - Interface segura para upload, listagem detalhada e deleção de arquivos.
+3. **Contas (Gestão Financeira & Contratos)**:
+   - Gerenciamento e controle de faturas, licenças de software e contratos de TI.
+   - 3 visões complementares: Lista, Calendário e Dashboard de Despesas.
+   - Aba de Notificações com alertas inteligentes de contas vencidas ou próximas do vencimento.
+4. **Timeline (Painel de Ocorrências)**:
+   - Painel situacional para monitoramento de incidentes ou instabilidades do setor de TI.
+   - Eventos categorizados (Atendimento, Internet, Infraestrutura, Sistemas, Integrações) com alertas visuais intermitentes (pulso em vermelho) para ocorrências ativas.
+5. **Usuários (Restrito a Administradores)**:
+   - Controle de acesso (ACL) para criação, visualização e remoção de usuários com criptografia `bcrypt` para armazenamento de senhas.
+6. **Minha Conta**:
+   - Ajustes de dados do perfil do usuário logado e alteração de senha de acesso.
 
 ---
 
-## 🚀 Guia Prático de Deploy (Colocando em Produção)
+## 🩺 Monitoramento & Diagnóstico (Novas Funcionalidades)
 
-Como esta aplicação utiliza **SQLite** no Backend e **Vite** no Frontend, colocá-la em produção num Windows Server, Linux VPS ou provedora na nuvem é algo ágil, pois elimina-se a necessidade de gerenciar SGBDs robustos como MySQL/PostgreSQL. O banco de dados rodará contido dentro dos próprios arquivos da pasta.
+O sistema possui um painel de controle e monitoramento avançado de infraestrutura, dividido nas seguintes abas:
 
-### Passo 1: Construção do Frontend (Build)
-Na máquina local do Desenvolvedor, é necessário traduzir e minificar o código HTML/CSS/JS do `/src` para a versão compilada que abastecerá o Backend:
-```bash
-npm run build
-```
-Uma pasta chamada `/dist` será gerada na raiz contendo os arquivos prontos.
+### 1. Status de APIs Externas
+Monitoramento em tempo real de latência (tempo de ping em milissegundos) e integridade de APIs externas e locais:
+- **PABX Gnew API** (Integração com telefonia)
+- **Infocar API** (Dados veiculares)
+- **Autentique API** (GraphQL - assinaturas digitais)
+- **Sinch API** (Envio de SMS)
+- **Pluga API** (Automação de webhooks)
+- **Banco de Dados Local** (PostgreSQL)
+*Lentidões ou falhas críticas geram alertas automáticos registrados imediatamente no histórico do banco.*
 
-### Passo 2: Transferência de Arquivos
-Você precisará transferir para a máquina que atuará como servidora apenas os arquivos que importam.
-**✅ O que enviar (via Git, FTP, ZIP, etc):**
-- Os arquivos chaves isolados: `server.js`, `database.js`, `timeline_routes.js`
-- Lista de dependências: `package.json` e `package-lock.json`
-- A recém-criada pasta compilada `/dist`
-- A pasta estática `/public`
-- *(Opcional)* Você pode criar lá ou enviar as pastas vazias `uploads/` e `logs/`. A pasta `timeline/` pode ser enviada se contiver arquivos estáticos específicos do módulo.
+### 2. Diagnóstico em Tempo Real do PABX Gnew
+Integração via proxy seguro com os diagnósticos nativos do servidor de telefonia Gnew, exibindo:
+- **Espaço em Disco**: Exibição detalhada por partições e montagem (alertas preventivos ao atingir 80% e críticos a partir de 95% de uso).
+- **Memória RAM**: Monitoramento de consumo atual da memória RAM (alerta crítico ao atingir 90% de uso).
+- **Fail2Ban**: Histórico de IPs bloqueados e tentativas falhas de segurança no Asterisk.
+- **Firewall**: Regras de iptables ativas e chains de entrada/saída.
+- **Serviços (systemd)**: Status detalhado e logs de execução dos daemons do PABX (Asterisk, online-go, gnew_cdr, dialplan, webhook, etc.).
+- **Rede**: IP externo público detectado, portas abertas em escuta (LISTEN), tabela de roteamento do kernel e interfaces ativas.
 
-**❌ O que NÃO enviar:**
-- `node_modules/` (Muta conforme O.S)
-- `/src` (Trata-se de código cru)
+### 3. Histórico de Eventos e Alertas
+Um feed persistente de eventos de monitoramento (`monitoring_events`):
+- Armazena as mudanças de status (de online para offline) de APIs e falhas de limites de hardware.
+- Busca textual inteligente e filtros refinados por nível de gravidade (`Info`, `Alerta` e `Crítico`) e intervalo de datas.
+- Paginação dinâmica de alta performance e opção de limpar logs de histórico pelo painel administrativo.
 
-### Passo 3: O Banco de Dados
-A maior conveniência do **SQLite** é que o banco não é um serviço rodando de fundo que precisa ser iniciado, ele é um arquivo bruto físico e interpretado de modo "serverless" pela aplicação Express. As regras são simples:
-1. **Começando do zero:** Se a aplicação for hospedada sem os arquivos de dados, quando ela sentir a primeira chamada que envolva o BD, os controladores criarão sozinhos os arquivos zerados na raiz gerando automaticamente o administrador da empresa (`Usuário TI` e `admin123`).
-2. **Importando dados do desenvolvimento:** Se a sua intranet na sua máquina contem a contabilidade do mês ou os registros verdadeiros do setor, basta copiar o arquivo físico `intranet.db` (do Root) e o colar na raiz do servidor.
-*Nota de Servidor: Garanta que o diretório inteiro seja detentor de Permissões de Escrita pelo dono do serviço web. Sem escita, o SQLite será lido estritamente como "Read-Only".*
-
-### Passo 4: Executando no Ambiente Servidor
-Com todos arquivos hospedados no local escolhido, acesse o terminal do servidor, e execute:
-```bash
-# 1. Instalar as dependências do Node limpas para produção
-npm install --production
-
-# 2. Instalar globalmente o Gestor de Processos (PM2)
-npm install -g pm2
-
-# 3. Inicializar a Aplicação Web em Segundo Plano
-pm2 start server.js --name "Intranet-TI"
-
-# 4. Gravar essa tarefa para ser auto-iniciada se a máquina for reiniciada (Boot Persistence)
-pm2 startup
-pm2 save
-```
-
-Após o disparo dessa configuração, toda sua aplicação base, endpoints de monitoramento de saúde (health), painel estático, autenticação criptografada ACL e anti-DDoS e brute force integrados deverão operar normalmente pela porta `:3000` ou aquela configurada dentro de proxies e hosts virtualizados de cada datacenter.
+### 4. Infraestrutura (Lansweeper Switch Monitoring)
+- Integração direta com a API do **Lansweeper** para monitorar switches locais na infraestrutura da empresa.
+- Exibe o status da comunicação de cada switch (Online/Offline) facilitando a detecção imediata de quedas físicas na rede.
 
 ---
 
-## 🔄 Como Atualizar e Criar Novas Funcionalidades (Workflow)
+## 🛡️ Segurança e Rate Limit (Anti-Spam)
 
-Quando você for implementar novidades (ex: adicionar um chat, refazer uma tela, criar novas tabelas), siga este roteiro exato para não quebrar a aplicação em produção nem perder dados:
+Para proteger o backend Express contra abusos de requisições e ataques de força bruta, o sistema possui regras de rate-limiting (baseadas em IP de origem):
+- **Tentativas de Login** (`POST /api/login`): Máximo de **10** requisições por IP a cada 15 minutos (Erro 429).
+- **Upload de Arquivos** (`POST /api/upload` e `/api/documents`): Limite de **20** requisições por IP a cada 1 hora (Erro 429).
+- **Rotas Gerais da API** (`/api/*`): Máximo de **200** requisições por IP a cada 1 minuto (Erro 429).
 
-### 1. Desenvolvimento (Na sua Máquina Local)
-Sempre desenvolva e teste na sua própria máquina e não no servidor oficial.
-*   **Para mexer no visual ou nos scripts da tela:** Edite os arquivos dentro da pasta `src/` (arquivos CSS, JS e componentes) e o `index.html`. Você pode usar o comando `npm run dev` para ver as alterações de layout em tempo real no navegador.
-*   **Para mexer no Backend ou nas lógicas de Banco:** Edite os arquivos `server.js` (Rotas da API) ou adicione códigos no `database.js`.
+---
 
-### 2. Mudanças de Banco de Dados (Migrations Seguras)
-Se a sua nova funcionalidade precisar de uma **nova coluna no banco de dados**, NUNCA mande um banco de dados novo. Em vez disso, abra o arquivo `database.js` e adicione um script para adicionar a coluna na hora da inicialização usando `ALTER TABLE`.**Exemplo (como já feito antes):**
-```javascript
-// O código adiciona a coluna, e se a função crachar dizendo que a coluna já existe no db de produção, ele só ignora:
-db.run("ALTER TABLE accounts ADD COLUMN sua_coluna_nova TEXT", () => { });
+## 💻 Como Executar Localmente
+
+### Pré-requisitos
+- Node.js instalado (v18+)
+- Docker e Docker Compose (caso opte por rodar em contêineres)
+
+### 1. Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto e configure os dados:
+```env
+# Banco de Dados PostgreSQL
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=intranet_ti
+
+# Integração PABX Gnew
+GNEW_USERNAME=usuario_gnew
+GNEW_PASSWORD=senha_gnew
+
+# Integração Lansweeper
+LANSWEEPER_URL=https://192.168.0.92
+LANSWEEPER_USER=admin
+LANSWEEPER_PASS=senha_lansweeper
 ```
-*Isso garante que ao enviar para o servidor, a sua API vai modelar o banco antigo automaticamente sem esbarrar no que já existia.*
 
-### 3. Empacotando a Atualização (Build)
-Sua novidade local da máquina está lida e testada?
-1. Pare o seu servidor local.
-2. Rode `npm run build` no terminal. Esse comando vai pegar o fruto de todo o seu trabalho na interface (no diretório `/src`) e substituir no pacote protegido do diretório compilado (`/dist`).
+---
 
-### 4. Enviando a Evolução para Produção (Update)
-**MUITO CUIDADO NESTE PASSO!** Você precisará transferir a atualização local para o servidor onde o software já está morando.
+### Opção A: Execução via Docker (Recomendado)
+A forma mais ágil de rodar todo o ambiente de forma isolada, com banco e hot-reloading configurados.
 
-*   ✅ **O QUE PODE SUBSTITUIR E SOBRESCREVER:** Substitua tranquilamente seus `server.js`, `database.js`, a nova pasta compilada `/dist`, a pasta `/public` e o arquivo `package.json`.
-*   ❌ **O QUE VOCÊ NUNCA PODE SUBSTITUIR:** Nunca jogue o arquivo preenchido `intranet.db` do teste do seu PC ali, caso contrário você deletará todo o histórico financeiro e de eventos da TI verdadeira do servidor;
-*   ❌ **NÃO MEXA:** Na pasta `/uploads` (isso matará imagens velhas) nem na pasta `/logs`.
+1. Suba todo o ambiente local (PostgreSQL + Express Backend + Vite Frontend):
+   ```bash
+   npm run docker:local:up
+   ```
+   *O frontend estará acessível em `http://localhost:5173` e a API rodando em `http://localhost:3000`.*
+   *As alterações nos códigos locais das pastas `/apps` refletirão instantaneamente dentro do contêiner.*
 
-### 5. Aplicando e Reiniciando
-Lá no terminal do seu servidor final de produção, dê o xeque-mate para recarregar o sistema:
-```bash
-# Caso você tenha precisado de um pacote novo npm na feature
-npm install --production
+2. Para parar os serviços locais:
+   ```bash
+   npm run docker:local:down
+   ```
 
-# Recarrega as rotas da sua aplicação sem a derrubar com violência ("Zero-downtime Reboot")
-pm2 reload Intranet-TI
-```
-*Tudo pronto e seguro! O seu web-app subirá as novas interfaces de imediato aos usuários preservando integralmente tudo.*
+---
+
+### Opção B: Execução Nativa (Sem Docker)
+Ideal para desenvolvedores que preferem rodar o Node.js de forma nativa e conectar a um SGBD PostgreSQL local.
+
+1. Instale as dependências de todo o projeto (o monorepo utiliza npm workspaces para instalar em todas as pastas automaticamente):
+   ```bash
+   npm install
+   ```
+
+2. Certifique-se de que o banco de dados definido no seu arquivo `.env` já existe no PostgreSQL local.
+
+3. Inicie os serviços locais:
+   - **Para rodar a API (Backend)**:
+     ```bash
+     npm run backend:dev
+     ```
+     *(Inicia o TypeScript usando `ts-node` e ativa o `nodemon` na porta `3000`)*
+   - **Para rodar a Interface (Frontend)**:
+     ```bash
+     npm run frontend:dev
+     ```
+     *(Inicia o servidor de desenvolvimento do Vite em `http://localhost:5173`)*
+
+> [!NOTE]
+> Ao iniciar o backend pela primeira vez, as migrations do TypeORM serão executadas e os dados iniciais padrão (Seeds), como o usuário `ti@empresa.com.br` com a senha `admin123` e os tópicos padrões da timeline, serão criados automaticamente.
+
+---
+
+## 🚀 Guia Prático de Deploy (Produção)
+
+### Opção A: Deploy com Docker (Recomendado)
+Ideal para implantar a aplicação completa com banco isolado e de forma rápida.
+
+1. No servidor de produção, configure as variáveis de ambiente no arquivo `.env`.
+2. Execute o build e inicialize os contêineres de produção:
+   ```bash
+   npm run docker:up
+   ```
+   *Este comando utiliza o `docker-compose.yml` para:*
+   - Provisionar um contêiner PostgreSQL com volume mapeado para persistência de dados.
+   - Compilar o backend TypeScript (`tsc`) e executá-lo em modo de produção na porta `3000`.
+   - Compilar o frontend Vite e encapsulá-lo com um servidor Nginx otimizado na porta `80` (configurado para roteamento SPA e proxy da API).
+
+3. Para encerrar os serviços em produção:
+   ```bash
+   npm run docker:down
+   ```
+
+---
+
+### Opção B: Deploy Manual no Servidor
+Caso seu servidor não suporte Docker:
+
+1. **Build do Frontend**:
+   Na sua máquina de desenvolvimento ou esteira de CI/CD, execute:
+   ```bash
+   npm run frontend:build
+   ```
+   *Isso gerará os arquivos estáticos compilados em `apps/frontend/dist`.*
+
+2. **Build do Backend**:
+   Transpile o código TypeScript para JavaScript na pasta do backend:
+   ```bash
+   npm run backend:build
+   ```
+   *Isso gerará o código pronto para produção em `apps/backend/dist`.*
+
+3. **Arquivos para o Servidor**:
+   Transfira para o servidor:
+   - A pasta `apps/backend/dist` (código do servidor compilado).
+   - O arquivo `apps/backend/package.json` e `apps/backend/package-lock.json`.
+   - A pasta de arquivos compilados do frontend `apps/frontend/dist`.
+   - A pasta de imagens estáticas `/public` (se houver uploads).
+
+4. **Instalar Dependências de Produção**:
+   No servidor, acesse a pasta do backend e execute:
+   ```bash
+   npm install --production
+   ```
+
+5. **Gerenciar Processo com PM2**:
+   Para garantir que o backend Express fique online de forma contínua e reinicie se houver falhas:
+   ```bash
+   # Instalar gerenciador de forma global
+   npm install -g pm2
+
+   # Iniciar o servidor
+   pm2 start dist/server.js --name "Intranet-TI-Backend"
+
+   # Configurar inicialização junto com o boot do sistema operacional
+   pm2 startup
+   pm2 save
+   ```
+
+6. **Configuração de Servidor Web (Nginx ou Apache)**:
+   Configure o Nginx apontando a pasta raiz (root) para o diretório `apps/frontend/dist` na porta `80` e realize o redirecionamento (Proxy Reverso) de `/api` para `http://localhost:3000/api`.
+
+---
+
+## 🔄 Fluxo de Migrations (Alterações no Banco de Dados)
+
+Nenhum ajuste estrutural de tabelas e colunas deve ser feito manualmente no SGBD PostgreSQL. Sempre utilize o fluxo do TypeORM:
+
+1. **Alterar Entidades**: Realize as modificações necessárias nos arquivos de entidade em `apps/backend/src/entities/`.
+2. **Gerar a Migration**: Execute o comando informando o nome da nova migração:
+   ```bash
+   npm run backend:migration:generate -- apps/backend/src/migrations/NomeDaSuaMigration
+   ```
+3. **Aplicar Localmente**: Teste a migração no seu ambiente de desenvolvimento:
+   ```bash
+   npm run backend:migration:run
+   ```
+4. **Execução em Produção**: O backend Express foi configurado para rodar `AppDataSource.runMigrations()` automaticamente na inicialização, aplicando todas as migrations pendentes no banco de produção sem intervenção manual.
