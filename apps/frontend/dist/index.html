@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intranet TI - Procedimentos e Documentos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" crossorigin src="/assets/index-BXrcyr6l.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-IbS2rwPF.css">
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="login-section" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>TI<span>Portal</span></h1>
+                <p class="login-subtitle">Sistema de Procedimentos e Documentos</p>
+            </div>
+            <form id="login-form" autocomplete="off">
+                <div class="login-form-group">
+                    <label for="login-email">EMAIL</label>
+                    <input type="email" id="login-email" placeholder="seu@email.com" required autocomplete="email">
+                </div>
+                <div class="login-form-group">
+                    <label for="login-password">SENHA</label>
+                    <input type="password" id="login-password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required
+                        autocomplete="current-password">
+                </div>
+                <p id="login-error" class="login-error hidden"></p>
+                <button type="submit" class="login-btn" id="login-btn">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-container hidden" id="app-container">
+        <aside class="sidebar collapsed" id="sidebar">
+            <div class="logo">
+                <div class="logo-header">
+                    <h1>TI<span>Portal</span></h1>
+                    <button id="sidebar-toggle" class="btn-icon">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <nav>
+                <button class="nav-btn active" data-section="list" title="Listagem Geral">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Listagem Geral</span>
+                </button>
+                <button class="nav-btn" data-section="account" title="Minha Conta">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Minha Conta</span>
+                </button>
+                <button class="nav-btn" data-section="docs" title="Documentos">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Documentos</span>
+                </button>
+                <button class="nav-btn" data-section="accounts" title="Contas">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Contas</span>
+                </button>
+                <button class="nav-btn" data-section="timeline" title="Timeline">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Timeline</span>
+                </button>
+                <button class="nav-btn" data-section="telephony" title="Telefonia">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    <span>Telefonia</span>
+                </button>
+                <button class="nav-btn" data-section="monitoring" title="Monitoramento" id="nav-monitoring">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                    <span>Monitoramento</span>
+                </button>
+                <button class="nav-btn" data-section="users" title="UsuÃ¡rios" id="nav-users">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>UsuÃ¡rios</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="nav-btn logout-btn" id="btn-logout" title="Sair">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span>Sair</span>
+                </button>
+            </div>
+        </aside>
+        <div class="overlay" id="sidebar-overlay"></div>
+
+        <main class="content">
+            <!-- Interface Direta -->
+            <div id="main-interface">
+                <header class="top-bar">
+                    <button id="mobile-menu-btn" class="btn-icon mobile-only">
+                        <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
+                    <h2 id="section-title">Minha Conta</h2>
+                    <div class="actions">
+                        <!-- BotÃ£o movido para a listagem -->
+                    </div>
+                </header>
+
+                <section id="timeline-section" class="display-section hidden" style="height: calc(100vh - 80px); padding: 0; display: flex; flex-direction: column; overflow: hidden;">
+                    <div class="account-tabs" style="flex-shrink: 0;">
+                        <button class="account-tab-btn active" data-timeline-tab="visualizacao">VisÃ£o Geral</button>
+                        <button class="account-tab-btn" data-timeline-tab="attention">AtenÃ§Ã£o</button>
+                        <button class="account-tab-btn role-hidden" id="timeline-tab-anexo" data-timeline-tab="anexo">Gerenciar Evento</button>
+                        <button class="account-tab-btn" data-timeline-tab="relatorio">RelatÃ³rio</button>
+                        <button class="account-tab-btn role-hidden" id="timeline-tab-config" data-timeline-tab="config">Configurar Dados</button>
+
+                        <!-- Auto-Refresh na barra de abas, lado direito -->
+                        <div id="floating-refresh-control" class="floating-refresh-control">
+                            <label class="refresh-toggle-wrapper" for="auto-refresh-toggle" title="Atualizar dados automaticamente a cada 60 segundos">
+                                <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                </svg>
+                                <span class="refresh-toggle-label">Auto-Refresh</span>
+                                <span class="refresh-toggle-badge">60s</span>
+                                <input type="checkbox" id="auto-refresh-toggle">
+                                <span class="refresh-toggle-switch"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="timeline-panels-container" style="position: relative; flex: 1; overflow-y: auto;">
+
+                        <!-- VisualizaÃ§Ã£o Section -->
+                        <div id="view-visualizacao" class="timeline-view-section active">
+                            <div id="timeline-tracks-container">
+                                <!-- Tracks will be rendered dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Attention Section -->
+                        <div id="view-attention" class="timeline-view-section">
+                            <div class="attention-header" style="margin-bottom: 2rem;">
+                                <h2>Eventos em OcorrÃªncia</h2>
+                                <p style="color: var(--text-secondary);">Abaixo estÃ£o listados todos os eventos que nÃ£o possuem data de encerramento.</p>
+                            </div>
+                            <div id="attention-topics-container">
+                                <!-- Cards injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Form Section -->
+                        <div id="view-anexo" class="timeline-view-section">
+                            <div class="form-container" style="background: var(--card-bg); padding: 2rem; border-radius: var(--border-radius); box-shadow: var(--shadow-sm);">
+                                <h2 style="margin-bottom: 2rem; font-size: 1.5rem; font-weight: 600;">Gerenciar Evento</h2>
+                                <form id="timeline-event-form" onsubmit="handleFormSubmit(event)">
+                                    <input type="hidden" id="event-id">
+
+                                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                        <div class="form-group" style="grid-column: span 2;">
+                                            <label class="form-label" for="nome">Nome do Evento</label>
+                                            <input type="text" id="nome" class="form-input w-full" required placeholder="Ex: ManutenÃ§Ã£o Preventiva">
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label" for="topico">TÃ³pico</label>
+                                            <select id="topico" class="form-input w-full" required>
+                                                <option value="" disabled selected>Selecione um tÃ³pico...</option>
+                                                <option value="atendimento">Atendimento</option>
+                                                <option value="internet">Internet</option>
+                                                <option value="infraestrutura">Infraestrutura</option>
+                                                <option value="sistema">Sistema</option>
+                                                <option value="integracoes">IntegraÃ§Ãµes</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label" for="sub-topico">Eventos</label>
+                                            <select id="sub-topico" class="form-input w-full" required>
+                                                <option value="">Selecione o tÃ³pico primeiro...</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label" for="cor">Cor do Evento</label>
+                                            <input type="color" id="cor" style="width: 100%; height: 40px; border: none; border-radius: 6px; cursor: pointer;">
+                                        </div>
+                                        <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; justify-content: flex-start; padding-top: 1.5rem;">
+                                            <input type="checkbox" id="em-ocorrencia" style="width: 20px; height: 20px;">
+                                            <label for="em-ocorrencia" style="font-weight: 500;">Em OcorrÃªncia</label>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label class="form-label" for="inicio">InÃ­cio</label>
+                                            <input type="datetime-local" id="inicio" class="form-input w-full" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label" for="fim">Fim</label>
+                                            <input type="datetime-local" id="fim" class="form-input w-full" required>
+                                        </div>
+
+                                        <div class="form-group" style="grid-column: span 2;">
+                                            <label class="form-label" for="descricao">DescriÃ§Ã£o</label>
+                                            <textarea id="descricao" class="form-input w-full" rows="3" placeholder="Detalhes do evento..."></textarea>
+                                        </div>
+                                        <div class="form-group" style="grid-column: span 2;">
+                                            <label class="form-label" for="anotacao">AnotaÃ§Ã£o</label>
+                                            <textarea id="anotacao" class="form-input w-full" rows="2" placeholder="Notas internas..."></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                        <button type="button" id="btn-delete" onclick="handleDelete()" class="btn btn-danger hidden">Excluir</button>
+                                        <button type="button" id="btn-reset" onclick="resetForm()" class="btn btn-secondary">Limpar</button>
+                                        <button type="submit" class="btn btn-primary">Salvar Evento</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- RelatÃ³rio Section -->
+                        <div id="view-relatorio" class="timeline-view-section" style="padding: 2rem;">
+                            <div class="report-header" style="margin-bottom: 2rem;">
+                                <h2>RelatÃ³rio de SLA & OcorrÃªncias</h2>
+                                <p style="color: var(--text-muted); font-size: 0.95rem;">AnÃ¡lise estatÃ­stica de disponibilidade e incidentes em tempo real.</p>
+                            </div>
+
+                            <!-- Report Filters -->
+                            <div class="report-filters glass" style="display: flex; gap: 15px; flex-wrap: wrap; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--glass-border);">
+                                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                    <label class="form-label" style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">Data InÃ­cio</label>
+                                    <input type="date" id="rep-filter-start" class="form-control glass">
+                                </div>
+                                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                    <label class="form-label" style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">Data Final</label>
+                                    <input type="date" id="rep-filter-end" class="form-control glass">
+                                </div>
+                                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                    <label class="form-label" style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">TÃ³pico</label>
+                                    <select id="rep-filter-topic" class="form-control glass">
+                                        <option value="Todos">Todos</option>
+                                        <option value="atendimento">Atendimento</option>
+                                        <option value="internet">Internet</option>
+                                        <option value="infraestrutura">Infraestrutura</option>
+                                        <option value="sistema">Sistema</option>
+                                        <option value="integracoes">IntegraÃ§Ãµes</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                    <label class="form-label" style="display:block; margin-bottom:0.5rem; font-size: 0.85rem; font-weight: 600;">Eventos</label>
+                                    <select id="rep-filter-subtopic" class="form-control glass">
+                                        <option value="Todos">Todos</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: flex-end; min-width: 100px; margin-bottom: 0;">
+                                    <button type="button" onclick="window.timelineHandler.clearReportFilters()" class="btn btn-secondary" style="width:100%; height:42px;">Limpar</button>
+                                </div>
+                            </div>
+
+                            <!-- Summary KPIs -->
+                            <div class="report-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 2rem;">
+                                <div class="glass" style="padding: 1.5rem; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border);">
+                                    <p style="color: var(--text-muted); margin: 0; font-size: 0.9rem;">Total de OcorrÃªncias</p>
+                                    <h3 id="rep-kpi-total" style="font-size: 2.2rem; margin: 10px 0 0 0; color: var(--accent); font-weight: 700;">0</h3>
+                                </div>
+                                <div class="glass" style="padding: 1.5rem; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border);">
+                                    <p style="color: var(--text-muted); margin: 0; font-size: 0.9rem;">Em OcorrÃªncia Ativa</p>
+                                    <h3 id="rep-kpi-active" style="font-size: 2.2rem; margin: 10px 0 0 0; color: #ef4444; font-weight: 700;">0</h3>
+                                </div>
+                                <div class="glass" style="padding: 1.5rem; border-radius: 12px; text-align: center; border: 1px solid var(--glass-border);">
+                                    <p style="color: var(--text-muted); margin: 0; font-size: 0.9rem;">Tempo MÃ©dio de ResoluÃ§Ã£o</p>
+                                    <h3 id="rep-kpi-avg-time" style="font-size: 1.8rem; margin: 12px 0 0 0; color: #10b981; font-weight: 700;">0h 0m</h3>
+                                </div>
+                            </div>
+
+                            <!-- Charts Grid -->
+                            <div class="report-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                                <!-- SLA Availability Chart -->
+                                <div class="glass" style="padding: 1.5rem; border-radius: 12px; height: 350px; border: 1px solid var(--glass-border);">
+                                    <h3 style="margin-top:0; margin-bottom:1.5rem; font-size:1.1rem; font-weight:600; color:var(--text-main);">Disponibilidade SLA (%)</h3>
+                                    <div style="position:relative; height:240px; width:100%;">
+                                        <canvas id="chart-rep-sla"></canvas>
+                                    </div>
+                                </div>
+                                <!-- Occurrences Count Chart -->
+                                <div class="glass" style="padding: 1.5rem; border-radius: 12px; height: 350px; border: 1px solid var(--glass-border);">
+                                    <h3 style="margin-top:0; margin-bottom:1.5rem; font-size:1.1rem; font-weight:600; color:var(--text-main);">DistribuiÃ§Ã£o por Evento</h3>
+                                    <div style="position:relative; height:240px; width:100%;">
+                                        <canvas id="chart-rep-qty"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ConfiguraÃ§Ã£o Section -->
+                        <div id="view-config" class="timeline-view-section" style="padding: 2rem;">
+                            <div class="config-header" style="margin-bottom: 2rem;">
+                                <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-main);">ConfiguraÃ§Ã£o de Dados da Timeline</h2>
+                                <p style="color: var(--text-muted); font-size: 0.95rem;">Gerencie os tÃ³picos e seus respectivos sub-tÃ³picos/eventos em tempo real.</p>
+                            </div>
+                            <div class="config-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; align-items: start;">
+                                <!-- Gerenciamento de TÃ³picos -->
+                                <div class="glass" style="padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border);">
+                                    <h3 style="margin-bottom: 1.5rem; color: var(--accent); font-size: 1.1rem; font-weight: 600; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">Adicionar / Editar TÃ³pico</h3>
+                                    <form id="timeline-topic-form" style="display: flex; flex-direction: column; gap: 12px;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">ID DO TÃ“PICO (Slug, ex: atendimento)</label>
+                                            <input type="text" id="topic-id" class="form-control glass" placeholder="Ex: atendimento" required style="width: 100%; border-radius: 8px;">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">NOME DO TÃ“PICO</label>
+                                            <input type="text" id="topic-name" class="form-control glass" placeholder="Ex: Atendimento" required style="width: 100%; border-radius: 8px;">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">COR REPRESENTATIVA</label>
+                                            <input type="color" id="topic-color" value="#3b82f6" style="width: 100%; height: 38px; border: none; border-radius: 8px; cursor: pointer; background: transparent; padding: 0;">
+                                        </div>
+                                        <button type="submit" class="btn-primary" style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;">Salvar TÃ³pico</button>
+                                    </form>
+
+                                    <h4 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-main); font-size: 1rem; font-weight: 600; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">TÃ³picos Atuais</h4>
+                                    <div id="config-topics-list" style="display: flex; flex-direction: column; gap: 8px;">
+                                        <!-- Topics will be dynamically listed here -->
+                                    </div>
+                                </div>
+
+                                <!-- Gerenciamento de SubtÃ³picos / Eventos -->
+                                <div class="glass" style="padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border);">
+                                    <h3 style="margin-bottom: 1.5rem; color: var(--accent); font-size: 1.1rem; font-weight: 600; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">Adicionar Evento</h3>
+                                    <form id="timeline-subtopic-form" style="display: flex; flex-direction: column; gap: 12px;">
+                                        <div class="form-group" style="margin-bottom: 0;">
+                                            <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">TÃ“PICO ASSOCIAÃ‡ÃƒO</label>
+                                            <select id="subtopic-topic-id" class="form-control glass" required style="width: 100%; border-radius: 8px; padding: 8px;">
+                                                <option value="" disabled selected>Selecione um tÃ³pico...</option>
+                                              </select>
+                                          </div>
+                                          <div class="form-group" style="margin-bottom: 0;">
+                                              <label class="form-label" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 4px;">NOME DO EVENTO</label>
+                                              <input type="text" id="subtopic-name" class="form-control glass" placeholder="Ex: Gnew" required style="width: 100%; border-radius: 8px;">
+                                          </div>
+                                          <button type="submit" class="btn-primary" style="width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px;">Adicionar Evento</button>
+                                      </form>
+
+                                      <h4 style="margin-top: 2rem; margin-bottom: 1rem; color: var(--text-main); font-size: 1rem; font-weight: 600; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px;">Eventos Atuais</h4>
+                                      <div id="config-subtopics-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 5px;">
+                                          <!-- Subtopics will be dynamically listed here -->
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </section>
+
+                <section id="monitoring-section" class="display-section hidden">
+                    <div class="monitoring-container">
+                        <div class="report-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                            <div>
+                                <h2>Painel de Monitoramento</h2>
+                                <p style="color: var(--text-muted); font-size: 0.95rem;">Alertas e notificaÃ§Ãµes dos sistemas em tempo real.</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div id="monitoring-api-status" class="api-status-badge online">
+                                    <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: currentColor;"></span>
+                                    <span class="status-text">Buscando status...</span>
+                                </div>
+                                <button id="btn-refresh-monitoring" class="btn btn-secondary" style="height: 40px; display: flex; align-items: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                    Atualizar
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submenu / Abas de Monitoramento -->
+                        <div class="accounts-tabs-nav" style="flex-shrink: 0; margin-bottom: 1.5rem;">
+                            <button class="acc-tab-btn active" id="tab-monitoring-alerts" data-monitoring-tab="alerts">Alertas Ativos</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-events" data-monitoring-tab="events">Histórico de Eventos</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-apis" data-monitoring-tab="apis">APIs Integradas</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-gnew" data-monitoring-tab="gnew">Gnew</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-infra" data-monitoring-tab="infra">Infraestrutura</button>
+                        </div>
+
+                        <!-- ABA 1: ALERTAS ATIVOS -->
+                        <div id="monitoring-tab-content-alerts" class="monitoring-tab-content active">
+                            <!-- KPIs -->
+                            <div class="monitoring-kpis">
+                                <div class="kpi-card">
+                                    <div class="kpi-label">Total de ServiÃ§os</div>
+                                    <div class="kpi-value" id="monitor-kpi-total">0</div>
+                                </div>
+                                <div class="kpi-card" style="border-left: 3px solid #10b981;">
+                                    <div class="kpi-label" style="color: #6ee7b7;">Online</div>
+                                    <div class="kpi-value" id="monitor-kpi-info" style="color: #10b981;">0</div>
+                                </div>
+                                <div class="kpi-card" style="border-left: 3px solid #f59e0b;">
+                                    <div class="kpi-label" style="color: #fde047;">Avisos (Offline)</div>
+                                    <div class="kpi-value" id="monitor-kpi-warning" style="color: #f59e0b;">0</div>
+                                </div>
+                            </div>
+
+                            <!-- Filters & Search -->
+                            <div class="monitoring-filters">
+                                <div class="filter-left" style="flex: 1;">
+                                    <input type="text" id="monitoring-search-input" class="monitoring-search" placeholder="Pesquisar por nome do serviÃ§o..." style="width: 100%; max-width: 400px;">
+                                </div>
+                                <div class="filter-right">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="monitoring-auto-refresh" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                        <span style="font-size: 0.85rem; color: var(--text-main);">Auto-Refresh (30s)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Grid representing alerts -->
+                            <div class="monitoring-grid" id="monitoring-alerts-grid">
+                                <!-- Cards will be rendered dynamically by JS -->
+                            </div>
+                        </div>
+
+
+
+                        <!-- ABA 3: HISTÃ“RICO DE EVENTOS -->
+                        <div id="monitoring-tab-content-events" class="monitoring-tab-content hidden">
+                            <!-- Header: título + botão limpar -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Histórico de Eventos</h3>
+                                    <span id="event-history-count" style="display: none; background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); border-radius: 12px; padding: 1px 8px; font-size: 0.75rem; font-weight: 600;"></span>
+                                </div>
+                                <button id="btn-clear-event-history" style="display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.07); color: #fca5a5; font-size: 0.82rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(239,68,68,0.07)'">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    Limpar Histórico
+                                </button>
+                            </div>
+                            <!-- Filtros: linha 1 (busca + severidade) -->
+                            <div class="monitoring-filters" style="margin-bottom: 0.75rem;">
+                                <div class="filter-left" style="flex: 1;">
+                                    <input type="text" id="monitoring-events-search-input" class="monitoring-search" placeholder="Buscar evento por título, descrição ou fonte..." style="width: 100%; max-width: 380px;">
+                                </div>
+                                <div class="filter-right">
+                                    <select id="monitoring-events-severity-filter" style="background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: var(--text-main); padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <option value="all">Todas as severidades</option>
+                                        <option value="critical">Crítico</option>
+                                        <option value="warning">Alerta</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Filtros: linha 2 (intervalo de data) -->
+                            <div class="event-date-filter-bar" style="margin-bottom: 1.5rem;">
+                                <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--text-muted); flex-shrink: 0;">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span style="font-size: 0.82rem; color: var(--text-muted); white-space: nowrap;">Período:</span>
+                                <input type="date" id="monitoring-events-date-start" class="event-date-input" title="Data início">
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">até</span>
+                                <input type="date" id="monitoring-events-date-end" class="event-date-input" title="Data fim">
+                                <button id="btn-clear-event-date-filter" class="event-date-clear-btn" title="Limpar filtro de data">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    Limpar datas
+                                </button>
+                            </div>
+                            <!-- Lista de eventos renderizada pelo JS -->
+                            <div id="monitoring-events-grid">
+                                <!-- Renderizado dinamicamente por monitoring.js -->
+                            </div>
+                            <!-- Paginação -->
+                            <div id="event-history-pagination"></div>
+                        </div>
+
+                        <!-- ABA: APIs INTEGRADAS -->
+                        <div id="monitoring-tab-content-apis" class="monitoring-tab-content hidden">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">APIs Integradas e Status</h3>
+                                    <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Status de conexões e integrações externas do sistema.</p>
+                                </div>
+                                <button id="btn-refresh-apis-status" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                    <span>Atualizar</span>
+                                </button>
+                            </div>
+                            <div class="apis-status-grid" id="monitoring-apis-grid">
+                                <!-- Preenchido dinamicamente -->
+                            </div>
+                        </div>
+
+                        <!-- ABA 4: DIAGNÃ“STICO GNEW -->
+                        <div id="monitoring-tab-content-gnew" class="monitoring-tab-content hidden">
+                            <!-- Connection Status -->
+                            <div class="report-filters glass" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; border: 1px solid var(--glass-border);">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-weight: 600; font-size: 0.95rem; color: var(--text-main);">Status da API Gnew:</span>
+                                    <div id="gnew-api-status-badge" class="api-status-badge offline" style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid currentColor; background: rgba(239, 68, 68, 0.1); color: #fca5a5;">
+                                        <span class="status-dot" style="width: 8px; height: 8px; border-radius: 50%; background-color: currentColor;"></span>
+                                        <span class="status-text">Buscando status...</span>
+                                    </div>
+                                </div>
+                                <span style="font-size: 0.85rem; color: var(--text-muted);" id="gnew-api-message">Nenhuma resposta recebida.</span>
+                            </div>
+
+                            <!-- Metrics/Hardware KPIs -->
+                            <div class="monitoring-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 1.5rem;">
+                                <!-- Memory Usage Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                        <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Uso de MemÃ³ria RAM</span>
+                                        <span id="gnew-kpi-mem-text" style="font-size: 0.85rem; font-weight: 700; color: var(--accent);">0%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">
+                                        <div id="gnew-kpi-mem-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.5s ease-in-out;"></div>
+                                    </div>
+                                    <div id="gnew-kpi-mem-detail" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">- / -</div>
+                                </div>
+
+                                <!-- Disk Usage Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                        <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">EspaÃ§o em Disco</span>
+                                        <span id="gnew-kpi-disk-text" style="font-size: 0.85rem; font-weight: 700; color: #10b981;">0%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">
+                                        <div id="gnew-kpi-disk-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.5s ease-in-out;"></div>
+                                    </div>
+                                    <div id="gnew-kpi-disk-detail" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">- / -</div>
+                                </div>
+
+                                <!-- External IP Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem; justify-content: center;">
+                                    <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">IP Externo do PABX</span>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent); flex-shrink:0;">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                        </svg>
+                                        <strong id="gnew-kpi-ip-text" style="font-size: 1.15rem; font-family: monospace; color: var(--text-main); letter-spacing: 0.5px;">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detailed Disk Accordion -->
+                            <div class="kpi-card" style="margin-top: 1.5rem; display: flex; flex-direction: column; padding: 0; overflow: hidden; border-radius: var(--border-radius); border: 1px solid var(--glass-border); background: var(--card-bg);">
+                                <!-- Header clickable to toggle -->
+                                <div id="gnew-disk-accordion-header" style="display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; cursor: pointer; user-select: none; background: rgba(255,255,255,0.02); transition: background 0.2s;">
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <!-- Chevron arrow -->
+                                        <svg id="gnew-disk-chevron" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" style="transition: transform 0.3s ease; transform: rotate(0deg); color: var(--text-muted); flex-shrink: 0;">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                        <!-- Disk/DB Icon -->
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent); flex-shrink: 0;">
+                                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                                        </svg>
+                                        <span style="font-weight: 600; font-size: 0.95rem; color: var(--text-main);">Disco</span>
+                                    </div>
+                                    <button id="btn-refresh-gnew-disk" class="btn-icon" style="background: transparent; color: var(--text-muted); padding: 0; border: none; cursor: pointer; display: flex; align-items: center;" title="Atualizar Disco">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <!-- Content wrapper (collapsible) -->
+                                <div id="gnew-disk-accordion-content" style="max-height: 1000px; overflow: hidden; transition: max-height 0.3s ease-in-out; border-top: 1px solid rgba(255, 255, 255, 0.05);">
+                                    <div style="padding: 1.25rem; overflow-x: auto;">
+                                        <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; margin: 0;">
+                                            <thead>
+                                                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: var(--text-muted); font-size: 0.85rem;">
+                                                    <th style="padding: 10px 12px; font-weight: 500;">Ponto de Montagem</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500; text-align: right; width: 100px;">Total</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500; text-align: right; width: 100px;">Usado</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500; text-align: right; width: 100px;">Livre</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500; text-align: right; width: 180px;">Uso</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="gnew-disk-table-body">
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                                                        Aguardando dados...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Services Card -->
+                            <div class="kpi-card" style="margin-top: 1.5rem; display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border); background: var(--card-bg);">
+                                <!-- Services Header -->
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-main);">ServiÃ§os do Sistema</h3>
+                                        <span id="gnew-services-timestamp" style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 4px;">Ãšltima verificaÃ§Ã£o: -</span>
+                                    </div>
+                                    <button id="btn-refresh-gnew-services" type="button">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                        </svg>
+                                        <span>Atualizar</span>
+                                    </button>
+                                </div>
+
+                                <!-- Services List -->
+                                <div id="gnew-services-list" style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                                        Aguardando dados...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ABA 5: INFRAESTRUTURA -->
+                        <div id="monitoring-tab-content-infra" class="monitoring-tab-content hidden">
+                            <!-- Submenu / Abas de Infraestrutura -->
+                            <div class="accounts-tabs-nav" style="flex-shrink: 0; margin-bottom: 1.5rem; justify-content: flex-start; gap: 10px;">
+                                <button class="acc-tab-btn active" id="tab-infra-switches" data-infra-tab="switches">Switch</button>
+                            </div>
+
+                            <!-- SUB-ABA: SWITCHES -->
+                            <div id="infra-tab-content-switches" class="infra-tab-content">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Status dos Switches (Lansweeper)</h3>
+                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de switches ativos e latência de resposta na rede.</p>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                            <input type="checkbox" id="switches-auto-refresh" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                            <span style="font-size: 0.85rem; color: var(--text-main);">Auto-Refresh (60s)</span>
+                                        </label>
+                                        <button id="btn-refresh-switches-status" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; gap: 8px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+                                                <polyline points="23 4 23 10 17 10"></polyline>
+                                                <polyline points="1 20 1 14 7 14"></polyline>
+                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                            </svg>
+                                            <span>Atualizar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-container glass" style="margin-top: 10px;">
+                                    <table class="table-minimal" style="width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th>Nome</th>
+                                                <th>IP</th>
+                                                <th>Modelo</th>
+                                                <th>Localização</th>
+                                                <th>Status</th>
+                                                <th style="text-align: right;">Latência</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monitoring-switches-tbody">
+                                            <tr>
+                                                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                                    Carregando dados dos switches...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="account-section" class="display-section hidden"
+                    style="position: relative; overflow: hidden; padding: 2rem;">
+                    <canvas id="account-network-bg"
+                        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.2; pointer-events: none;"></canvas>
+                    <div class="account-grid" style="position: relative; z-index: 1;">
+                        <div class="account-card profile-header"
+                            style="justify-content: center; align-items: flex-start; padding: 2.5rem 2rem;">
+                            <div class="profile-info">
+                                <h2 id="profile-name-display" style="font-size: 1.8rem; margin-bottom: 0.5rem;">UsuÃ¡rio
+                                    TI</h2>
+                                <p id="profile-role-display"
+                                    style="color: var(--accent); font-weight: 500; font-size: 1.1rem;">Administrador</p>
+                            </div>
+                        </div>
+
+                        <div class="account-card">
+                            <h3 style="border-left: none; padding-left: 0; color: var(--accent);">InformaÃ§Ãµes Pessoais
+                            </h3>
+                            <form id="profile-form" style="max-width: 500px;">
+                                <div class="form-group">
+                                    <label>NOME COMPLETO</label>
+                                    <input type="text" id="profile-name" placeholder="Seu nome completo" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>EMAIL</label>
+                                    <input type="email" id="profile-email" placeholder="seu@email.com" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>CARGO / FUNÃ‡ÃƒO</label>
+                                    <input type="text" id="profile-role" placeholder="Seu cargo/funÃ§Ã£o" required
+                                        readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>NOVA SENHA <small
+                                            style="color:var(--text-muted); text-transform:none;">(opcional)</small></label>
+                                    <input type="password" id="profile-password"
+                                        placeholder="Deixe em branco para manter a atual">
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+                                    <button type="submit" class="btn-primary" style="padding: 0.85rem 2rem;">Atualizar
+                                        Perfil</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+                <section id="list-section" class="display-section">
+                    <div class="search-bar">
+                        <input type="text" id="list-search" placeholder="Filtrar na listagem...">
+                    </div>
+                    <div class="list-controls"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div class="view-toggle" style="margin-bottom: 0;">
+                            <button id="toggle-list" class="toggle-btn active" title="Visualizar em Lista">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                                </svg>
+                                Lista
+                            </button>
+                            <button id="toggle-cards" class="toggle-btn" title="Visualizar em Cards">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 3h8v8H3zm0 10h8v8H3zm10 0h8v8h-8zm0-10h8v8h-8z" />
+                                </svg>
+                                Cards
+                            </button>
+                        </div>
+
+                        <button id="btn-new-item" class="btn-primary">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Novo Procedimento</span>
+                        </button>
+                    </div>
+                    <div id="list-table-container" class="table-container glass">
+                        <table id="proc-table">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>ResponsÃ¡vel</th>
+                                    <th>Grupo</th>
+                                    <th>Nota</th>
+                                    <th id="th-proc-actions">AÃ§Ãµes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="proc-table-body">
+                                <!-- Procedimentos will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="list-cards-container" class="grid-list hidden">
+                        <!-- Cards will be rendered here -->
+                    </div>
+                    <div id="list-pagination" class="pagination-container"></div>
+                </section>
+
+                <section id="detail-section" class="display-section hidden">
+                    <div class="detail-header">
+                        <button id="btn-back-to-list" class="btn-icon-large" title="Voltar">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                        </button>
+                        <h2 id="detail-title">Nome do Procedimento</h2>
+                    </div>
+                    <!-- Floating Action Button (FAB) for Edit -->
+                    <button id="btn-floating-edit" class="fab" title="Editar Procedimento">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                    </button>
+
+                    <div class="detail-page glass">
+                        <div id="detail-meta" class="hidden">
+                            <!-- We hide this for the new builder view as requested -->
+                        </div>
+
+                        <!-- Search Bar for Procedure Content -->
+                        <div class="procedure-search-container">
+                            <input type="text" id="procedure-search" placeholder="Pesquisar no procedimento...">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </div>
+
+                        <div class="procedure-layout">
+                            <!-- Sidebar (30%) -->
+                            <div class="procedure-sidebar glass">
+                                <!-- View Mode Sidebar -->
+                                <div id="procedure-view-sidebar">
+                                    <h3 class="sidebar-title">Ãndice</h3>
+                                    <ul id="procedure-view-index" class="sidebar-index-list">
+                                        <!-- Ãndice rendering -->
+                                    </ul>
+                                </div>
+                                <!-- Edit Mode Sidebar -->
+                                <div id="procedure-edit-sidebar" class="hidden">
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <h3 class="sidebar-title" style="margin: 0;">SumÃ¡rios</h3>
+                                        <button id="btn-add-summary" class="btn-icon" title="Adicionar SumÃ¡rio"
+                                            onclick="window.ProceduresHandler.addSummary()"
+                                            style="background: rgba(255,255,255,0.1); width: 28px; height: 28px;">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor"
+                                                stroke-width="2" fill="none">
+                                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <ul id="procedure-edit-index" class="sidebar-index-list sortable-list">
+                                        <!-- Editor de sumÃ¡rios -->
+                                    </ul>
+                                    <div style="margin-top: 20px; font-size: 0.8rem; color: var(--text-muted);">
+                                        * Arraste os sumÃ¡rios para reordenar. Selecione um para adicionar containers de
+                                        conteÃºdo.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Main Content (70%) -->
+                            <div class="procedure-main-content">
+                                <!-- Modo VisualizaÃ§Ã£o -->
+                                <div id="procedure-view-container">
+                                    <!-- Rendered groups and blocks -->
+                                </div>
+
+                                <!-- Modo EdiÃ§Ã£o -->
+                                <div id="procedure-edit-wrapper" class="hidden">
+                                    <div class="builder-header">
+                                        <h2>Editando: <span id="current-summary-name"
+                                                style="color: var(--accent);">Nenhum
+                                                sumÃ¡rio selecionado</span></h2>
+                                        <button id="btn-add-block" class="btn-secondary-small hidden">+ Novo
+                                            Container</button>
+                                    </div>
+                                    <div id="procedure-edit-container">
+                                        <p class="empty-state">Selecione ou crie um sumÃ¡rio na barra lateral para
+                                            comeÃ§ar.</p>
+                                    </div>
+                                    <div class="builder-actions">
+                                        <button id="btn-cancel-edit" class="btn-secondary">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor"
+                                                stroke-width="2" fill="none" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                                <polyline points="16 17 21 12 16 7"></polyline>
+                                                <line x1="21" y1="12" x2="9" y2="12"></line>
+                                            </svg>
+                                            Cancelar EdiÃ§Ã£o Geral
+                                        </button>
+                                        <button id="btn-save-procedure" class="btn-primary">
+                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor"
+                                                stroke-width="2" fill="none" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path
+                                                    d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+                                                </path>
+                                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                                <polyline points="7 3 7 8 15 8"></polyline>
+                                            </svg>
+                                            <span>Salvar Procedimento</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="detail-body" class="hidden">
+                            <!-- Legacy field hidden -->
+                        </div>
+                    </div>
+                </section>
+
+                <section id="docs-section" class="display-section hidden">
+                    <div class="docs-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;">
+                        <div class="search-bar" style="margin-bottom: 0; flex: 1; max-width: 400px;">
+                            <input type="text" id="doc-search" placeholder="Pesquisar documentos...">
+                        </div>
+                        <button id="btn-new-doc" class="btn-primary">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Novo Documento</span>
+                        </button>
+                    </div>
+
+                    <!-- Sub-menu Tabs for Documents -->
+                    <div class="docs-tabs-nav" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 10px;">
+                        <button id="tab-doc-geral" class="acc-tab-btn active">Geral</button>
+                        <button id="tab-doc-contratos" class="acc-tab-btn">Contratos</button>
+                        <button id="tab-doc-termo-de-uso" class="acc-tab-btn">Termo de Uso</button>
+                        <button id="tab-doc-dashboard" class="acc-tab-btn">Dashboard</button>
+                    </div>
+
+                    <div id="doc-list-container" class="table-container glass">
+                        <table class="table-minimal">
+                            <thead id="doc-list-thead">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Tamanho</th>
+                                    <th>Tipo</th>
+                                    <th>Data</th>
+                                    <th id="th-doc-actions">AÃ§Ãµes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="doc-list-body">
+                                <!-- Documents will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="doc-pagination" class="pagination-container"></div>
+
+                    <div id="doc-dashboard-container" class="hidden" style="margin-top: 20px;">
+                        <div style="display: grid; grid-template-columns: 220px 1fr; gap: 20px;">
+                            <!-- Filtros Sidebar -->
+                            <aside class="dashboard-sidebar glass" style="padding: 20px; border-radius: var(--border-radius); height: fit-content; border: 1px solid var(--glass-border);">
+                                <h3 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; color: var(--text-main);">Filtros</h3>
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">PESQUISAR</label>
+                                    <input type="text" id="doc-dash-search" class="form-control glass" placeholder="Buscar por nome..." style="width: 100%; padding: 8px; border-radius: 8px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">CATEGORIA</label>
+                                    <select id="doc-dash-filter-category" class="form-control glass" style="width: 100%; padding: 8px; border-radius: 8px;">
+                                        <option value="Todos">Todos</option>
+                                        <option value="Contratos">Contratos</option>
+                                        <option value="Termo de Uso">Termo de Uso</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 15px;">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 5px;">STATUS DE VIGÃŠNCIA</label>
+                                    <select id="doc-dash-filter-status" class="form-control glass" style="width: 100%; padding: 8px; border-radius: 8px;">
+                                        <option value="Todos">Todos</option>
+                                        <option value="Ativos">Ativos</option>
+                                        <option value="Expirando">Expirando em breve</option>
+                                        <option value="Expirados">Expirados</option>
+                                        <option value="Indeterminado">VigÃªncia Indeterminada</option>
+                                    </select>
+                                </div>
+                            </aside>
+
+                            <!-- Painel Principal -->
+                            <div class="dashboard-main-content">
+                                <!-- Cards KPI -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                                    <div class="glass" style="padding: 15px; border-radius: var(--border-radius); text-align: center; border: 1px solid var(--glass-border);">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Contratos Ativos</h3>
+                                        <p id="doc-kpi-active-contracts" style="font-size: 1.8rem; font-weight: bold; color: var(--accent); margin: 0;">0</p>
+                                    </div>
+                                    <div class="glass" style="padding: 15px; border-radius: var(--border-radius); text-align: center; border: 1px solid var(--glass-border);">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Termos Ativos</h3>
+                                        <p id="doc-kpi-active-terms" style="font-size: 1.8rem; font-weight: bold; color: #8b5cf6; margin: 0;">0</p>
+                                    </div>
+                                    <div class="glass" style="padding: 15px; border-radius: var(--border-radius); text-align: center; border: 1px solid var(--glass-border);">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">AtenÃ§Ã£o (&lt; 30 dias)</h3>
+                                        <p id="doc-kpi-warning-docs" style="font-size: 1.8rem; font-weight: bold; color: #f59e0b; margin: 0;">0</p>
+                                    </div>
+                                    <div class="glass" style="padding: 15px; border-radius: var(--border-radius); text-align: center; border: 1px solid var(--glass-border);">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Expirados / Vencidos</h3>
+                                        <p id="doc-kpi-expired-docs" style="font-size: 1.8rem; font-weight: bold; color: #ef4444; margin: 0;">0</p>
+                                    </div>
+                                </div>
+
+                                <!-- Tabela de Prazos -->
+                                <div class="table-container glass" style="margin-top: 10px; border: 1px solid var(--glass-border);">
+                                    <table class="table-minimal">
+                                        <thead>
+                                            <tr>
+                                                <th>Documento</th>
+                                                <th>Categoria</th>
+                                                <th>InÃ­cio</th>
+                                                <th>Fim</th>
+                                                <th>Tempo Restante</th>
+                                                <th>AÃ§Ã£o</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="doc-dashboard-tbody">
+                                            <!-- Document items will be rendered here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="telephony-section" class="display-section hidden">
+                    <!-- NavegaÃ§Ã£o das Abas de Telefonia -->
+                    <div class="telephony-tabs-nav" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                        <button id="tab-telephony-extensions" class="acc-tab-btn active">Ramais</button>
+                        <button id="tab-telephony-queues" class="acc-tab-btn">QUEUE (Filas)</button>
+                        <button id="tab-telephony-blf" class="acc-tab-btn">BLF</button>
+                        <button id="tab-telephony-users" class="acc-tab-btn">UsuÃ¡rios</button>
+                    </div>
+
+                    <div class="search-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; max-width: none;">
+                        <div style="flex: 1;">
+                            <input type="text" id="telephony-search" class="form-control glass" placeholder="Pesquisar ramais por nÃºmero, nome ou usuÃ¡rio...">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label for="telephony-page-size" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por pÃ¡gina:</label>
+                                <select id="telephony-page-size" class="form-control glass" style="width: 100px; padding: 8px; border-radius: 8px; cursor: pointer;">
+                                    <option value="100" selected>100</option>
+                                    <option value="500">500</option>
+                                    <option value="1000">1000</option>
+                                </select>
+                            </div>
+                            <button id="telephony-reload-btn" class="btn-primary" style="display: flex; align-items: center; gap: 8px;" title="Atualizar ramais">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                </svg>
+                                <span>Atualizar</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- ABA 1: RAMAIS -->
+                    <div id="telephony-view-extensions" class="telephony-tab-content">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>Ramal</th>
+                                        <th>Nome</th>
+                                        <th>DDR</th>
+                                        <th>UsuÃ¡rio SIP</th>
+                                        <th>Senha</th>
+                                        <th>Rota de SaÃ­da</th>
+                                        <th>ObservaÃ§Ã£o</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-table-body">
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botÃ£o "Atualizar" para sincronizar os ramais do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 2: QUEUE (FILAS) -->
+                    <div id="telephony-view-queues" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>NÃºmero</th>
+                                        <th>Fila / Nome</th>
+                                        <th>EstratÃ©gia</th>
+                                        <th>Timeout Agente</th>
+                                        <th>GravaÃ§Ã£o</th>
+                                        <th>Quantidade de Membros</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-queues-table-body">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botÃ£o "Atualizar" para sincronizar as filas do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 3: BLF -->
+                    <div id="telephony-view-blf" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nome</th>
+                                        <th>Quantidade de Ramais</th>
+                                        <th>Data de CriaÃ§Ã£o</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-blf-table-body">
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botÃ£o "Atualizar" para sincronizar os BLFs do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 4: USUARIOS -->
+                    <div id="telephony-view-users" class="telephony-tab-content hidden">
+                        <div class="table-container glass" style="margin-top: 10px;">
+                            <table class="table-minimal">
+                                <thead>
+                                    <tr>
+                                        <th>Nome do UsuÃ¡rio</th>
+                                        <th>E-mail</th>
+                                        <th>Perfil / Tipo</th>
+                                        <th>Senha</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="telephony-users-table-body">
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                            Clique no botÃ£o "Atualizar" para sincronizar os usuÃ¡rios do servidor.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="telephony-pagination" class="pagination-container"></div>
+                </section>
+
+                <section id="users-section" class="display-section hidden">
+                    <div class="users-header"
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <div class="search-bar" style="margin-bottom: 0; flex: 1; max-width: 400px;">
+                            <input type="text" id="user-search" placeholder="Pesquisar usuÃ¡rios...">
+                        </div>
+                        <button id="btn-new-user" class="btn-secondary">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Novo UsuÃ¡rio</span>
+                        </button>
+                    </div>
+                    <div class="table-container" style="background: transparent; border: none; padding: 0;">
+                        <table id="user-table" class="table-minimal">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>Tipo</th>
+                                    <th id="th-user-actions">AÃ§Ãµes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-table-body">
+                                <!-- Users will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ACCOUNTS SECTION (Main Container) -->
+                <section id="accounts-section" class="display-section hidden">
+
+                    <!-- NEW: Sub-menu Tabs for Accounts -->
+                    <div class="accounts-tabs-nav"
+                        style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 15px; align-items: center;">
+                            <button id="tab-acc-lista" class="acc-tab-btn active">Lista</button>
+                            <button id="tab-acc-calendario" class="acc-tab-btn">CalendÃ¡rio</button>
+                            <button id="tab-acc-dashboard" class="acc-tab-btn">Dashboard</button>
+                            <button id="tab-acc-notificacoes" class="acc-tab-btn"
+                                style="display: flex; align-items: center; gap: 6px;">
+                                <svg id="icon-alert-bell" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                NotificaÃ§Ãµes
+                            </button>
+                        </div>
+                        <!-- Filters for Calendar View Only -->
+                        <div id="calendar-view-toggle-container" class="view-toggle hidden"
+                            style="display: flex; gap: 8px; align-items: center; margin-left: 20px; border: none; background: transparent; padding: 0;">
+                            <button id="toggle-accounts-cal-day" class="toggle-btn"
+                                style="border-radius: 6px;">Dia</button>
+                            <button id="toggle-accounts-cal-month" class="toggle-btn active"
+                                style="border-radius: 6px;">MÃªs</button>
+                            <button id="toggle-accounts-cal-year" class="toggle-btn"
+                                style="border-radius: 6px;">Ano</button>
+                        </div>
+                    </div>
+
+                    <!-- TAB 1: LISTA -->
+                    <div id="acc-tab-content-lista" class="acc-tab-content active">
+
+                        <!-- HEADER (Full width Search & Button) -->
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 20px;">
+                            <div style="flex: 1; max-width: 600px;">
+                                <input type="text" id="accounts-search" class="form-control glass"
+                                    placeholder="Pesquisar contas por nome ou descriÃ§Ã£o..."
+                                    style="width: 100%; border-radius: 8px;">
+                            </div>
+
+                            <button id="btn-new-account" class="btn-primary role-hidden">
+                                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                <span>Nova Conta</span>
+                            </button>
+                        </div>
+
+                        <div class="calendar-layout-wrapper">
+                            <!-- SIDEBAR (20% - approx 250px) -->
+                            <aside class="calendar-sidebar glass">
+                                <h3
+                                    style="margin-bottom: 15px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                                    Filtros</h3>
+
+                                <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                                    <div>
+                                        <label
+                                            style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 5px;">Status
+                                            da Conta</label>
+                                        <select id="filter-status" class="form-control glass" style="width: 100%;">
+                                            <option value="" selected>-</option>
+                                            <option value="On">Ativa</option>
+                                            <option value="Off">Desativada</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                                    <label
+                                        style="font-size: 0.85rem; color: var(--text-muted); margin: 0; cursor: pointer;"
+                                        for="filter-date-toggle">Filtrar por Data</label>
+                                    <input type="checkbox" id="filter-date-toggle"
+                                        style="transform: scale(1.2); cursor: pointer;">
+                                </div>
+
+                                <div id="sidebar-mini-calendar-list" class="mini-calendar glass"
+                                    style="padding: 10px; border-radius: 8px; opacity: 0.4; pointer-events: none; transition: 0.3s all;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </aside>
+
+                            <!-- MAIN CALENDAR VIEW (80%) -->
+                            <main class="calendar-main-view" style="display: flex; flex-direction: column;">
+                                <div id="accounts-list-view" class="table-container glass" style="flex: 1; margin: 0;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Conta/Empresa</th>
+                                                <th>Tipo</th>
+                                                <th>Vencimento</th>
+                                                <th>Valor (R$)</th>
+                                                <th>Status AtivaÃ§Ã£o</th>
+                                                <th>Status Pagamento</th>
+                                                <th id="th-account-actions" class="action-cell"
+                                                    style="text-align: right;">AÃ§Ãµes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="accounts-table-body">
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="accounts-list-pagination" class="pagination-container"></div>
+                            </main>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: CALENDAR (Notion-like 20/80 Layout) -->
+                    <div id="acc-tab-content-calendario" class="acc-tab-content hidden">
+                        <div class="calendar-layout-wrapper">
+
+                            <!-- SIDEBAR (20% - approx 250px) -->
+                            <aside class="calendar-sidebar glass">
+                                <h3
+                                    style="margin-bottom: 15px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                                    NavegaÃ§Ã£o</h3>
+
+                                <button id="btn-new-account-cal" class="btn-primary role-hidden"
+                                    style="width: 100%; margin-bottom: 20px; justify-content: center;">
+                                    + Nova Conta
+                                </button>
+
+                                <!-- Mini Calendar / Navigation Filters -->
+                                <div class="sidebar-filters">
+
+
+                                    <!-- Interactive Mini Calendar Container -->
+                                    <div id="sidebar-mini-calendar" class="sidebar-mini-calendar">
+                                        <!-- JS renders small 7x6 grid here -->
+                                    </div>
+
+                                </div>
+
+                                <!-- Removed View Toggle from Sidebar as requested -->
+                            </aside>
+
+                            <!-- MAIN CALENDAR VIEW (80%) -->
+                            <main class="calendar-main-view">
+                                <div class="calendar-header">
+                                    <button id="btn-prev-date-nav" class="btn-icon">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M15 18l-6-6 6-6" />
+                                        </svg>
+                                    </button>
+                                    <h2 id="calendar-date-display" style="margin: 0;">Janeiro 2024</h2>
+                                    <button id="btn-next-date-nav" class="btn-icon">
+                                        <svg viewBox="0 0 24 24">
+                                            <path d="M9 18l6-6-6-6" />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- MONTH VIEW INNER CONTAINER -->
+                                <div id="cal-month-view-container" class="active-cal-view">
+                                    <div class="calendar-weekdays">
+                                        <div>Dom</div>
+                                        <div>Seg</div>
+                                        <div>Ter</div>
+                                        <div>Qua</div>
+                                        <div>Qui</div>
+                                        <div>Sex</div>
+                                        <div>SÃ¡b</div>
+                                    </div>
+                                    <div id="calendar-month-grid" class="calendar-grid">
+                                        <!-- Calendar days will be rendered here -->
+                                    </div>
+                                </div>
+
+                                <!-- YEAR VIEW INNER CONTAINER -->
+                                <div id="cal-year-view-container" class="hidden-cal-view">
+                                    <div id="calendar-year-grid" class="year-grid">
+                                        <!-- 12 months will be rendered here -->
+                                    </div>
+                                </div>
+
+                                <!-- DAY VIEW INNER CONTAINER -->
+                                <div id="cal-day-view-container" class="hidden-cal-view">
+                                    <div id="calendar-day-list" class="day-list-container">
+                                        <!-- Timeline or list of events for a single day -->
+                                    </div>
+                                </div>
+                            </main>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: DASHBOARD -->
+                    <section id="accounts-dashboard-view" class="display-section hidden">
+                        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 20px;">
+                            <!-- Filtros (aprox 10-15%) -->
+                            <aside class="dashboard-sidebar glass"
+                                style="padding: 20px; border-radius: var(--border-radius); height: fit-content;">
+                                <h3
+                                    style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">
+                                    Filtros</h3>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">DATA INICIAL</label>
+                                    <input type="date" id="dash-filter-start" class="form-control glass"
+                                        style="width: 100%; padding: 8px;">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">DATA FINAL</label>
+                                    <input type="date" id="dash-filter-end" class="form-control glass"
+                                        style="width: 100%; padding: 8px;">
+                                </div>
+
+                                <button id="btn-dash-clear-dates" class="btn-secondary" title="Zerar Filtro (MÃªs Atual)"
+                                    style="width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 25px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor"
+                                        stroke-width="2" fill="none" class="feather feather-rotate-ccw">
+                                        <polyline points="1 4 1 10 7 10"></polyline>
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                                    </svg>
+                                </button>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">TIPO</label>
+                                    <select id="dash-filter-type" class="form-control glass"
+                                        style="width: 100%; padding: 8px;">
+                                        <option value="Todos">Todos</option>
+                                        <option value="Recorrente">Recorrente</option>
+                                        <option value="Ãšnico">Ãšnico</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">ATIVAÃ‡ÃƒO</label>
+                                    <select id="dash-filter-status" class="form-control glass"
+                                        style="width: 100%; padding: 8px;">
+                                        <option value="Todos">Todos</option>
+                                        <option value="On">On</option>
+                                        <option value="Off">Off</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">PAGAMENTO</label>
+                                    <select id="dash-filter-payment" class="form-control glass"
+                                        style="width: 100%; padding: 8px;">
+                                        <option value="Todos">Todos</option>
+                                        <option value="Pendente">Pendente</option>
+                                        <option value="Pago">Pago</option>
+                                        <option value="Cancelado">Cancelado</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">CATEGORIA</label>
+                                    <div class="custom-multiselect-container" id="dash-filter-category-container">
+                                        <button type="button" class="multiselect-trigger glass" id="dash-filter-category-trigger">
+                                            <span class="trigger-label">Todos</span>
+                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                        <div class="multiselect-dropdown glass hidden" id="dash-filter-category-dropdown">
+                                            <label class="multiselect-option"><input type="checkbox" value="Todos" checked> <span>Todos</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="Infraestrutura"> <span>Infraestrutura</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="LicenÃ§as de Software"> <span>LicenÃ§as de Software</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="ServiÃ§os Web"> <span>ServiÃ§os Web</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="Telefonia / Internet"> <span>Telefonia / Internet</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="Equipamentos"> <span>Equipamentos</span></label>
+                                            <label class="multiselect-option"><input type="checkbox" value="Outros"> <span>Outros</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label style="font-size: 0.8rem; color: var(--text-muted);">NOME DA CONTA</label>
+                                    <div class="custom-multiselect-container" id="dash-filter-company-container">
+                                        <button type="button" class="multiselect-trigger glass" id="dash-filter-company-trigger">
+                                            <span class="trigger-label">Todos</span>
+                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                        <div class="multiselect-dropdown glass hidden" id="dash-filter-company-dropdown">
+                                            <label class="multiselect-option"><input type="checkbox" value="Todos" checked> <span>Todos</span></label>
+                                            <div id="dash-filter-company-dynamic-options"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </aside>
+
+                            <!-- Dados Principais (90%) -->
+                            <main class="dashboard-main-content">
+                                <div
+                                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Valor Total</h3>
+                                        <div id="dash-metric-valor"
+                                            style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">R$
+                                            0,00</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Total de Contas</h3>
+                                        <div id="dash-metric-contas"
+                                            style="font-size: 1.5rem; font-weight: bold; color: var(--accent);">0</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Tipos de Contas</h3>
+                                        <div id="dash-metric-tipos"
+                                            style="font-size: 1.5rem; font-weight: bold; color: #34d399;">0</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Conta / Empresa</h3>
+                                        <div id="dash-metric-empresas"
+                                            style="font-size: 1.5rem; font-weight: bold; color: #f87171;">0</div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Total Pago</h3>
+                                        <div id="dash-metric-pago"
+                                            style="font-size: 1.5rem; font-weight: bold; color: #4ade80;">R$ 0,00</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Total Pendente</h3>
+                                        <div id="dash-metric-pendente"
+                                            style="font-size: 1.5rem; font-weight: bold; color: #facc15;">R$ 0,00</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Maior Despesa</h3>
+                                        <div id="dash-metric-maior-valor"
+                                            style="font-size: 1.2rem; font-weight: bold; color: #f87171; line-height: 1.2;">
+                                            R$ 0,00</div>
+                                        <div id="dash-metric-maior-nome"
+                                            style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            -</div>
+                                    </div>
+                                    <div class="glass"
+                                        style="padding: 15px; border-radius: var(--border-radius); text-align: center;">
+                                        <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">
+                                            Custo (Fixo / VariÃ¡vel)</h3>
+                                        <div
+                                            style="display: flex; justify-content: space-around; font-weight: bold; margin-top: 5px; font-size: 1.1rem;">
+                                            <span id="dash-metric-fixo" style="color: #60a5fa;" title="Recorrente">R$
+                                                0,00</span>
+                                            <span
+                                                style="color: var(--text-muted); font-size: 0.9rem; font-weight: normal; margin-top: 2px;">/</span>
+                                            <span id="dash-metric-variavel" style="color: #c084fc;" title="Ãšnico">R$
+                                                0,00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+
+                                    <!-- Ranking Empresas -->
+                                    <div class="glass"
+                                        style="padding: 20px; border-radius: var(--border-radius); display: flex; flex-direction: column;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                            <h3 style="margin: 0; font-size: 1.1rem;">Top Contas / Empresas</h3>
+                                            <select id="dash-sort-empresas" class="form-control glass"
+                                                style="padding: 4px 8px; font-size: 0.8rem; border-color: rgba(255,255,255,0.2);">
+                                                <option value="desc">Maior Valor</option>
+                                                <option value="asc">Menor Valor</option>
+                                            </select>
+                                        </div>
+                                        <div id="dash-list-empresas"
+                                            style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; max-height: 300px; padding-right: 5px;">
+                                            <!-- Rendering here -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Ranking Categorias -->
+                                    <div class="glass"
+                                        style="padding: 20px; border-radius: var(--border-radius); display: flex; flex-direction: column;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                            <h3 style="margin: 0; font-size: 1.1rem;">Top Tipos de Conta</h3>
+                                            <select id="dash-sort-categorias" class="form-control glass"
+                                                style="padding: 4px 8px; font-size: 0.8rem; border-color: rgba(255,255,255,0.2);">
+                                                <option value="desc">Maior Valor</option>
+                                                <option value="asc">Menor Valor</option>
+                                            </select>
+                                        </div>
+                                        <div id="dash-list-categorias"
+                                            style="display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; max-height: 300px; padding-right: 5px;">
+                                            <!-- Rendering here -->
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="glass"
+                                    style="padding: 20px; border-radius: var(--border-radius); margin-top: 20px;">
+                                    <h3
+                                        style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;">
+                                        EvoluÃ§Ã£o no Tempo</h3>
+                                    <div style="position: relative; height: 350px; width: 100%;">
+                                        <canvas id="chart-dashboard-time"></canvas>
+                                    </div>
+                                </div>
+
+                            </main>
+                        </div>
+                    </section>
+                    <!-- TAB 4: NOTIFICAÃ‡Ã•ES (DÃ­vidas Vencidas e de Hoje) -->
+                    <div id="acc-tab-content-notificacoes" class="acc-tab-content hidden">
+                        <div class="calendar-layout-wrapper" style="grid-template-columns: 1fr;">
+                            <main class="calendar-main-view" style="display: flex; flex-direction: column;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 20px;">
+                                    <h2 style="margin: 0;">Contas Urgentes e Alertas</h2>
+                                </div>
+                                <div id="accounts-notifications-view" class="table-container glass"
+                                    style="flex: 1; margin: 0;">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>CONTA/EMPRESA</th>
+                                                <th>TIPO</th>
+                                                <th>VENCIMENTO</th>
+                                                <th>VALOR (R$)</th>
+                                                <th>STATUS PAGAMENTO</th>
+                                                <th>AÃ‡Ã•ES</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="accounts-notifications-body">
+                                            <!-- Late or pending accounts injected by JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </main>
+                        </div> <!-- TAB 4 END -->
+                </section> <!-- CLOSE ACCOUNTS SECTION -->
+
+                <!-- DEDICATED ACCOUNT PAGE -->
+                <section id="dedicated-account-page" class="display-section hidden">
+                    <div class="header-actions" style="margin-bottom: 20px;">
+                        <button id="btn-back-to-accounts" class="btn-secondary">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2"
+                                fill="none">
+                                <line x1="19" y1="12" x2="5" y2="12"></line>
+                                <polyline points="12 19 5 12 12 5"></polyline>
+                            </svg>
+                            Voltar para Contas
+                        </button>
+                        <h2 id="ded-acc-company"
+                            style="font-size: 1.8rem; margin: 0; margin-left: 15px; color: var(--text-main);">Nome
+                            da Empresa</h2>
+                    </div>
+
+                    <!-- 1. Top Section (Cards/Stats) -->
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div class="glass" style="padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Total Gasto
+                                (HistÃ³rico)</h3>
+                            <div id="ded-acc-total-paid"
+                                style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">R$ 0,00</div>
+                        </div>
+                        <div class="glass" style="padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Total
+                                Pendente (Vencido)</h3>
+                            <div id="ded-acc-total-pending"
+                                style="font-size: 1.5rem; font-weight: bold; color: #f87171;">R$ 0,00</div>
+                        </div>
+                        <div class="glass" style="padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Status da
+                                Conta</h3>
+                            <div id="ded-acc-status-badge"
+                                style="font-size: 1.2rem; font-weight: bold; margin-top: 5px;">
+                                <span class="badge"
+                                    style="background: rgba(16, 185, 129, 0.2); color: #34d399;">Ativa</span>
+                            </div>
+                        </div>
+                        <div class="glass" style="padding: 15px; border-radius: 8px; text-align: center;">
+                            <h3 style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px;">Faturas
+                                Pagas</h3>
+                            <div id="ded-acc-total-count"
+                                style="font-size: 1.5rem; font-weight: bold; color: var(--text-main);">0</div>
+                        </div>
+                    </div>
+
+                    <!-- 2 & 3. Split Layout (Left List / Right Details) -->
+                    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 20px;">
+
+                        <!-- 2. Left Side (History List) -->
+                        <div class="glass"
+                            style="padding: 15px; border-radius: 8px; display: flex; flex-direction: column; max-height: 600px;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="margin: 0; font-size: 1.1rem;">HistÃ³rico</h3>
+                                <button id="btn-ded-add-history" class="btn-icon" title="Adicionar Fatura"
+                                    style="background: rgba(255,255,255,0.1); width: 28px; height: 28px; border-radius: 4px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor"
+                                        stroke-width="2" fill="none">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div id="ded-acc-history-list"
+                                style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;">
+                                <!-- History items appended via JS -->
+                                <div class="text-center" style="color: var(--text-muted); padding: 20px;">Carregando
+                                    histÃ³rico...</div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Right Side (Details & Upload) -->
+                        <div class="glass" style="padding: 20px; border-radius: 8px; position: relative;">
+                            <!-- Empty State Overlay -->
+                            <div id="ded-acc-details-empty"
+                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--glass-bg); backdrop-filter: blur(10px); z-index: 10; display: flex; align-items: center; justify-content: center; border-radius: 8px; text-align: center;">
+                                <div style="color: var(--text-muted);">
+                                    <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor"
+                                        stroke-width="1" fill="none" style="margin-bottom: 10px; opacity: 0.5;">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    </svg>
+                                    <p>Selecione uma fatura no histÃ³rico ao lado para visualizar os detalhes.</p>
+                                </div>
+                            </div>
+
+                            <div id="ded-acc-details-content"
+                                style="display: flex; flex-direction: column; height: 100%;">
+                                <div
+                                    style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px;">
+                                    <div>
+                                        <h3 style="margin-bottom: 5px; color: var(--accent);">Detalhes da Fatura
+                                        </h3>
+                                        <span id="ded-acc-det-date"
+                                            style="color: var(--text-muted); font-size: 0.9rem;">DD/MM/YYYY</span>
+                                    </div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button id="btn-ded-save-details" class="btn-primary"
+                                            style="padding: 6px 12px; font-size: 0.9rem;">Salvar AlteraÃ§Ãµes</button>
+                                        <button id="btn-ded-delete-account" class="btn-icon" style="color: #ef4444;"
+                                            title="Excluir Fatura">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor"
+                                                stroke-width="2" fill="none">
+                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                <path
+                                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>VALOR (R$)</label>
+                                        <input type="number" id="ded-acc-det-val-input" step="0.01" class="form-control"
+                                            style="background: rgba(0,0,0,0.2);">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>VENCIMENTO</label>
+                                        <input type="date" id="ded-acc-det-date-input" class="form-control"
+                                            style="background: rgba(0,0,0,0.2);">
+                                    </div>
+                                </div>
+                                <div
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>STATUS PAGAMENTO</label>
+                                        <select id="ded-acc-det-status-input" class="form-control"
+                                            style="background: rgba(0,0,0,0.2);">
+                                            <option value="Pendente">Pendente</option>
+                                            <option value="Pago">Pago</option>
+                                            <option value="Cancelado">Cancelado</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label>STATUS DA CONTA</label>
+                                        <select id="ded-acc-det-account-status-input" class="form-control"
+                                            style="background: rgba(0,0,0,0.2);">
+                                            <option value="On">Ativa</option>
+                                            <option value="Off">Inativa</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div id="ded-acc-det-freq-group" class="form-group hidden" style="margin-bottom: 20px;">
+                                    <label>FREQUÃŠNCIA DE REPETIÃ‡ÃƒO (ALTERA AS PRÃ“XIMAS)</label>
+                                    <select id="ded-acc-det-freq-input" class="form-control"
+                                        style="background: rgba(0,0,0,0.2);">
+                                        <option value="Dia">DiÃ¡rio (Todo dia)</option>
+                                        <option value="Semana">Semanal (A cada 7 dias)</option>
+                                        <option value="15 Dias">Quinzenal (A cada 15 dias)</option>
+                                        <option value="Mensal">Mensal (Todo mÃªs)</option>
+                                        <option value="3 Meses">Trimestral (A cada 3 meses)</option>
+                                        <option value="6 Meses">Semestral (A cada 6 meses)</option>
+                                        <option value="Ano">Anual (Uma vez por ano)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label>OBSERVAÃ‡ÃƒO</label>
+                                    <textarea id="ded-acc-det-obs-input" class="form-control" rows="3"
+                                        placeholder="Insira detalhes especÃ­ficos desta fatura..."
+                                        style="background: rgba(0,0,0,0.2); resize: vertical;"></textarea>
+                                </div>
+
+                                <!-- Upload and Preview Area -->
+                                <div
+                                    style="margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                                    <label
+                                        style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 10px;">COMPROVANTE
+                                        / BOLETO</label>
+
+                                    <div id="ded-acc-upload-area"
+                                        style="border: 2px dashed rgba(255,255,255,0.2); border-radius: 8px; padding: 20px; text-align: center; transition: all 0.3s; cursor: pointer; background: rgba(0,0,0,0.1);">
+                                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="var(--text-muted)"
+                                            stroke-width="1.5" fill="none" style="margin-bottom: 10px;">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        <p style="margin: 0; color: var(--text-main); font-size: 0.95rem;">Clique
+                                            para anexar arquivo ou arraste para cÃ¡</p>
+                                        <p style="margin: 5px 0 0 0; color: var(--text-muted); font-size: 0.8rem;">
+                                            PDF ou Imagem (MÃ¡x 10MB)</p>
+                                        <input type="file" id="ded-acc-file-input" style="display: none;"
+                                            accept=".pdf,image/*">
+                                    </div>
+
+                                    <div id="ded-acc-preview-area" class="hidden"
+                                        style="margin-top: 15px; display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                                        <div id="ded-acc-preview-thumb"
+                                            style="width: 60px; height: 60px; border-radius: 4px; background-size: cover; background-position: center; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;">
+                                            <!-- Fallback icon for PDF shown via JS -->
+                                        </div>
+                                        <div style="flex: 1; overflow: hidden;">
+                                            <p id="ded-acc-preview-name"
+                                                style="margin: 0; font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                documento.pdf</p>
+                                            <a id="ded-acc-preview-link" href="#" target="_blank"
+                                                style="font-size: 0.8rem; color: var(--accent); text-decoration: none;">Abrir
+                                                em nova guia</a>
+                                        </div>
+                                        <button id="btn-ded-remove-attachment" class="btn-icon" style="color: #ef4444;"
+                                            title="Remover Anexo">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor"
+                                                stroke-width="2" fill="none">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div> <!-- End main-interface -->
+        </main>
+    </div> <!-- End app-container -->
+
+    <!-- Modal for New Procedure -->
+    <div id="modal-form" class="modal hidden">
+        <div class="modal-content glass">
+            <h3 id="modal-form-title">Novo Procedimento</h3>
+            <form id="faq-form">
+                <input type="hidden" id="proc-id">
+
+                <div class="form-group">
+                    <label>NOME DO PROCEDIMENTO</label>
+                    <input type="text" id="proc-name" placeholder="Ex: ACESSO AO SISTEMA XYZ" required>
+                </div>
+
+                <div class="form-group">
+                    <label>COR DE IDENTIFICAÃ‡ÃƒO</label>
+                    <div class="color-palette" id="proc-color-palette">
+                        <!-- Swatches will be generated by JS or defined here -->
+                        <div class="color-swatch active swatch-indigo" data-color="#4F46E5"></div>
+                        <div class="color-swatch swatch-cyan" data-color="#06B6D4"></div>
+                        <div class="color-swatch swatch-emerald" data-color="#10B981"></div>
+                        <div class="color-swatch swatch-amber" data-color="#F59E0B"></div>
+                        <div class="color-swatch swatch-red" data-color="#EF4444"></div>
+                        <div class="color-swatch swatch-pink" data-color="#EC4899"></div>
+                        <div class="color-swatch swatch-violet" data-color="#8B5CF6"></div>
+                        <div class="color-swatch custom" id="color-custom-swatch" title="Cor Personalizada"
+                            data-color="custom">
+                            <span>+</span>
+                        </div>
+                    </div>
+                    <input type="color" id="proc-color" value="#4F46E5" class="hidden">
+                </div>
+
+                <div class="form-group">
+                    <label>RESPONSÃVEL</label>
+                    <input type="text" id="proc-responsible" placeholder="Ex: JOÃƒO SILVA" value="TI">
+                </div>
+
+                <div class="form-group">
+                    <label>GRUPO</label>
+                    <select id="proc-group">
+                        <option value="Geral" selected>Geral</option>
+                        <option value="Suporte">Suporte</option>
+                        <option value="Infraestrutura">Infraestrutura</option>
+                        <option value="Sistemas">Sistemas</option>
+                        <option value="ElÃ©trica">ElÃ©trica</option>
+                        <option value="Neo">Neo</option>
+                        <option value="Rede">Rede</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>NOTA</label>
+                    <input type="text" id="proc-note" placeholder="Nota adicional" value="">
+                </div>
+
+                <!-- Hidden legacy fields for background processing -->
+                <div class="hidden">
+                    <textarea id="proc-content">[]</textarea>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for User Management -->
+    <div id="modal-user" class="modal hidden">
+        <div class="modal-content glass">
+            <h3 id="modal-user-title">Novo UsuÃ¡rio</h3>
+            <form id="user-form">
+                <input type="hidden" id="user-id-form">
+
+                <div class="form-group">
+                    <label>NOME COMPLETO</label>
+                    <input type="text" id="user-name-form" placeholder="Ex: JoÃ£o Silva" required>
+                </div>
+
+                <div class="form-group">
+                    <label>EMAIL</label>
+                    <input type="email" id="user-email-form" placeholder="Ex: joao@empresa.com.br" required>
+                </div>
+
+                <div class="form-group">
+                    <label>SENHA</label>
+                    <input type="password" id="user-password-form" placeholder="Sua senha">
+                </div>
+
+                <div class="form-group">
+                    <label>TIPO DE USUÃRIO</label>
+                    <select id="user-role-form" required>
+                        <option value="Administrador">Administrador</option>
+                        <option value="PadrÃ£o" selected>PadrÃ£o</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Accounts -->
+    <div id="account-modal-form" class="modal hidden">
+        <div class="modal-content glass">
+            <h3 id="account-modal-title">Nova Conta</h3>
+            <form id="account-form">
+                <input type="hidden" id="account-id">
+
+                <div class="form-group">
+                    <label>NOME DA EMPRESA / INSTITUTO</label>
+                    <input type="text" id="account-company" placeholder="Ex: Enel, Vivo, Fornecedor X" required>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>TIPO DE CONTA</label>
+                        <select id="account-type" required>
+                            <option value="Recorrente">Recorrente (Repetitivo)</option>
+                            <option value="Ãšnico">Ãšnico (Apenas uma vez)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>CATEGORIA</label>
+                        <select id="account-category" required>
+                            <option value="Infraestrutura">Infraestrutura</option>
+                            <option value="LicenÃ§as de Software">LicenÃ§as de Software</option>
+                            <option value="ServiÃ§os Web">ServiÃ§os Web</option>
+                            <option value="Telefonia / Internet">Telefonia / Internet</option>
+                            <option value="Equipamentos">Equipamentos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="account-frequency-group">
+                    <label>FREQUÃŠNCIA DE REPETIÃ‡ÃƒO</label>
+                    <select id="account-frequency" required>
+                        <option value="1 dia">1 dia</option>
+                        <option value="7 dias">7 dias</option>
+                        <option value="15 dias">15 dias</option>
+                        <option value="1 mes" selected>1 mes</option>
+                        <option value="3 meses">3 meses</option>
+                        <option value="6 meses">6 meses</option>
+                        <option value="1 ano">1 ano</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>VALOR (R$)</label>
+                        <input type="number" id="account-value" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+                    <div>
+                        <label>DATA DE VENCIMENTO</label>
+                        <input type="date" id="account-due-date">
+                    </div>
+                </div>
+
+                <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label>STATUS ATIVAÃ‡ÃƒO</label>
+                        <select id="account-status" required>
+                            <option value="On">Ativa (Mostrar no HistÃ³rico Pai)</option>
+                            <option value="Off">Inativa (Oculta das prÃ³ximas previsÃµes)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>STATUS DE PAGAMENTO</label>
+                        <select id="account-payment-status" required>
+                            <option value="Pendente">Pendente</option>
+                            <option value="Pago">Pago</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>DESCRIÃ‡ÃƒO RESUMIDA</label>
+                    <input type="text" id="account-description" placeholder="O que Ã© essa conta?">
+                </div>
+
+                <div class="form-group">
+                    <label>OBSERVAÃ‡ÃƒO DETALHADA</label>
+                    <textarea id="account-observation" rows="3"
+                        placeholder="InformaÃ§Ãµes de contrato, links, etc."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Conta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Account Details Modal (View Only) -->
+    <div id="account-view-modal" class="modal hidden">
+        <div class="modal-content glass">
+            <h3 id="view-account-title">Detalhes da Conta</h3>
+            <div style="margin-bottom: 20px;">
+                <p><strong>Empresa:</strong> <span id="v-acc-company"></span></p>
+                <p><strong>Tipo:</strong> <span id="v-acc-type"></span></p>
+                <p><strong>Categoria:</strong> <span id="v-acc-category"></span></p>
+                <p><strong>Valor:</strong> R$ <span id="v-acc-value"></span></p>
+                <p><strong>Status AtivaÃ§Ã£o:</strong> <span id="v-acc-status"></span></p>
+                <p><strong>Status Pagamento:</strong> <span id="v-acc-payment"></span></p>
+                <p><strong>Vencimento:</strong> <span id="v-acc-due"></span></p>
+                <p style="margin-top:10px;"><strong>DescriÃ§Ã£o:</strong><br><span id="v-acc-desc"></span></p>
+                <p style="margin-top:10px;"><strong>ObservaÃ§Ãµes:</strong><br><span id="v-acc-obs"></span></p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-primary close-modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Adicionar SeÃ§Ã£o DinÃ¢mica -->
+    <div id="modal-add-section" class="modal hidden">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <h2>Adicionar Novo Campo</h2>
+            </div>
+            <div class="form-group">
+                <label>TÃTULO DO CONTAINER</label>
+                <input type="text" id="section-title-input" placeholder="Ex: InstruÃ§Ãµes de Acesso" required>
+            </div>
+            <div class="form-group">
+                <label>TIPO DE CAMPO</label>
+                <select id="section-type-input" required>
+                    <option value="TEXTO">TEXTO</option>
+                    <option value="FAQ">FAQ (Perguntas e Respostas)</option>
+                    <option value="DOCUMENTO">DOCUMENTO (Upload de Arquivo)</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary close-modal">Cancelar</button>
+                <button id="btn-confirm-add-section" class="btn-primary">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Confirmation -->
+    <div id="modal-confirm" class="modal hidden">
+        <div class="modal-content glass text-center">
+            <h3>Procedimento Salvo!</h3>
+            <p class="modal-message">Deseja preencher o procedimento agora?</p>
+            <div class="modal-actions-center">
+                <button id="confirm-no" class="btn-secondary">NÃ£o</button>
+                <button id="confirm-yes" class="btn-primary">Sim</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Document Upload -->
+    <div id="modal-upload" class="modal hidden">
+        <div class="modal-content glass">
+            <h3>Anexar Documento</h3>
+            <form id="doc-form">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" for="doc-category" style="display:block; margin-bottom:0.5rem; font-weight:500;">Categoria</label>
+                    <select id="doc-category" class="form-control glass" style="width:100%;" required>
+                        <option value="Geral">Geral</option>
+                        <option value="Contratos">Contratos</option>
+                        <option value="Termo de Uso">Termo de Uso</option>
+                    </select>
+                </div>
+                
+                <!-- Date fields for Contratos and Termo de Uso -->
+                <div class="form-group" id="doc-dates-container" style="display: none; margin-bottom: 1.5rem; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label class="form-label" for="doc-start-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">VigÃªncia InÃ­cio</label>
+                        <input type="date" id="doc-start-date" class="form-control glass" style="width:100%;">
+                    </div>
+                    <div>
+                        <label class="form-label" for="doc-end-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">VigÃªncia Fim</label>
+                        <input type="date" id="doc-end-date" class="form-control glass" style="width:100%;">
+                        <div style="margin-top: 5px; display: flex; align-items: center; gap: 5px;">
+                            <input type="checkbox" id="doc-indefinite" style="cursor: pointer;">
+                            <label for="doc-indefinite" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">Indefinido</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" for="doc-display-name" style="display:block; margin-bottom:0.5rem; font-weight:500;">Nome do Documento (Opcional)</label>
+                    <input type="text" id="doc-display-name" class="form-control glass" style="width:100%;" placeholder="Deixe em branco para usar o nome original">
+                </div>
+                <div class="upload-area" id="drop-zone" style="margin-bottom: 1.5rem;">
+                    <input type="file" id="doc-file" accept=".png, .pdf" hidden>
+                    <div class="upload-icon">ðŸ“¤</div>
+                    <p>Clique ou arraste o arquivo aqui</p>
+                    <span id="file-name-display">Respeite o formato .png ou .pdf</span>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Fazer Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar SequÃªncia (Small) -->
+    <div id="modal-save-sequence" class="modal hidden">
+        <div class="modal-content glass small">
+            <div class="modal-header-center">
+                <h3>Salvar nova sequÃªncia?</h3>
+            </div>
+            <p>A ordem dos itens foi alterada e precisa ser salva.</p>
+            <div class="form-actions center">
+                <button type="button" class="btn-secondary" onclick="cancelSaveSequence()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="confirmSaveSequence()">Salvar AlteraÃ§Ãµes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACCOUNT MODAL FORM -->
+    <div id="account-modal-form" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 500px;">
+            <span class="close-btn" onclick="closeAccountModal()">&times;</span>
+            <h2 id="account-modal-title">Nova Conta</h2>
+            <form id="account-form">
+                <input type="hidden" id="account-id">
+                <div class="form-group">
+                    <label>Empresa / Instituto *</label>
+                    <input type="text" id="acc-company" class="form-control glass" required>
+                </div>
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Tipo *</label>
+                        <select id="acc-type" class="form-control glass" required>
+                            <option value="Fixo">Fixo</option>
+                            <option value="VolÃ¡til">VolÃ¡til</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Vencimento</label>
+                        <input type="date" id="acc-due" class="form-control glass">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="acc-status" class="form-control glass">
+                        <option value="On">On</option>
+                        <option value="Off">Off</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>DescriÃ§Ã£o</label>
+                    <textarea id="acc-desc" class="form-control glass" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>ObservaÃ§Ãµes</label>
+                    <textarea id="acc-obs" class="form-control glass" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; margin-top: 15px;">Salvar Conta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase / Vendor Scripts (Optional) -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+</body>
+
+</html>
+
+

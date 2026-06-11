@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: intranet-db
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-intranet_ti}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: intranet-backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-intranet_ti}
+      PORT: 3000
+      LANSWEEPER_URL: ${LANSWEEPER_URL}
+      LANSWEEPER_USER: ${LANSWEEPER_USER}
+      LANSWEEPER_PASS: ${LANSWEEPER_PASS}
+      GNEW_USERNAME: ${GNEW_USERNAME}
+      GNEW_PASSWORD: ${GNEW_PASSWORD}
+    depends_on:
+      - db
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: intranet-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - uploads_data:/usr/share/nginx/html/uploads
+
+volumes:
+  pg_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local

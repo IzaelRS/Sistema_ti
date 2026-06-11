@@ -1,27 +1,16 @@
 {
-  "name": "intranet_ti",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "sistema-ti-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "start": "node server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.3.2",
-    "morgan": "^1.10.1",
-    "multer": "^2.0.2",
-    "sqlite3": "^5.1.7"
-  },
-  "devDependencies": {
-    "vite": "^7.3.1"
+    "frontend:dev": "npm run dev -w apps/frontend",
+    "frontend:build": "npm run build -w apps/frontend",
+    "backend:dev": "npm run dev -w apps/backend",
+    "backend:build": "npm run build -w apps/backend",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down"
   }
 }
