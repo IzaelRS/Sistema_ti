@@ -10,7 +10,13 @@
     "frontend:build": "npm run build -w apps/frontend",
     "backend:dev": "npm run dev -w apps/backend",
     "backend:build": "npm run build -w apps/backend",
+    "backend:migration:generate": "npm run migration:generate -w apps/backend --",
+    "backend:migration:run": "npm run migration:run -w apps/backend",
+    "backend:migration:revert": "npm run migration:revert -w apps/backend",
+    "backend:migration:show": "npm run migration:show -w apps/backend",
     "docker:up": "docker-compose up --build",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "docker:local:up": "docker-compose -f docker-compose.local.yml up --build",
+    "docker:local:down": "docker-compose -f docker-compose.local.yml down"
   }
 }

@@ -9,25 +9,33 @@ import { TimelineTopic } from "./entities/TimelineTopic";
 import { TimelineSubtopic } from "./entities/TimelineSubtopic";
 import { MonitoringEvent } from "./entities/MonitoringEvent";
 import * as bcrypt from "bcrypt";
+import path from "path";
 
 export const AppDataSource = new DataSource({
     type: "postgres",
-    host: process.env.DB_HOST || "db",
+    host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432"),
     username: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     database: process.env.DB_NAME || "intranet_ti",
-    synchronize: true,
+    synchronize: false,
     logging: false,
     entities: [User, Procedure, Document, Account, Event, TimelineTopic, TimelineSubtopic, MonitoringEvent],
     subscribers: [],
-    migrations: [],
+    migrations: [
+        path.join(__dirname, "migrations/**/*.{ts,js}")
+    ],
 });
 
 export async function initializeDatabase() {
     try {
         await AppDataSource.initialize();
         console.log("✅ Conexão com o banco de dados PostgreSQL estabelecida com sucesso via TypeORM.");
+
+        console.log("🔄 Executando migrations pendentes...");
+        await AppDataSource.runMigrations();
+        console.log("✅ Migrations executadas com sucesso.");
+
         await runSeeds();
     } catch (error) {
         console.error("❌ Erro ao conectar ao banco de dados:", error);

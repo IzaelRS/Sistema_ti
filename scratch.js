@@ -3,11 +3,15 @@ const path = require('path');
 const dbPath = path.resolve(__dirname, 'intranet.db');
 const db = new sqlite3.Database(dbPath);
 
-db.all("SELECT id, nome, em_ocorrencia, inicio, fim FROM events", [], (err, rows) => {
+db.all("SELECT * FROM users", [], (err, rows) => {
     if (err) {
-        console.error(err);
+        console.error("Error or no users table:", err.message);
+        db.all("SELECT name FROM sqlite_master WHERE type='table'", [], (err2, tables) => {
+            console.log("Tables:", tables);
+            db.close();
+        });
         return;
     }
-    console.log(JSON.stringify(rows, null, 2));
+    console.log("Users in SQLite:", JSON.stringify(rows, null, 2));
     db.close();
 });

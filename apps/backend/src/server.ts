@@ -716,7 +716,7 @@ async function getGnewToken() {
     
     console.log(`[TELEFONIA] Autenticando na API Gnew em ${GNEW_API_URL}/api/v2/token/ com usuário: ${GNEW_USERNAME}`);
     try {
-        const response = await fetch(`${GNEW_API_URL}/api/v2/token//`, {
+        const response = await fetch(`${GNEW_API_URL}/api/v2/token/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username: GNEW_USERNAME, password: GNEW_PASSWORD })
