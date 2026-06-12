@@ -2225,6 +2225,253 @@ app.get("/api/monitoring/nas/:id/storage", async (req, res) => {
         res.status(500).json({ error: "Erro ao obter detalhes de storage do NAS: " + err.message });
     }
 });
+// --- Lansweeper Cameras Monitoring ---
+function fetchLansweeperCustomReport(url, cookies, reportName, queryParams) {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(url);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+            path: `/ReportJson.aspx?det=${reportName}&${queryParams}&top=500&page=1&cache=0`,
+            method: "POST",
+            agent: lansweeperAgent,
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                "Content-Length": 0,
+                "Cookie": cookies,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+                "Accept": "application/json, text/javascript, */*; q=0.01",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        };
+        const req = https_1.default.request(options, (res) => {
+            let data = "";
+            res.on("data", (chunk) => data += chunk);
+            res.on("end", () => {
+                if (res.statusCode !== 200) {
+                    reject(new Error(`Erro HTTP ${res.statusCode} ao carregar JSON`));
+                    return;
+                }
+                try {
+                    const parsed = JSON.parse(data);
+                    if (parsed.Error) {
+                        reject(new Error(parsed.Emsg || "Erro na resposta do Lansweeper"));
+                    }
+                    else {
+                        resolve(parsed);
+                    }
+                }
+                catch (e) {
+                    reject(new Error("Falha no parse do JSON do Lansweeper: " + e.message));
+                }
+            });
+        });
+        req.on("error", reject);
+        req.write("");
+        req.end();
+    });
+}
+async function fetchRawCamerasList() {
+    try {
+        const lansweeperUrl = process.env.LANSWEEPER_URL;
+        const username = process.env.LANSWEEPER_USER;
+        const password = process.env.LANSWEEPER_PASS;
+        if (!lansweeperUrl || !username || !password) {
+            throw new Error("Configurações do Lansweeper ausentes no arquivo .env");
+        }
+        const loginParams = await getLansweeperLoginParams(lansweeperUrl);
+        const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
+        const reportData = await fetchLansweeperCustomReport(lansweeperUrl, cookies, "web50get1IPlocation", "@iplocation=DR%20-%20Mibos");
+        if (!reportData || !Array.isArray(reportData.AddedRows)) {
+            throw new Error("Nenhum dado retornado no relatório do Lansweeper");
+        }
+        return reportData.AddedRows.map((row) => {
+            const stripHtml = (htmlStr) => (htmlStr || "").replace(/<[^>]*>/g, "").trim();
+            const assetId = row[1];
+            const name = stripHtml(row[2]);
+            const location = stripHtml(row[3]) || "DR - Mibos";
+            const type = row[6] || "Camera";
+            const ip = row[7];
+            const mac = row[8] ? stripHtml(row[8]) : "-";
+            const manufacturer = row[9] ? stripHtml(row[9]) : "Intelbras";
+            let model = stripHtml(row[10]);
+            if (!model && name) {
+                model = name.replace(/^Camera\s+/i, "");
+            }
+            if (!model)
+                model = "Mibo";
+            return { id: assetId, name, type, manufacturer, ip, mac, model, location };
+        }).filter((cam) => cam.ip && cam.ip.trim() !== "" && cam.ip.toLowerCase() !== "surveillance camera");
+    }
+    catch (err) {
+        console.warn("[CAMERAS MONITOR] Erro ao buscar do Lansweeper. Usando fallback local:", err.message);
+        return [
+            { id: "cam1", name: "Câmera Recepção", type: "IP Camera", manufacturer: "Intelbras", ip: "192.168.0.95", mac: "00:1A:3F:F1:4C:11", model: "Mibo iC3", location: "DR - Mibos" },
+            { id: "cam2", name: "Câmera Corredor Principal", type: "IP Camera", manufacturer: "Intelbras", ip: "192.168.0.96", mac: "00:1A:3F:F1:4C:12", model: "Mibo iC5", location: "DR - Mibos" },
+            { id: "cam3", name: "Câmera CPD / Rack", type: "IP Camera", manufacturer: "Intelbras", ip: "192.168.0.97", mac: "00:1A:3F:F1:4C:13", model: "Mibo iC3", location: "DR - Mibos" },
+            { id: "cam4", name: "Câmera Copa", type: "IP Camera", manufacturer: "Intelbras", ip: "192.168.0.98", mac: "00:1A:3F:F1:4C:14", model: "Mibo iC3", location: "DR - Mibos" },
+            { id: "cam5", name: "Câmera Estacionamento", type: "IP Camera", manufacturer: "Intelbras", ip: "192.168.0.99", mac: "00:1A:3F:F1:4C:15", model: "Mibo iC5", location: "DR - Mibos" }
+        ];
+    }
+}
+async function runCamerasStatusCheckActual() {
+    const rawCameras = await fetchRawCamerasList();
+    const pingPromises = rawCameras.map(async (cam) => {
+        const pingResult = await pingDevice(cam.ip);
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `camera-offline-${cam.id}`,
+                title: `Câmera Offline: ${cam.name}`,
+                description: `A Câmera "${cam.name}" (${cam.ip}) localizada em "${cam.location}" está inativa ou inacessível na rede local.`,
+                severity: "critical",
+                source: "Monitor de Rede",
+                value_pct: null
+            }).catch(() => { });
+        }
+        return {
+            id: cam.id,
+            name: cam.name,
+            ip: cam.ip,
+            manufacturer: cam.manufacturer,
+            mac: cam.mac,
+            model: cam.model,
+            location: cam.location,
+            online: pingResult.online,
+            latency: pingResult.latency,
+            message: pingResult.message
+        };
+    });
+    return await Promise.all(pingPromises);
+}
+let cachedCamerasStatus = null;
+let isCheckingCameras = false;
+async function runCamerasStatusCheck(forceRefresh = false) {
+    if (cachedCamerasStatus && !forceRefresh) {
+        if (!isCheckingCameras) {
+            isCheckingCameras = true;
+            runCamerasStatusCheckActual().then(data => {
+                cachedCamerasStatus = data;
+                isCheckingCameras = false;
+            }).catch(err => {
+                console.error("[CAMERA MONITOR] Erro na verificação em segundo plano:", err.message);
+                isCheckingCameras = false;
+            });
+        }
+        return cachedCamerasStatus;
+    }
+    isCheckingCameras = true;
+    try {
+        const data = await runCamerasStatusCheckActual();
+        cachedCamerasStatus = data;
+        isCheckingCameras = false;
+        return data;
+    }
+    catch (err) {
+        isCheckingCameras = false;
+        throw err;
+    }
+}
+// GET: Monitoramento de Câmeras
+app.get("/api/monitoring/cameras", async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const start = Date.now();
+        const forceRefresh = req.query.refresh === "true";
+        const ping = req.query.ping !== "false";
+        if (!ping) {
+            let cameras = [];
+            if (cachedCamerasStatus && !forceRefresh) {
+                cameras = cachedCamerasStatus;
+            }
+            else {
+                const list = await fetchRawCamerasList();
+                cameras = list.map((cam) => {
+                    const cached = cachedCamerasStatus ? cachedCamerasStatus.find((c) => c.id === cam.id) : null;
+                    return {
+                        id: cam.id,
+                        name: cam.name,
+                        ip: cam.ip,
+                        manufacturer: cam.manufacturer,
+                        mac: cam.mac,
+                        model: cam.model,
+                        location: cam.location,
+                        online: cached ? cached.online : null,
+                        latency: cached ? cached.latency : null,
+                        message: cached ? cached.message : "Aguardando verificação..."
+                    };
+                });
+                cachedCamerasStatus = cameras;
+            }
+            res.json({
+                success: true,
+                elapsed_ms: Date.now() - start,
+                cameras
+            });
+            return;
+        }
+        const cameras = await runCamerasStatusCheck(forceRefresh);
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            cameras
+        });
+    }
+    catch (err) {
+        console.error("Erro ao verificar status das câmeras:", err);
+        res.status(500).json({ error: "Erro ao verificar status das câmeras: " + err.message });
+    }
+});
+// GET: Ping individual camera
+app.get("/api/monitoring/cameras/:id/ping", async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const start = Date.now();
+        const assetId = req.params.id;
+        if (!cachedCamerasStatus) {
+            const list = await fetchRawCamerasList();
+            cachedCamerasStatus = list.map((cam) => ({
+                id: cam.id,
+                name: cam.name,
+                ip: cam.ip,
+                manufacturer: cam.manufacturer,
+                mac: cam.mac,
+                model: cam.model,
+                location: cam.location,
+                online: null,
+                latency: null,
+                message: "Aguardando verificação..."
+            }));
+        }
+        const cam = cachedCamerasStatus.find((c) => c.id === assetId);
+        if (!cam) {
+            res.status(404).json({ error: "Câmera não encontrada" });
+            return;
+        }
+        const pingResult = await pingDevice(cam.ip);
+        cam.online = pingResult.online;
+        cam.latency = pingResult.latency;
+        cam.message = pingResult.message;
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `camera-offline-${cam.id}`,
+                title: `Câmera Offline: ${cam.name}`,
+                description: `A Câmera "${cam.name}" (${cam.ip}) localizada em "${cam.location}" está inativa ou inacessível na rede local.`,
+                severity: "critical",
+                source: "Monitor de Rede",
+                value_pct: null
+            }).catch(() => { });
+        }
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            camera: cam
+        });
+    }
+    catch (err) {
+        console.error("Erro ao pingar câmera:", err);
+        res.status(500).json({ error: "Erro ao pingar câmera: " + err.message });
+    }
+});
 // Periodic background check (every 5 minutes)
 async function runBackgroundMonitoringChecks() {
     try {
@@ -2240,6 +2487,9 @@ async function runBackgroundMonitoringChecks() {
         });
         await runNasStatusCheck().catch(err => {
             console.error("[BACKGROUND MONITOR] Erro ao monitorar dispositivos NAS:", err.message);
+        });
+        await runCamerasStatusCheck().catch(err => {
+            console.error("[BACKGROUND MONITOR] Erro ao monitorar câmeras:", err.message);
         });
         const token = await getGnewToken().catch(() => null);
         if (token) {

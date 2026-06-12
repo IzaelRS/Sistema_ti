@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-D-A4oKuY.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bgp8kAOf.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-IbS2rwPF.css">
 </head>
 
@@ -685,6 +685,7 @@
                                 <button class="acc-tab-btn active" id="tab-infra-switches" data-infra-tab="switches">Switch</button>
                                 <button class="acc-tab-btn" id="tab-infra-routers" data-infra-tab="routers">Roteadores</button>
                                 <button class="acc-tab-btn" id="tab-infra-nas" data-infra-tab="nas">NAS</button>
+                                <button class="acc-tab-btn" id="tab-infra-cameras" data-infra-tab="cameras">Câmeras</button>
                             </div>
 
                             <!-- SUB-ABA: SWITCHES -->
@@ -692,7 +693,7 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
                                     <div>
                                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Status dos Switches (Lansweeper)</h3>
-                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de switches ativos e latência de resposta na rede.</p>
+                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de switches ativos and latência de resposta na rede.</p>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 15px;">
                                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
@@ -737,7 +738,7 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
                                     <div>
                                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Status dos Roteadores (Lansweeper)</h3>
-                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de roteadores ativos e latência de resposta na rede.</p>
+                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de roteadores ativos and latência de resposta na rede.</p>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 15px;">
                                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
@@ -782,7 +783,7 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
                                     <div>
                                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Status dos Dispositivos NAS (Lansweeper)</h3>
-                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de dispositivos NAS ativos e latência de resposta na rede.</p>
+                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de dispositivos NAS ativos and latência de resposta na rede.</p>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 15px;">
                                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
@@ -817,6 +818,53 @@
                                             <tr>
                                                 <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                                                     Carregando dados dos dispositivos NAS...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA: CAMERAS -->
+                            <div id="infra-tab-content-cameras" class="infra-tab-content hidden">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
+                                    <div>
+                                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Status das Câmeras (Lansweeper - DR - Mibos)</h3>
+                                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Monitoramento de câmeras de segurança e latência de resposta na rede.</p>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                            <input type="checkbox" id="cameras-auto-refresh" style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                            <span style="font-size: 0.85rem; color: var(--text-main);">Auto-Refresh (60s)</span>
+                                        </label>
+                                        <button id="btn-refresh-cameras-status" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; gap: 8px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+                                                <polyline points="23 4 23 10 17 10"></polyline>
+                                                <polyline points="1 20 1 14 7 14"></polyline>
+                                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                            </svg>
+                                            <span>Atualizar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="table-container glass" style="margin-top: 10px;">
+                                    <table class="table-minimal" style="width: 100%;">
+                                        <thead>
+                                            <tr>
+                                                <th>Nome</th>
+                                                <th>IP</th>
+                                                <th>Fabricante</th>
+                                                <th>Modelo</th>
+                                                <th>MAC</th>
+                                                <th>Localização</th>
+                                                <th>Status</th>
+                                                <th style="text-align: right;">Latência</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monitoring-cameras-tbody">
+                                            <tr>
+                                                <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                                    Carregando dados das câmeras...
                                                 </td>
                                             </tr>
                                         </tbody>
