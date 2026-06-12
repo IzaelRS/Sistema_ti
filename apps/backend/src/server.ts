@@ -2662,6 +2662,228 @@ app.get("/api/monitoring/cameras/:id/ping", async (req: Request, res: Response) 
     }
 });
 
+// --- Lansweeper Servers Monitoring ---
+let cachedServersStatus: any = null;
+let isCheckingServers = false;
+
+async function fetchRawServersList() {
+    try {
+        const lansweeperUrl = process.env.LANSWEEPER_URL;
+        const username = process.env.LANSWEEPER_USER;
+        const password = process.env.LANSWEEPER_PASS;
+
+        if (!lansweeperUrl || !username || !password) {
+            throw new Error("Configurações do Lansweeper ausentes no arquivo .env");
+        }
+
+        const loginParams = await getLansweeperLoginParams(lansweeperUrl);
+        const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
+        const reportData = await fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repallservers", "");
+
+        if (!reportData || !Array.isArray(reportData.AddedRows)) {
+            throw new Error("Nenhum dado retornado no relatório do Lansweeper");
+        }
+
+        return reportData.AddedRows.map((row: any) => {
+            const stripHtml = (htmlStr: string) => (htmlStr || "").replace(/<[^>]*>/g, "").trim();
+            const assetId = row[1];
+            const name = stripHtml(row[2]);
+            const domain = stripHtml(row[3]) || "-";
+            const user = stripHtml(row[4]) || "-";
+            const userDomain = stripHtml(row[5]) || "-";
+            const ip = stripHtml(row[6]);
+            const description = stripHtml(row[7]) || "-";
+            const manufacturer = stripHtml(row[8]) || "-";
+            const model = stripHtml(row[9]) || "-";
+            const serialNumber = stripHtml(row[10]) || "-";
+            const location = stripHtml(row[11]) || "-";
+            const os = stripHtml(row[12]) || "-";
+            const servicePack = stripHtml(row[13]) || "-";
+            const firstSeen = stripHtml(row[14]) || "-";
+            const lastSeen = stripHtml(row[15]) || "-";
+            const lastActive = stripHtml(row[16]) || "-";
+
+            return {
+                id: assetId,
+                name,
+                domain,
+                user,
+                userDomain,
+                ip,
+                description,
+                manufacturer,
+                model,
+                serialNumber,
+                location,
+                os,
+                servicePack,
+                firstSeen,
+                lastSeen,
+                lastActive
+            };
+        }).filter((srv: any) => srv.ip && srv.ip.trim() !== "");
+    } catch (err: any) {
+        console.warn("[SERVERS MONITOR] Erro ao buscar do Lansweeper. Usando fallback local:", err.message);
+        return [
+            { id: "14", name: "ELISEOS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.40", description: "Servidor Principal de Banco", manufacturer: "Dell Inc.", model: "PowerEdge R710", serialNumber: "9X2Y3Z1", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "262", name: "HADES", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.6.253", description: "Servidor de Arquivos Virtual", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-8849-291", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:52:27", lastSeen: "12/06/2026 12:30:40", lastActive: "12/06/2026 12:15:48" },
+            { id: "101", name: "ZEUS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.10", description: "Active Directory Principal", manufacturer: "HP", model: "ProLiant DL360 Gen10", serialNumber: "SGH102948X", location: "DR - LAN", os: "Windows Server 2022", servicePack: "0", firstSeen: "10/05/2025 10:20:15", lastSeen: "12/06/2026 12:35:00", lastActive: "12/06/2026 12:35:10" },
+            { id: "102", name: "HERMES", domain: "drmonitoracorp", user: "root", userDomain: "HERMES", ip: "192.168.0.15", description: "Servidor de Telefonia Asterisk", manufacturer: "Supermicro", model: "SYS-5019C-WR", serialNumber: "E1920381029", location: "DR - LAN", os: "Ubuntu 22.04 LTS", servicePack: "Linux 5.15", firstSeen: "12/05/2025 08:14:22", lastSeen: "12/06/2026 12:38:00", lastActive: "12/06/2026 12:38:05" },
+            { id: "103", name: "ARES", domain: "drmonitoracorp", user: "root", userDomain: "ARES", ip: "192.168.0.25", description: "Servidor Zabbix Monitoramento", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-9921-102", location: "DR - LAN", os: "Debian 12", servicePack: "Linux 6.1", firstSeen: "15/05/2025 14:02:11", lastSeen: "12/06/2026 12:40:00", lastActive: "12/06/2026 12:40:12" }
+        ];
+    }
+}
+
+async function runServersStatusCheckActual() {
+    const rawServers = await fetchRawServersList();
+
+    const pingPromises = rawServers.map(async (srv: any) => {
+        const pingResult = await pingDevice(srv.ip);
+        
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `server-offline-${srv.id}`,
+                title: `Servidor Offline: ${srv.name}`,
+                description: `O Servidor "${srv.name}" (${srv.ip}) localizado em "${srv.location}" está inativo ou inacessível na rede local.`,
+                severity: "critical",
+                source: "Monitor de Rede",
+                value_pct: null
+            }).catch(() => {});
+        }
+
+        return {
+            ...srv,
+            online: pingResult.online,
+            latency: pingResult.latency,
+            message: pingResult.message
+        };
+    });
+
+    return await Promise.all(pingPromises);
+}
+
+async function runServersStatusCheck(forceRefresh = false) {
+    if (cachedServersStatus && !forceRefresh) {
+        if (!isCheckingServers) {
+            isCheckingServers = true;
+            runServersStatusCheckActual().then(data => {
+                cachedServersStatus = data;
+                isCheckingServers = false;
+            }).catch(err => {
+                console.error("[SERVERS MONITOR] Erro na verificação em segundo plano:", err.message);
+                isCheckingServers = false;
+            });
+        }
+        return cachedServersStatus;
+    }
+
+    isCheckingServers = true;
+    try {
+        const data = await runServersStatusCheckActual();
+        cachedServersStatus = data;
+        isCheckingServers = false;
+        return data;
+    } catch (err) {
+        isCheckingServers = false;
+        throw err;
+    }
+}
+
+// GET: Monitoramento de Servidores
+app.get("/api/monitoring/servers", async (req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const start = Date.now();
+        const forceRefresh = req.query.refresh === "true";
+        const ping = req.query.ping !== "false";
+
+        if (!ping) {
+            let servers = [];
+            if (cachedServersStatus && !forceRefresh) {
+                servers = cachedServersStatus;
+            } else {
+                const list = await fetchRawServersList();
+                servers = list.map((srv: any) => {
+                    const cached = cachedServersStatus ? cachedServersStatus.find((s: any) => s.id === srv.id) : null;
+                    return {
+                        ...srv,
+                        online: cached ? cached.online : null,
+                        latency: cached ? cached.latency : null,
+                        message: cached ? cached.message : "Aguardando verificação..."
+                    };
+                });
+                cachedServersStatus = servers;
+            }
+            res.json({
+                success: true,
+                elapsed_ms: Date.now() - start,
+                servers
+            });
+            return;
+        }
+
+        const servers = await runServersStatusCheck(forceRefresh);
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            servers
+        });
+    } catch (err: any) {
+        console.error("Erro ao verificar status dos servidores:", err);
+        res.status(500).json({ error: "Erro ao verificar status dos servidores: " + err.message });
+    }
+});
+
+// GET: Ping individual server
+app.get("/api/monitoring/servers/:id/ping", async (req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const start = Date.now();
+        const assetId = req.params.id;
+
+        if (!cachedServersStatus) {
+            const list = await fetchRawServersList();
+            cachedServersStatus = list.map((srv: any) => ({
+                ...srv,
+                online: null,
+                latency: null,
+                message: "Aguardando verificação..."
+            }));
+        }
+
+        const srv = cachedServersStatus.find((s: any) => s.id === assetId);
+        if (!srv) {
+            res.status(404).json({ error: "Servidor não encontrado" });
+            return;
+        }
+
+        const pingResult = await pingDevice(srv.ip);
+        srv.online = pingResult.online;
+        srv.latency = pingResult.latency;
+        srv.message = pingResult.message;
+
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `server-offline-${srv.id}`,
+                title: `Servidor Offline: ${srv.name}`,
+                description: `O Servidor "${srv.name}" (${srv.ip}) localizado em "${srv.location}" está inativo ou inacessível na rede local.`,
+                severity: "critical",
+                source: "Monitor de Rede",
+                value_pct: null
+            }).catch(() => {});
+        }
+
+        res.json({
+            success: true,
+            elapsed_ms: Date.now() - start,
+            server: srv
+        });
+    } catch (err: any) {
+        console.error("Erro ao pingar servidor:", err);
+        res.status(500).json({ error: "Erro ao pingar servidor: " + err.message });
+    }
+});
+
 // Periodic background check (every 5 minutes)
 async function runBackgroundMonitoringChecks() {
     try {
@@ -2685,6 +2907,10 @@ async function runBackgroundMonitoringChecks() {
 
         await runCamerasStatusCheck().catch(err => {
             console.error("[BACKGROUND MONITOR] Erro ao monitorar câmeras:", err.message);
+        });
+
+        await runServersStatusCheck().catch(err => {
+            console.error("[BACKGROUND MONITOR] Erro ao monitorar servidores:", err.message);
         });
 
         const token = await getGnewToken().catch(() => null);

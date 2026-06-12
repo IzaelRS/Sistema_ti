@@ -9,18 +9,20 @@ let eventsFilterDateEnd   = ''; // YYYY-MM-DD
 let eventsCurrentPage = 1;      // página corrente (1-indexed)
 let eventsTotalFiltered = 0;    // total de registros após filtros
 let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew', 'infra'
-let activeInfraTab = 'switches'; // 'switches', 'routers', 'nas', 'cameras'
+let activeInfraTab = 'switches'; // 'switches', 'routers', 'nas', 'cameras', 'servers'
 let gnewDiagData = null;
 let apisStatusData = [];
 let switchesStatusData = [];
 let routersStatusData = [];
 let nasStatusData = [];
 let camerasStatusData = [];
+let serversStatusData = [];
 let autoRefreshInterval = null;
 let switchesAutoRefreshInterval = null;
 let routersAutoRefreshInterval = null;
 let nasAutoRefreshInterval = null;
 let camerasAutoRefreshInterval = null;
+let serversAutoRefreshInterval = null;
 let isPingingSequentially = false;
 
 export const monitoringHandler = {
@@ -62,6 +64,11 @@ export const monitoringHandler = {
             console.log('📊 [MONITORING] Clicked on Cameras subtab');
             this.setInfraTab('cameras');
         });
+        const tabInfraServers = document.getElementById('tab-infra-servers');
+        if (tabInfraServers) tabInfraServers.addEventListener('click', () => {
+            console.log('📊 [MONITORING] Clicked on Servers subtab');
+            this.setInfraTab('servers');
+        });
 
         // Refresh switches button
         const refreshSwitchesBtn = document.getElementById('btn-refresh-switches-status');
@@ -85,6 +92,20 @@ export const monitoringHandler = {
         const refreshCamerasBtn = document.getElementById('btn-refresh-cameras-status');
         if (refreshCamerasBtn) {
             refreshCamerasBtn.addEventListener('click', () => this.fetchAndRenderCamerasStatus(true));
+        }
+
+        // Refresh Servers button
+        const refreshServersBtn = document.getElementById('btn-refresh-servers-status');
+        if (refreshServersBtn) {
+            refreshServersBtn.addEventListener('click', () => this.fetchAndRenderServersStatus(true));
+        }
+
+        // Search in Servers tab
+        const serversSearchInput = document.getElementById('servers-search');
+        if (serversSearchInput) {
+            serversSearchInput.addEventListener('input', () => {
+                this.renderServersAccordion(serversStatusData);
+            });
         }
 
         // Search in event history
@@ -277,6 +298,19 @@ export const monitoringHandler = {
             if (camerasAutoRefreshChk.checked) this._startCamerasAutoRefresh();
         }
 
+        // Auto-refresh checkbox (Servers tab)
+        const serversAutoRefreshChk = document.getElementById('servers-auto-refresh');
+        if (serversAutoRefreshChk) {
+            serversAutoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startServersAutoRefresh();
+                } else {
+                    this._stopServersAutoRefresh();
+                }
+            });
+            if (serversAutoRefreshChk.checked) this._startServersAutoRefresh();
+        }
+
         // Bind global helper
         window.monitoringHandler = this;
     },
@@ -361,6 +395,22 @@ export const monitoringHandler = {
         }
     },
 
+    _startServersAutoRefresh() {
+        this._stopServersAutoRefresh();
+        serversAutoRefreshInterval = setInterval(() => {
+            if (activeTab === 'infra' && activeInfraTab === 'servers') {
+                this.fetchAndRenderServersStatus(false, true);
+            }
+        }, 60000);
+    },
+
+    _stopServersAutoRefresh() {
+        if (serversAutoRefreshInterval) {
+            clearInterval(serversAutoRefreshInterval);
+            serversAutoRefreshInterval = null;
+        }
+    },
+
     fetch() {
         // Called when section is first loaded
         this.setActiveTab('alerts');
@@ -432,15 +482,18 @@ export const monitoringHandler = {
         const tabRouters = document.getElementById('tab-infra-routers');
         const tabNas = document.getElementById('tab-infra-nas');
         const tabCameras = document.getElementById('tab-infra-cameras');
+        const tabServers = document.getElementById('tab-infra-servers');
         if (tabSwitches) tabSwitches.classList.toggle('active', subTab === 'switches');
         if (tabRouters) tabRouters.classList.toggle('active', subTab === 'routers');
         if (tabNas) tabNas.classList.toggle('active', subTab === 'nas');
         if (tabCameras) tabCameras.classList.toggle('active', subTab === 'cameras');
+        if (tabServers) tabServers.classList.toggle('active', subTab === 'servers');
 
         const contentSwitches = document.getElementById('infra-tab-content-switches');
         const contentRouters = document.getElementById('infra-tab-content-routers');
         const contentNas = document.getElementById('infra-tab-content-nas');
         const contentCameras = document.getElementById('infra-tab-content-cameras');
+        const contentServers = document.getElementById('infra-tab-content-servers');
         if (contentSwitches) {
             contentSwitches.classList.toggle('hidden', subTab !== 'switches');
             contentSwitches.classList.toggle('active', subTab === 'switches');
@@ -457,6 +510,10 @@ export const monitoringHandler = {
             contentCameras.classList.toggle('hidden', subTab !== 'cameras');
             contentCameras.classList.toggle('active', subTab === 'cameras');
         }
+        if (contentServers) {
+            contentServers.classList.toggle('hidden', subTab !== 'servers');
+            contentServers.classList.toggle('active', subTab === 'servers');
+        }
 
         if (subTab === 'switches') {
             this.fetchAndRenderSwitchesStatus();
@@ -466,6 +523,8 @@ export const monitoringHandler = {
             this.fetchAndRenderNasStatus();
         } else if (subTab === 'cameras') {
             this.fetchAndRenderCamerasStatus();
+        } else if (subTab === 'servers') {
+            this.fetchAndRenderServersStatus();
         }
     },
 
@@ -485,6 +544,8 @@ export const monitoringHandler = {
                 this.fetchAndRenderNasStatus();
             } else if (activeInfraTab === 'cameras') {
                 this.fetchAndRenderCamerasStatus();
+            } else if (activeInfraTab === 'servers') {
+                this.fetchAndRenderServersStatus();
             }
         }
     },
@@ -509,8 +570,9 @@ export const monitoringHandler = {
         const routers = routersStatusData || [];
         const nasDevices = nasStatusData || [];
         const cameras = camerasStatusData || [];
+        const servers = serversStatusData || [];
 
-        if (services.length === 0 && apis.length === 0 && switches.length === 0 && routers.length === 0 && nasDevices.length === 0 && cameras.length === 0) {
+        if (services.length === 0 && apis.length === 0 && switches.length === 0 && routers.length === 0 && nasDevices.length === 0 && cameras.length === 0 && servers.length === 0) {
             grid.innerHTML = `
                 <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
                     <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de monitoramento disponível.</p>
@@ -520,14 +582,15 @@ export const monitoringHandler = {
             return;
         }
 
-        const total = services.length + apis.length + switches.length + routers.length + nasDevices.length + cameras.length;
+        const total = services.length + apis.length + switches.length + routers.length + nasDevices.length + cameras.length + servers.length;
         const offlineServices = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
         const offlineApis = apis.filter(a => !a.online || a.status === 'warning').length;
         const offlineSwitches = switches.filter(s => !s.online).length;
         const offlineRouters = routers.filter(r => !r.online).length;
         const offlineNas = nasDevices.filter(n => !n.online).length;
         const offlineCameras = cameras.filter(c => !c.online).length;
-        const offline = offlineServices + offlineApis + offlineSwitches + offlineRouters + offlineNas + offlineCameras;
+        const offlineServers = servers.filter(s => !s.online).length;
+        const offline = offlineServices + offlineApis + offlineSwitches + offlineRouters + offlineNas + offlineCameras + offlineServers;
         const online = total - offline;
 
         // Update KPIs
@@ -548,6 +611,7 @@ export const monitoringHandler = {
         let filteredRouters = routers;
         let filteredNas = nasDevices;
         let filteredCameras = cameras;
+        let filteredServers = servers;
 
         if (query) {
             filteredServices = services.filter(s => s.nome.toLowerCase().includes(query));
@@ -556,6 +620,7 @@ export const monitoringHandler = {
             filteredRouters = routers.filter(r => r.name.toLowerCase().includes(query) || r.ip.toLowerCase().includes(query));
             filteredNas = nasDevices.filter(n => n.name.toLowerCase().includes(query) || n.ip.toLowerCase().includes(query));
             filteredCameras = cameras.filter(c => c.name.toLowerCase().includes(query) || c.ip.toLowerCase().includes(query));
+            filteredServers = servers.filter(s => s.name.toLowerCase().includes(query) || s.ip.toLowerCase().includes(query));
         }
 
         let html = `
@@ -769,6 +834,43 @@ export const monitoringHandler = {
                     <div class="monitor-list-col-name">
                         <span class="monitor-dot" style="background: ${dotColor};"></span>
                         <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#10b981;">[Câmera] ${cam.name} (${cam.ip})</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        // Infraestrutura (Servidores)
+        filteredServers.forEach(srv => {
+            let dotColor = '#10b981';
+            let statusLabel = 'Online';
+            let badgeBg = 'rgba(16, 185, 129, 0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+
+            if (srv.online === null) {
+                dotColor = '#94a3b8';
+                statusLabel = 'Aguardando...';
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+            } else if (!srv.online) {
+                dotColor = '#ef4444';
+                statusLabel = 'Offline';
+                badgeBg = 'rgba(239, 68, 68, 0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239, 68, 68, 0.3)';
+            }
+
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#6366f1;">[Servidor] ${srv.name} (${srv.ip})</span>
                     </div>
                     <div class="monitor-list-col-status">
                         <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
@@ -1053,13 +1155,14 @@ export const monitoringHandler = {
     async fetchDiagnostics() {
         try {
             // Buscas em paralelo para otimizar latência de carregamento
-            const [resDiag, resApis, resSwitches, resRouters, resNas, resCameras] = await Promise.all([
+            const [resDiag, resApis, resSwitches, resRouters, resNas, resCameras, resServers] = await Promise.all([
                 apiClient.get('/monitoring/diagnostico?t=' + Date.now()),
                 apiClient.get('/monitoring/apis-status?t=' + Date.now()),
                 apiClient.get('/monitoring/switches?t=' + Date.now()),
                 apiClient.get('/monitoring/routers?t=' + Date.now()),
                 apiClient.get('/monitoring/nas?t=' + Date.now()),
-                apiClient.get('/monitoring/cameras?t=' + Date.now())
+                apiClient.get('/monitoring/cameras?t=' + Date.now()),
+                apiClient.get('/monitoring/servers?t=' + Date.now())
             ]);
             
             const isOnline = resDiag && resDiag.status === 'online';
@@ -1090,6 +1193,10 @@ export const monitoringHandler = {
 
             if (resCameras && resCameras.success && Array.isArray(resCameras.cameras)) {
                 camerasStatusData = resCameras.cameras;
+            }
+
+            if (resServers && resServers.success && Array.isArray(resServers.servers)) {
+                serversStatusData = resServers.servers;
             }
             
             // Se estiver na aba de Alertas Ativos, re-renderiza para atualizar
@@ -2633,5 +2740,257 @@ export const monitoringHandler = {
                 </tr>
             `;
         }).join('');
+    },
+
+    async fetchAndRenderServersStatus(forceRefresh = false, sequential = false) {
+        console.log('⚡ [MONITORING] fetchAndRenderServersStatus called. forceRefresh:', forceRefresh, 'sequential:', sequential);
+        const serversAutoRefreshChk = document.getElementById('servers-auto-refresh');
+        const isSequential = sequential || (serversAutoRefreshChk && serversAutoRefreshChk.checked);
+
+        const container = document.getElementById('monitoring-servers-accordion');
+        if (!container) {
+            console.error('❌ [MONITORING] Element #monitoring-servers-accordion not found in DOM!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-refresh-servers-status');
+        if (btn) {
+            btn.disabled = true;
+            const icon = btn.querySelector('.refresh-icon');
+            if (icon) icon.style.animation = 'spin 1s linear infinite';
+        }
+
+        try {
+            if (isSequential) {
+                console.log('⚡ [MONITORING] Fetching servers, sequential mode:', isSequential);
+                const res = await apiClient.get(`/monitoring/servers?ping=false&refresh=${forceRefresh}&t=${Date.now()}`);
+                if (res && res.success && Array.isArray(res.servers)) {
+                    serversStatusData = res.servers;
+                    this.renderServersAccordion(res.servers);
+
+                    for (const srv of res.servers) {
+                        if (activeTab !== 'infra' || activeInfraTab !== 'servers') break;
+
+                        const itemHeader = container.querySelector(`[data-server-id="${srv.id}"]`);
+                        if (itemHeader) {
+                            const indicator = itemHeader.querySelector('.server-status-dot');
+                            if (indicator) {
+                                indicator.style.color = '#94a3b8';
+                                indicator.style.backgroundColor = '#94a3b8';
+                                indicator.style.boxShadow = '0 0 8px #94a3b8';
+                                indicator.style.animation = 'pulse-gray 1.5s infinite';
+                            }
+                        }
+
+                        try {
+                            const pingRes = await apiClient.get(`/monitoring/servers/${srv.id}/ping?t=${Date.now()}`);
+                            if (pingRes && pingRes.success && pingRes.server) {
+                                const idx = serversStatusData.findIndex(s => s.id === srv.id);
+                                if (idx !== -1) {
+                                    serversStatusData[idx] = pingRes.server;
+                                }
+                                this.renderServersAccordion(serversStatusData);
+                            }
+                        } catch (pingErr) {
+                            console.error(`Erro ao pingar servidor individual ${srv.name}:`, pingErr);
+                        }
+                    }
+                }
+            } else {
+                console.log('⚡ [MONITORING] Fetching all servers with parallel pings...');
+                const url = `/monitoring/servers?refresh=${forceRefresh}&t=${Date.now()}`;
+                const res = await apiClient.get(url);
+                if (res && res.success && Array.isArray(res.servers)) {
+                    serversStatusData = res.servers;
+                    this.renderServersAccordion(res.servers);
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status dos servidores:', err);
+            container.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #fca5a5; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: var(--border-radius);">
+                    Erro ao carregar dados dos servidores: ${err.message || err}
+                </div>
+            `;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                const icon = btn.querySelector('.refresh-icon');
+                if (icon) icon.style.animation = '';
+            }
+        }
+    },
+
+    renderServersAccordion(servers) {
+        const container = document.getElementById('monitoring-servers-accordion');
+        if (!container) return;
+
+        const searchInput = document.getElementById('servers-search');
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+        const filtered = servers.filter(srv => {
+            if (!query) return true;
+            return srv.name.toLowerCase().includes(query) ||
+                   srv.ip.toLowerCase().includes(query) ||
+                   srv.os.toLowerCase().includes(query) ||
+                   srv.model.toLowerCase().includes(query);
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted); background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius);">
+                    ${query ? 'Nenhum servidor corresponde à busca.' : 'Nenhum servidor cadastrado.'}
+                </div>
+            `;
+            return;
+        }
+
+        const expandedIds = Array.from(container.querySelectorAll('.server-accordion-item.active'))
+            .map(item => item.getAttribute('data-item-id'));
+
+        container.innerHTML = filtered.map(srv => {
+            const isExpanded = expandedIds.includes(srv.id.toString());
+            const activeClass = isExpanded ? 'active' : '';
+
+            let dotColorClass = 'online';
+            let statusText = 'Online';
+            if (srv.online === null) {
+                dotColorClass = 'offline';
+                statusText = 'Aguardando verificação...';
+            } else if (!srv.online) {
+                dotColorClass = 'offline';
+                statusText = 'Offline (Sem resposta)';
+            } else {
+                statusText = 'Operando normalmente';
+            }
+
+            const osLower = srv.os.toLowerCase();
+            let osClass = 'other';
+            let osIcon = '💻';
+            if (osLower.includes('win')) {
+                osClass = 'windows';
+                osIcon = '🪟';
+            } else if (osLower.includes('linux') || osLower.includes('ubuntu') || osLower.includes('debian') || osLower.includes('centos') || osLower.includes('redhat')) {
+                osClass = 'linux';
+                osIcon = '🐧';
+            }
+
+            const latencyText = srv.online ? `${srv.latency}ms` : '-';
+            const latencyColor = srv.online ? (srv.latency < 20 ? '#6ee7b7' : srv.latency < 80 ? '#fde047' : '#fca5a5') : 'var(--text-muted)';
+
+            return `
+                <div class="server-accordion-item ${activeClass}" data-item-id="${srv.id}">
+                    <div class="server-accordion-header" data-server-id="${srv.id}">
+                        <div class="server-header-left">
+                            <span class="server-status-dot ${dotColorClass}" title="${statusText}"></span>
+                            <span class="server-title">${srv.name}</span>
+                            <span class="server-ip-badge">${srv.ip}</span>
+                            <span class="server-os-badge ${osClass}">${osIcon} ${srv.os}</span>
+                        </div>
+                        <div class="server-header-right">
+                            <span class="server-latency" style="color: ${latencyColor}; font-weight: 500;">${latencyText}</span>
+                            <svg class="server-chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="server-accordion-body">
+                        <div class="server-accordion-content">
+                            <div class="server-details-grid">
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Descrição</span>
+                                    <span class="server-detail-value">${srv.description || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Domínio</span>
+                                    <span class="server-detail-value">${srv.domain || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Usuário Contato</span>
+                                    <span class="server-detail-value">${srv.user} (${srv.userDomain})</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Fabricante</span>
+                                    <span class="server-detail-value">${srv.manufacturer || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Modelo</span>
+                                    <span class="server-detail-value">${srv.model || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Número de Série</span>
+                                    <span class="server-detail-value code-font">${srv.serialNumber || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Localização</span>
+                                    <span class="server-detail-value">${srv.location || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Primeiro Visto</span>
+                                    <span class="server-detail-value">${srv.firstSeen || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Último Visto</span>
+                                    <span class="server-detail-value">${srv.lastSeen || '-'}</span>
+                                </div>
+                                <div class="server-detail-item">
+                                    <span class="server-detail-label">Último Ativo</span>
+                                    <span class="server-detail-value">${srv.lastActive || '-'}</span>
+                                </div>
+                            </div>
+                            <div class="server-actions-row">
+                                <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); window.monitoringHandler.pingSingleServer('${srv.id}', this)" style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 4px 10px; height: 28px;">
+                                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" class="ping-icon">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <path d="M20.49 15a9 9 0 0 1-12.42-3.36L1 14"></path>
+                                    </svg>
+                                    <span>Pingar agora</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.server-accordion-header').forEach(header => {
+            header.addEventListener('click', (e) => {
+                const item = header.closest('.server-accordion-item');
+                const isOpen = item.classList.contains('active');
+                item.classList.toggle('active', !isOpen);
+            });
+        });
+    },
+
+    async pingSingleServer(id, button) {
+        console.log(`⚡ [MONITORING] pingSingleServer called for server ${id}`);
+        if (!button) return;
+
+        button.disabled = true;
+        const span = button.querySelector('span');
+        const originalText = span.textContent;
+        span.textContent = 'Verificando...';
+        
+        const icon = button.querySelector('.ping-icon');
+        if (icon) icon.style.animation = 'spin 1s linear infinite';
+
+        try {
+            const res = await apiClient.get(`/monitoring/servers/${id}/ping?t=${Date.now()}`);
+            if (res && res.success && res.server) {
+                const idx = serversStatusData.findIndex(s => s.id === id);
+                if (idx !== -1) {
+                    serversStatusData[idx] = res.server;
+                }
+                this.renderServersAccordion(serversStatusData);
+            }
+        } catch (err) {
+            console.error('Erro ao pingar servidor individual:', err);
+        } finally {
+            if (button) {
+                button.disabled = false;
+                if (span) span.textContent = originalText;
+                if (icon) icon.style.animation = '';
+            }
+        }
     }
 };
