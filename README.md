@@ -244,3 +244,4 @@ Nenhum ajuste estrutural de tabelas e colunas deve ser feito manualmente no SGBD
    npm run backend:migration:run
    ```
 4. **Execução em Produção**: O backend Express foi configurado para rodar `AppDataSource.runMigrations()` automaticamente na inicialização, aplicando todas as migrations pendentes no banco de produção sem intervenção manual.
+
