@@ -9,15 +9,21 @@ let eventsFilterDateEnd   = ''; // YYYY-MM-DD
 let eventsCurrentPage = 1;      // página corrente (1-indexed)
 let eventsTotalFiltered = 0;    // total de registros após filtros
 let activeTab = 'alerts'; // 'alerts', 'events', 'apis', 'gnew', 'infra'
+let activeInfraTab = 'switches'; // 'switches', 'routers'
 let gnewDiagData = null;
 let apisStatusData = [];
 let switchesStatusData = [];
+let routersStatusData = [];
+let nasStatusData = [];
 let autoRefreshInterval = null;
 let switchesAutoRefreshInterval = null;
+let routersAutoRefreshInterval = null;
+let nasAutoRefreshInterval = null;
 let isPingingSequentially = false;
 
 export const monitoringHandler = {
     init() {
+        console.log('📊 [MONITORING] Initializing monitoringHandler...');
         // Tab switching listeners
         const tabAlerts = document.getElementById('tab-monitoring-alerts');
         if (tabAlerts) tabAlerts.addEventListener('click', () => this.setActiveTab('alerts'));
@@ -28,12 +34,44 @@ export const monitoringHandler = {
         const tabGnew = document.getElementById('tab-monitoring-gnew');
         if (tabGnew) tabGnew.addEventListener('click', () => this.setActiveTab('gnew'));
         const tabInfra = document.getElementById('tab-monitoring-infra');
-        if (tabInfra) tabInfra.addEventListener('click', () => this.setActiveTab('infra'));
+        if (tabInfra) tabInfra.addEventListener('click', () => {
+            console.log('📊 [MONITORING] Clicked on Infraestrutura tab');
+            this.setActiveTab('infra');
+        });
+
+        // Infra subtabs click
+        const tabInfraSwitches = document.getElementById('tab-infra-switches');
+        if (tabInfraSwitches) tabInfraSwitches.addEventListener('click', () => {
+            console.log('📊 [MONITORING] Clicked on Switches subtab');
+            this.setInfraTab('switches');
+        });
+        const tabInfraRouters = document.getElementById('tab-infra-routers');
+        if (tabInfraRouters) tabInfraRouters.addEventListener('click', () => {
+            console.log('📊 [MONITORING] Clicked on Routers subtab');
+            this.setInfraTab('routers');
+        });
+        const tabInfraNas = document.getElementById('tab-infra-nas');
+        if (tabInfraNas) tabInfraNas.addEventListener('click', () => {
+            console.log('📊 [MONITORING] Clicked on NAS subtab');
+            this.setInfraTab('nas');
+        });
 
         // Refresh switches button
         const refreshSwitchesBtn = document.getElementById('btn-refresh-switches-status');
         if (refreshSwitchesBtn) {
             refreshSwitchesBtn.addEventListener('click', () => this.fetchAndRenderSwitchesStatus(true));
+        }
+
+        // Refresh routers button
+        const refreshRoutersBtn = document.getElementById('btn-refresh-routers-status');
+        if (refreshRoutersBtn) {
+            refreshRoutersBtn.addEventListener('click', () => this.fetchAndRenderRoutersStatus(true));
+        }
+
+        // Refresh NAS button
+        const refreshNasBtn = document.getElementById('btn-refresh-nas-status');
+        if (refreshNasBtn) {
+            refreshNasBtn.addEventListener('click', () => this.fetchAndRenderNasStatus(true));
         }
 
         // Search in event history
@@ -187,6 +225,32 @@ export const monitoringHandler = {
             if (switchesAutoRefreshChk.checked) this._startSwitchesAutoRefresh();
         }
 
+        // Auto-refresh checkbox (routers tab)
+        const routersAutoRefreshChk = document.getElementById('routers-auto-refresh');
+        if (routersAutoRefreshChk) {
+            routersAutoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startRoutersAutoRefresh();
+                } else {
+                    this._stopRoutersAutoRefresh();
+                }
+            });
+            if (routersAutoRefreshChk.checked) this._startRoutersAutoRefresh();
+        }
+
+        // Auto-refresh checkbox (NAS tab)
+        const nasAutoRefreshChk = document.getElementById('nas-auto-refresh');
+        if (nasAutoRefreshChk) {
+            nasAutoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startNasAutoRefresh();
+                } else {
+                    this._stopNasAutoRefresh();
+                }
+            });
+            if (nasAutoRefreshChk.checked) this._startNasAutoRefresh();
+        }
+
         // Bind global helper
         window.monitoringHandler = this;
     },
@@ -210,7 +274,7 @@ export const monitoringHandler = {
     _startSwitchesAutoRefresh() {
         this._stopSwitchesAutoRefresh();
         switchesAutoRefreshInterval = setInterval(() => {
-            if (activeTab === 'infra') {
+            if (activeTab === 'infra' && activeInfraTab === 'switches') {
                 this.fetchAndRenderSwitchesStatus(false, true);
             }
         }, 60000);
@@ -220,6 +284,38 @@ export const monitoringHandler = {
         if (switchesAutoRefreshInterval) {
             clearInterval(switchesAutoRefreshInterval);
             switchesAutoRefreshInterval = null;
+        }
+    },
+
+    _startRoutersAutoRefresh() {
+        this._stopRoutersAutoRefresh();
+        routersAutoRefreshInterval = setInterval(() => {
+            if (activeTab === 'infra' && activeInfraTab === 'routers') {
+                this.fetchAndRenderRoutersStatus(false, true);
+            }
+        }, 60000);
+    },
+
+    _stopRoutersAutoRefresh() {
+        if (routersAutoRefreshInterval) {
+            clearInterval(routersAutoRefreshInterval);
+            routersAutoRefreshInterval = null;
+        }
+    },
+
+    _startNasAutoRefresh() {
+        this._stopNasAutoRefresh();
+        nasAutoRefreshInterval = setInterval(() => {
+            if (activeTab === 'infra' && activeInfraTab === 'nas') {
+                this.fetchAndRenderNasStatus(false, true);
+            }
+        }, 60000);
+    },
+
+    _stopNasAutoRefresh() {
+        if (nasAutoRefreshInterval) {
+            clearInterval(nasAutoRefreshInterval);
+            nasAutoRefreshInterval = null;
         }
     },
 
@@ -280,12 +376,47 @@ export const monitoringHandler = {
         } else if (tab === 'apis') {
             this.fetchAndRenderApisStatus();
         } else if (tab === 'infra') {
-            this.fetchAndRenderSwitchesStatus();
+            this.setInfraTab(activeInfraTab);
         } else {
             this.renderGnewServicesStatus();
         }
     },
 
+    setInfraTab(subTab) {
+        console.log('📊 [MONITORING] setInfraTab called with:', subTab);
+        activeInfraTab = subTab;
+        
+        const tabSwitches = document.getElementById('tab-infra-switches');
+        const tabRouters = document.getElementById('tab-infra-routers');
+        const tabNas = document.getElementById('tab-infra-nas');
+        if (tabSwitches) tabSwitches.classList.toggle('active', subTab === 'switches');
+        if (tabRouters) tabRouters.classList.toggle('active', subTab === 'routers');
+        if (tabNas) tabNas.classList.toggle('active', subTab === 'nas');
+
+        const contentSwitches = document.getElementById('infra-tab-content-switches');
+        const contentRouters = document.getElementById('infra-tab-content-routers');
+        const contentNas = document.getElementById('infra-tab-content-nas');
+        if (contentSwitches) {
+            contentSwitches.classList.toggle('hidden', subTab !== 'switches');
+            contentSwitches.classList.toggle('active', subTab === 'switches');
+        }
+        if (contentRouters) {
+            contentRouters.classList.toggle('hidden', subTab !== 'routers');
+            contentRouters.classList.toggle('active', subTab === 'routers');
+        }
+        if (contentNas) {
+            contentNas.classList.toggle('hidden', subTab !== 'nas');
+            contentNas.classList.toggle('active', subTab === 'nas');
+        }
+
+        if (subTab === 'switches') {
+            this.fetchAndRenderSwitchesStatus();
+        } else if (subTab === 'routers') {
+            this.fetchAndRenderRoutersStatus();
+        } else if (subTab === 'nas') {
+            this.fetchAndRenderNasStatus();
+        }
+    },
 
     render() {
         if (activeTab === 'alerts') {
@@ -295,7 +426,13 @@ export const monitoringHandler = {
         } else if (activeTab === 'apis') {
             this.fetchAndRenderApisStatus();
         } else if (activeTab === 'infra') {
-            this.fetchAndRenderSwitchesStatus();
+            if (activeInfraTab === 'switches') {
+                this.fetchAndRenderSwitchesStatus();
+            } else if (activeInfraTab === 'routers') {
+                this.fetchAndRenderRoutersStatus();
+            } else if (activeInfraTab === 'nas') {
+                this.fetchAndRenderNasStatus();
+            }
         }
     },
 
@@ -316,8 +453,10 @@ export const monitoringHandler = {
 
         const apis = apisStatusData || [];
         const switches = switchesStatusData || [];
+        const routers = routersStatusData || [];
+        const nasDevices = nasStatusData || [];
 
-        if (services.length === 0 && apis.length === 0 && switches.length === 0) {
+        if (services.length === 0 && apis.length === 0 && switches.length === 0 && routers.length === 0 && nasDevices.length === 0) {
             grid.innerHTML = `
                 <div style="text-align: center; padding: 4rem; color: var(--text-muted);">
                     <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Nenhum dado de monitoramento disponível.</p>
@@ -327,11 +466,13 @@ export const monitoringHandler = {
             return;
         }
 
-        const total = services.length + apis.length + switches.length;
+        const total = services.length + apis.length + switches.length + routers.length + nasDevices.length;
         const offlineServices = services.filter(s => s.status !== 'active' && s.status_label !== 'ativo').length;
         const offlineApis = apis.filter(a => !a.online || a.status === 'warning').length;
         const offlineSwitches = switches.filter(s => !s.online).length;
-        const offline = offlineServices + offlineApis + offlineSwitches;
+        const offlineRouters = routers.filter(r => !r.online).length;
+        const offlineNas = nasDevices.filter(n => !n.online).length;
+        const offline = offlineServices + offlineApis + offlineSwitches + offlineRouters + offlineNas;
         const online = total - offline;
 
         // Update KPIs
@@ -349,11 +490,15 @@ export const monitoringHandler = {
         let filteredServices = services;
         let filteredApis = apis;
         let filteredSwitches = switches;
+        let filteredRouters = routers;
+        let filteredNas = nasDevices;
 
         if (query) {
             filteredServices = services.filter(s => s.nome.toLowerCase().includes(query));
             filteredApis = apis.filter(a => a.name.toLowerCase().includes(query) || a.description.toLowerCase().includes(query));
             filteredSwitches = switches.filter(s => s.name.toLowerCase().includes(query) || s.ip.toLowerCase().includes(query));
+            filteredRouters = routers.filter(r => r.name.toLowerCase().includes(query) || r.ip.toLowerCase().includes(query));
+            filteredNas = nasDevices.filter(n => n.name.toLowerCase().includes(query) || n.ip.toLowerCase().includes(query));
         }
 
         let html = `
@@ -456,6 +601,80 @@ export const monitoringHandler = {
                     <div class="monitor-list-col-name">
                         <span class="monitor-dot" style="background: ${dotColor};"></span>
                         <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#38bdf8;">[Switch] ${sw.name} (${sw.ip})</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        // Infraestrutura (Routers)
+        filteredRouters.forEach(rt => {
+            let dotColor = '#10b981';
+            let statusLabel = 'Online';
+            let badgeBg = 'rgba(16,185,129,0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16,185,129,0.3)';
+
+            if (rt.online === null) {
+                dotColor = '#94a3b8';
+                statusLabel = 'Aguardando...';
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+            } else if (!rt.online) {
+                dotColor = '#ef4444';
+                statusLabel = 'Offline';
+                badgeBg = 'rgba(239,68,68,0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239,68,68,0.3)';
+            }
+
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#f43f5e;">[Roteador] ${rt.name} (${rt.ip})</span>
+                    </div>
+                    <div class="monitor-list-col-status">
+                        <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                    </div>
+                </div>`;
+        });
+
+        // Infraestrutura (NAS)
+        filteredNas.forEach(nas => {
+            let dotColor = '#10b981';
+            let statusLabel = 'Online';
+            let badgeBg = 'rgba(16,185,129,0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16,185,129,0.3)';
+
+            if (nas.online === null) {
+                dotColor = '#94a3b8';
+                statusLabel = 'Aguardando...';
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+            } else if (!nas.online) {
+                dotColor = '#ef4444';
+                statusLabel = 'Offline';
+                badgeBg = 'rgba(239,68,68,0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239,68,68,0.3)';
+            }
+
+            const rowBg = rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+            rowIdx++;
+
+            html += `
+                <div class="monitor-list-row" style="background: ${rowBg};">
+                    <div class="monitor-list-col-name">
+                        <span class="monitor-dot" style="background: ${dotColor};"></span>
+                        <span class="monitor-svc-name" style="font-size:0.88rem; font-weight:600; color:#f97316;">[NAS] ${nas.name} (${nas.ip})</span>
                     </div>
                     <div class="monitor-list-col-status">
                         <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
@@ -740,10 +959,12 @@ export const monitoringHandler = {
     async fetchDiagnostics() {
         try {
             // Buscas em paralelo para otimizar latência de carregamento
-            const [resDiag, resApis, resSwitches] = await Promise.all([
+            const [resDiag, resApis, resSwitches, resRouters, resNas] = await Promise.all([
                 apiClient.get('/monitoring/diagnostico?t=' + Date.now()),
                 apiClient.get('/monitoring/apis-status?t=' + Date.now()),
-                apiClient.get('/monitoring/switches?t=' + Date.now())
+                apiClient.get('/monitoring/switches?t=' + Date.now()),
+                apiClient.get('/monitoring/routers?t=' + Date.now()),
+                apiClient.get('/monitoring/nas?t=' + Date.now())
             ]);
             
             const isOnline = resDiag && resDiag.status === 'online';
@@ -762,6 +983,14 @@ export const monitoringHandler = {
 
             if (resSwitches && resSwitches.success && Array.isArray(resSwitches.switches)) {
                 switchesStatusData = resSwitches.switches;
+            }
+
+            if (resRouters && resRouters.success && Array.isArray(resRouters.routers)) {
+                routersStatusData = resRouters.routers;
+            }
+
+            if (resNas && resNas.success && Array.isArray(resNas.nas)) {
+                nasStatusData = resNas.nas;
             }
             
             // Se estiver na aba de Alertas Ativos, re-renderiza para atualizar
@@ -1423,5 +1652,661 @@ export const monitoringHandler = {
                 </tr>
             `;
         }).join('');
+    },
+
+    async fetchAndRenderRoutersStatus(forceRefresh = false, sequential = false) {
+        console.log('📊 [MONITORING] fetchAndRenderRoutersStatus called. forceRefresh:', forceRefresh, 'sequential:', sequential);
+        const routersAutoRefreshChk = document.getElementById('routers-auto-refresh');
+        const isSequential = sequential || (routersAutoRefreshChk && routersAutoRefreshChk.checked);
+
+        const tbody = document.getElementById('monitoring-routers-tbody');
+        if (!tbody) {
+            console.error('📊 [MONITORING] Element #monitoring-routers-tbody not found in DOM!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-refresh-routers-status');
+        let svg = null;
+        if (btn) {
+            svg = btn.querySelector('svg');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+        }
+
+        try {
+            console.log('📊 [MONITORING] Fetching routers, sequential mode:', isSequential);
+            if (isSequential) {
+                // Step 1: Fetch raw list of routers without pings
+                const res = await apiClient.get(`/monitoring/routers?ping=false&refresh=${forceRefresh}&t=${Date.now()}`);
+                if (res && res.success && Array.isArray(res.routers)) {
+                    // Render the table with all routers in pending/previous state
+                    this.renderRoutersTable(res.routers);
+
+                    // Step 2: Show sync icon on all rows
+                    res.routers.forEach(rt => {
+                        const row = document.getElementById(`router-row-${rt.id}`);
+                        if (row) {
+                            const indicator = row.querySelector('.router-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+                    });
+
+                    // Step 3: Sequential pinging
+                    isPingingSequentially = true;
+                    for (const rt of res.routers) {
+                        // If user changed tab or subtab, we stop
+                        if (activeTab !== 'infra' || activeInfraTab !== 'routers') break;
+
+                        const row = document.getElementById(`router-row-${rt.id}`);
+                        if (row) {
+                            // Make this router spinner spin
+                            const indicator = row.querySelector('.router-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); animation: spin 1s linear infinite;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+
+                        try {
+                            const pingRes = await apiClient.get(`/monitoring/routers/${rt.id}/ping?t=${Date.now()}`);
+                            if (pingRes && pingRes.success && pingRes.router) {
+                                // Update this row
+                                const updatedRt = pingRes.router;
+                                const rtRow = document.getElementById(`router-row-${updatedRt.id}`);
+                                if (rtRow) {
+                                    let badgeBg = 'rgba(16, 185, 129, 0.12)';
+                                    let badgeColor = '#6ee7b7';
+                                    let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+                                    let statusLabel = 'Online';
+
+                                    if (!updatedRt.online) {
+                                        badgeBg = 'rgba(239, 68, 68, 0.12)';
+                                        badgeColor = '#fca5a5';
+                                        badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                                        statusLabel = 'Offline';
+                                    }
+
+                                    const latencyColor = updatedRt.latency < 50 ? '#6ee7b7' : updatedRt.latency < 150 ? '#fde047' : '#fca5a5';
+                                    const latencyText = updatedRt.online ? `${updatedRt.latency}ms` : '-';
+
+                                    const badgeContainer = rtRow.querySelector('.monitor-badge');
+                                    if (badgeContainer) {
+                                        badgeContainer.style.background = badgeBg;
+                                        badgeContainer.style.color = badgeColor;
+                                        badgeContainer.style.borderColor = badgeBorder;
+                                        badgeContainer.textContent = statusLabel;
+                                    }
+
+                                    const latencyContainer = rtRow.querySelector('.router-latency');
+                                    if (latencyContainer) {
+                                        latencyContainer.style.color = latencyColor;
+                                        latencyContainer.textContent = latencyText;
+                                    }
+
+                                    // Clear sync icon with visual confirmation tick
+                                    const indicator = rtRow.querySelector('.router-sync-indicator');
+                                    if (indicator) {
+                                        indicator.innerHTML = `
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        `;
+                                        setTimeout(() => {
+                                            if (indicator.querySelector('polyline')) {
+                                                indicator.innerHTML = '';
+                                            }
+                                        }, 3000);
+                                    }
+                                }
+                            }
+                        } catch (pingErr) {
+                            console.error(`Erro ao pingar roteador ${rt.name}:`, pingErr);
+                            const rtRow = document.getElementById(`router-row-${rt.id}`);
+                            if (rtRow) {
+                                const badgeContainer = rtRow.querySelector('.monitor-badge');
+                                if (badgeContainer) {
+                                    badgeContainer.style.background = 'rgba(239, 68, 68, 0.12)';
+                                    badgeContainer.style.color = '#fca5a5';
+                                    badgeContainer.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    badgeContainer.textContent = 'Erro';
+                                }
+                                const indicator = rtRow.querySelector('.router-sync-indicator');
+                                if (indicator) indicator.innerHTML = '';
+                            }
+                        }
+                    }
+                    isPingingSequentially = false;
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            } else {
+                // Load all at once on backend
+                const url = `/monitoring/routers?refresh=${forceRefresh}&t=${Date.now()}`;
+                const res = await apiClient.get(url);
+                if (res && res.success && Array.isArray(res.routers)) {
+                    this.renderRoutersTable(res.routers);
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status dos roteadores:', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #fca5a5; background: rgba(239, 68, 68, 0.07);">
+                        <p style="margin: 0; font-weight: 600;">Falha ao obter status dos roteadores</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.82rem; opacity: 0.85;">${err.message}</p>
+                    </td>
+                </tr>
+            `;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = 'pointer';
+                if (svg) svg.style.animation = '';
+            }
+        }
+    },
+
+    renderRoutersTable(routers) {
+        const tbody = document.getElementById('monitoring-routers-tbody');
+        if (!tbody) return;
+
+        if (routers.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nenhum roteador encontrado.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = routers.map(rt => {
+            let badgeBg = 'rgba(16, 185, 129, 0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+            let statusLabel = 'Online';
+
+            if (rt.online === null) {
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+                statusLabel = 'Aguardando...';
+            } else if (!rt.online) {
+                badgeBg = 'rgba(239, 68, 68, 0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                statusLabel = 'Offline';
+            }
+
+            const latencyColor = rt.online ? (rt.latency < 50 ? '#6ee7b7' : rt.latency < 150 ? '#fde047' : '#fca5a5') : 'var(--text-muted)';
+            const latencyText = rt.online ? `${rt.latency}ms` : '-';
+
+            return `
+                <tr id="router-row-${rt.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                    <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${rt.name}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${rt.ip}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${rt.model || '-'}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${rt.location || '-'}</td>
+                    <td style="padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span class="router-sync-indicator" style="display: inline-flex; align-items: center;"></span>
+                        </div>
+                    </td>
+                    <td class="router-latency" style="padding: 12px; text-align: right; font-weight: 500; font-family: monospace; color: ${latencyColor};">${latencyText}</td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    async fetchAndRenderNasStatus(forceRefresh = false, sequential = false) {
+        console.log('📊 [MONITORING] fetchAndRenderNasStatus called. forceRefresh:', forceRefresh, 'sequential:', sequential);
+        const nasAutoRefreshChk = document.getElementById('nas-auto-refresh');
+        const isSequential = sequential || (nasAutoRefreshChk && nasAutoRefreshChk.checked);
+
+        const tbody = document.getElementById('monitoring-nas-tbody');
+        if (!tbody) {
+            console.error('📊 [MONITORING] Element #monitoring-nas-tbody not found in DOM!');
+            return;
+        }
+
+        const btn = document.getElementById('btn-refresh-nas-status');
+        let svg = null;
+        if (btn) {
+            svg = btn.querySelector('svg');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+        }
+
+        try {
+            console.log('📊 [MONITORING] Fetching NAS devices, sequential mode:', isSequential);
+            if (isSequential) {
+                // Step 1: Fetch raw list of NAS without pings
+                const res = await apiClient.get(`/monitoring/nas?ping=false&refresh=${forceRefresh}&t=${Date.now()}`);
+                if (res && res.success && Array.isArray(res.nas)) {
+                    // Render the table with all NAS in pending/previous state
+                    this.renderNasTable(res.nas);
+
+                    // Step 2: Show sync icon on all rows
+                    res.nas.forEach(nas => {
+                        const row = document.getElementById(`nas-row-${nas.id}`);
+                        if (row) {
+                            const indicator = row.querySelector('.nas-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); opacity: 0.5;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+                    });
+
+                    // Step 3: Sequential pinging
+                    isPingingSequentially = true;
+                    for (const nas of res.nas) {
+                        // If user changed tab or subtab, we stop
+                        if (activeTab !== 'infra' || activeInfraTab !== 'nas') break;
+
+                        const row = document.getElementById(`nas-row-${nas.id}`);
+                        if (row) {
+                            // Make this NAS spinner spin
+                            const indicator = row.querySelector('.nas-sync-indicator');
+                            if (indicator) {
+                                indicator.innerHTML = `
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent); animation: spin 1s linear infinite;">
+                                        <polyline points="23 4 23 10 17 10"></polyline>
+                                        <polyline points="1 20 1 14 7 14"></polyline>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                    </svg>
+                                `;
+                            }
+                        }
+
+                        try {
+                            const pingRes = await apiClient.get(`/monitoring/nas/${nas.id}/ping?t=${Date.now()}`);
+                            if (pingRes && pingRes.success && pingRes.nas) {
+                                // Update this row
+                                const updatedNas = pingRes.nas;
+                                const nasRow = document.getElementById(`nas-row-${updatedNas.id}`);
+                                if (nasRow) {
+                                    let badgeBg = 'rgba(16, 185, 129, 0.12)';
+                                    let badgeColor = '#6ee7b7';
+                                    let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+                                    let statusLabel = 'Online';
+
+                                    if (!updatedNas.online) {
+                                        badgeBg = 'rgba(239, 68, 68, 0.12)';
+                                        badgeColor = '#fca5a5';
+                                        badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                                        statusLabel = 'Offline';
+                                    }
+
+                                    const latencyColor = updatedNas.latency < 50 ? '#6ee7b7' : updatedNas.latency < 150 ? '#fde047' : '#fca5a5';
+                                    const latencyText = updatedNas.online ? `${updatedNas.latency}ms` : '-';
+
+                                    const badgeContainer = nasRow.querySelector('.monitor-badge');
+                                    if (badgeContainer) {
+                                        badgeContainer.style.background = badgeBg;
+                                        badgeContainer.style.color = badgeColor;
+                                        badgeContainer.style.borderColor = badgeBorder;
+                                        badgeContainer.textContent = statusLabel;
+                                    }
+
+                                    const latencyContainer = nasRow.querySelector('.nas-latency');
+                                    if (latencyContainer) {
+                                        latencyContainer.style.color = latencyColor;
+                                        latencyContainer.textContent = latencyText;
+                                    }
+
+                                    // Clear sync icon with visual confirmation tick
+                                    const indicator = nasRow.querySelector('.nas-sync-indicator');
+                                    if (indicator) {
+                                        indicator.innerHTML = `
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                        `;
+                                        setTimeout(() => {
+                                            if (indicator.querySelector('polyline')) {
+                                                indicator.innerHTML = '';
+                                            }
+                                        }, 3000);
+                                    }
+                                }
+                            }
+                        } catch (pingErr) {
+                            console.error(`Erro ao pingar NAS ${nas.name}:`, pingErr);
+                            const nasRow = document.getElementById(`nas-row-${nas.id}`);
+                            if (nasRow) {
+                                const badgeContainer = nasRow.querySelector('.monitor-badge');
+                                if (badgeContainer) {
+                                    badgeContainer.style.background = 'rgba(239, 68, 68, 0.12)';
+                                    badgeContainer.style.color = '#fca5a5';
+                                    badgeContainer.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                                    badgeContainer.textContent = 'Erro';
+                                }
+                                const indicator = nasRow.querySelector('.nas-sync-indicator');
+                                if (indicator) indicator.innerHTML = '';
+                            }
+                        }
+                    }
+                    isPingingSequentially = false;
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            } else {
+                // Load all at once on backend
+                const url = `/monitoring/nas?refresh=${forceRefresh}&t=${Date.now()}`;
+                const res = await apiClient.get(url);
+                if (res && res.success && Array.isArray(res.nas)) {
+                    this.renderNasTable(res.nas);
+                } else {
+                    throw new Error("Resposta inválida do servidor.");
+                }
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status dos dispositivos NAS:', err);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: #fca5a5; background: rgba(239, 68, 68, 0.07);">
+                        <p style="margin: 0; font-weight: 600;">Falha ao obter status dos dispositivos NAS</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.82rem; opacity: 0.85;">${err.message}</p>
+                    </td>
+                </tr>
+            `;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = 'pointer';
+                if (svg) svg.style.animation = '';
+            }
+        }
+    },
+
+    renderNasTable(nas) {
+        const tbody = document.getElementById('monitoring-nas-tbody');
+        if (!tbody) return;
+
+        if (nas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nenhum dispositivo NAS encontrado.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = nas.map(n => {
+            let badgeBg = 'rgba(16, 185, 129, 0.12)';
+            let badgeColor = '#6ee7b7';
+            let badgeBorder = 'rgba(16, 185, 129, 0.3)';
+            let statusLabel = 'Online';
+
+            if (n.online === null) {
+                badgeBg = 'rgba(255, 255, 255, 0.05)';
+                badgeColor = 'var(--text-muted)';
+                badgeBorder = 'rgba(255, 255, 255, 0.1)';
+                statusLabel = 'Aguardando...';
+            } else if (!n.online) {
+                badgeBg = 'rgba(239, 68, 68, 0.12)';
+                badgeColor = '#fca5a5';
+                badgeBorder = 'rgba(239, 68, 68, 0.3)';
+                statusLabel = 'Offline';
+            }
+
+            const latencyColor = n.online ? (n.latency < 50 ? '#6ee7b7' : n.latency < 150 ? '#fde047' : '#fca5a5') : 'var(--text-muted)';
+            const latencyText = n.online ? `${n.latency}ms` : '-';
+
+            return `
+                <tr id="nas-row-${n.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s; cursor: pointer;">
+                    <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${n.name}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${n.ip}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${n.manufacturer || '-'}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${n.model || '-'}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted); font-size: 0.8rem;">${n.mac || '-'}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${n.location || '-'}</td>
+                    <td style="padding: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span class="nas-sync-indicator" style="display: inline-flex; align-items: center;"></span>
+                        </div>
+                    </td>
+                    <td class="nas-latency" style="padding: 12px; text-align: right; font-weight: 500; font-family: monospace; color: ${latencyColor};">${latencyText}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // Vincular cliques nas linhas
+        nas.forEach(n => {
+            const row = document.getElementById(`nas-row-${n.id}`);
+            if (row) {
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    this.toggleNasDetails(n.id);
+                });
+            }
+        });
+    },
+
+    async toggleNasDetails(nasId) {
+        console.log('📊 [MONITORING] Toggling details for NAS ID:', nasId);
+        const existingRow = document.getElementById(`nas-details-row-${nasId}`);
+        if (existingRow) {
+            existingRow.remove();
+            return;
+        }
+
+        // Fecha outros painéis abertos de detalhes de NAS
+        const openRows = document.querySelectorAll('.nas-details-row');
+        openRows.forEach(r => r.remove());
+
+        const parentRow = document.getElementById(`nas-row-${nasId}`);
+        if (!parentRow) return;
+
+        // Linha temporária de carregamento
+        const detailsRow = document.createElement('tr');
+        detailsRow.id = `nas-details-row-${nasId}`;
+        detailsRow.className = 'nas-details-row';
+        detailsRow.innerHTML = `
+            <td colspan="8" style="padding: 24px; text-align: center; background: rgba(255,255,255,0.01); border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 10px; color: var(--accent);">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
+                        <line x1="12" y1="2" x2="12" y2="6"></line>
+                        <line x1="12" y1="18" x2="12" y2="22"></line>
+                        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                        <line x1="2" y1="12" x2="6" y2="12"></line>
+                        <line x1="18" y1="12" x2="22" y2="12"></line>
+                        <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                        <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                    </svg>
+                    <span style="font-weight: 500; font-size: 0.9rem;">Buscando detalhes de storage e compartilhamentos...</span>
+                </div>
+            </td>
+        `;
+
+        parentRow.parentNode.insertBefore(detailsRow, parentRow.nextSibling);
+
+        try {
+            const res = await apiClient.get(`/monitoring/nas/${nasId}/storage?t=${Date.now()}`);
+            if (res && res.success && res.storage) {
+                const storage = res.storage;
+                const volume = storage.volume;
+
+                const pctUsed = Math.round((volume.used_gb / volume.total_gb) * 100);
+                const totalText = (volume.total_gb / 1000).toFixed(1) + ' TB';
+                const usedText = (volume.used_gb / 1000).toFixed(1) + ' TB';
+                const freeText = (volume.free_gb / 1000).toFixed(1) + ' TB';
+
+                // Render HDD Bays
+                const baysHtml = storage.bays.map(bay => {
+                    const ledColor = bay.led === 'green' ? '#10b981' : '#ef4444';
+                    const ledShadow = bay.led === 'green' ? '0 0 8px #10b981' : '0 0 8px #ef4444';
+                    return `
+                        <div style="background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 14px; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                            <!-- HDD Icon with LED -->
+                            <div style="position: relative; width: 32px; height: 44px; background: #2a2b2f; border: 2px solid #3d3e42; border-radius: 4px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 4px 2px; flex-shrink: 0;">
+                                <div style="width: 5px; height: 5px; background: ${ledColor}; border-radius: 50%; box-shadow: ${ledShadow};"></div>
+                                <div style="display: flex; flex-direction: column; gap: 2px; width: 80%;">
+                                    <div style="height: 1px; background: rgba(255,255,255,0.15);"></div>
+                                    <div style="height: 1px; background: rgba(255,255,255,0.15);"></div>
+                                    <div style="height: 1px; background: rgba(255,255,255,0.15);"></div>
+                                </div>
+                                <span style="font-size: 0.52rem; color: var(--text-muted); font-weight: 700; text-align: center;">BAY ${bay.slot}</span>
+                            </div>
+                            <!-- HDD Details -->
+                            <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+                                <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${bay.disk_model}">${bay.disk_model}</span>
+                                <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">S/N: ${bay.serial}</span>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+                                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--accent);">${bay.capacity}</span>
+                                    <span style="font-size: 0.68rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.05);">${bay.temp}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Render Shares
+                const sharesHtml = storage.shares.map(share => {
+                    const pctShareUsed = Math.round((share.used_gb / share.total_gb) * 100);
+                    const shareTotalText = (share.total_gb / 1000).toFixed(1) + ' TB';
+                    const shareUsedText = (share.used_gb / 1000).toFixed(1) + ' TB';
+                    return `
+                        <div class="nas-share-item" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-size: 0.82rem; transition: background 0.2s;">
+                            <!-- Folder Icon and Name -->
+                            <div style="flex: 2; display: flex; align-items: center; gap: 12px; min-width: 0; padding-right: 10px;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#f59e0b" stroke-width="2" fill="#f59e0b" fill-opacity="0.2" style="flex-shrink: 0;">
+                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <div style="display: flex; flex-direction: column; min-width: 0;">
+                                    <span style="font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${share.name}</span>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${share.description}">${share.description}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Path -->
+                            <div style="flex: 3; color: var(--text-muted); font-family: monospace; font-size: 0.75rem; word-break: break-all; padding-right: 15px;">
+                                ${share.path}
+                            </div>
+                            
+                            <!-- Usage -->
+                            <div style="flex: 2; display: flex; flex-direction: column; gap: 4px; padding-right: 20px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted);">
+                                    <span>${shareUsedText} / ${shareTotalText}</span>
+                                    <span>${pctShareUsed}%</span>
+                                </div>
+                                <div style="width: 100%; height: 4px; background: rgba(255, 255, 255, 0.05); border-radius: 2px; overflow: hidden;">
+                                    <div style="width: ${pctShareUsed}%; height: 100%; background: #f59e0b; border-radius: 2px;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Permissions -->
+                            <div style="flex: 2; min-width: 0;">
+                                <span style="background: rgba(245, 158, 11, 0.08); color: #fde047; border: 1px solid rgba(245, 158, 11, 0.2); padding: 3px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 500; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${share.user_group}">
+                                    ${share.user_group}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Render Dashboard HTML
+                detailsRow.innerHTML = `
+                    <td colspan="8" style="padding: 24px 28px; background: rgba(255, 255, 255, 0.015); border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="display: flex; flex-direction: column; gap: 24px; animation: fadeIn 0.25s ease-out; text-align: left;">
+                            
+                            <!-- TOP: RAID and Volume Capacity Overview -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Volume de Armazenamento</span>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">${volume.raid_level}</span>
+                                        <span class="monitor-badge" style="background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); padding: 2px 8px; font-size: 0.75rem;">Status: ${volume.status}</span>
+                                    </div>
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">Sistema de arquivos: <strong style="color: var(--text-main); font-family: monospace;">${volume.filesystem}</strong></span>
+                                </div>
+                                
+                                <!-- Overall Space Gauge -->
+                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; min-width: 250px; flex-grow: 1; max-width: 400px;">
+                                    <div style="display: flex; justify-content: space-between; width: 100%; font-size: 0.82rem;">
+                                        <span style="color: var(--text-muted);">Espaço Utilizado: <strong style="color: var(--text-main);">${usedText}</strong></span>
+                                        <span style="color: var(--text-muted);">Disponível: <strong style="color: var(--text-main);">${freeText}</strong></span>
+                                    </div>
+                                    <!-- Progress Bar -->
+                                    <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); display: flex;">
+                                        <div style="width: ${pctUsed}%; height: 100%; background: linear-gradient(90deg, #f97316, #ea580c); border-radius: 4px;"></div>
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted);">Capacidade Total: <strong>${totalText}</strong> (Ocupação: ${pctUsed}%)</span>
+                                </div>
+                            </div>
+
+                            <!-- MIDDLE: Physical Hard Drive Bays (WD Style) -->
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Gavetas de Discos Físicos (Bays)</span>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
+                                    ${baysHtml}
+                                </div>
+                            </div>
+
+                            <!-- BOTTOM: Dropbox-style Shared Folders / Compartilhamentos -->
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Pastas Compartilhadas (Pastas de Rede)</span>
+                                <div style="display: flex; flex-direction: column; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; overflow: hidden; background: rgba(0, 0, 0, 0.15);">
+                                    <!-- Header -->
+                                    <div style="display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.02); font-weight: 600; font-size: 0.78rem; color: var(--text-muted);">
+                                        <div style="flex: 2;">Nome da Pasta</div>
+                                        <div style="flex: 3;">Caminho de Rede</div>
+                                        <div style="flex: 2;">Ocupação</div>
+                                        <div style="flex: 2;">Grupo de Acesso</div>
+                                    </div>
+                                    <!-- Rows -->
+                                    <div style="display: flex; flex-direction: column;">
+                                        ${sharesHtml}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </td>
+                `;
+            } else {
+                throw new Error("Dados inválidos recebidos do servidor.");
+            }
+        } catch (err) {
+            console.error("Erro ao expandir NAS storage:", err);
+            detailsRow.innerHTML = `
+                <td colspan="8" style="padding: 16px; text-align: center; color: #fca5a5; background: rgba(239, 68, 68, 0.07); border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    Erro ao carregar detalhes de storage: ${err.message}
+                </td>
+            `;
+        }
     }
 };

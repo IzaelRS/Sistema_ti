@@ -32,6 +32,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppDataSource = void 0;
 exports.initializeDatabase = initializeDatabase;
@@ -46,23 +49,29 @@ const TimelineTopic_1 = require("./entities/TimelineTopic");
 const TimelineSubtopic_1 = require("./entities/TimelineSubtopic");
 const MonitoringEvent_1 = require("./entities/MonitoringEvent");
 const bcrypt = __importStar(require("bcrypt"));
+const path_1 = __importDefault(require("path"));
 exports.AppDataSource = new typeorm_1.DataSource({
     type: "postgres",
-    host: process.env.DB_HOST || "db",
+    host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "5432"),
     username: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "postgres",
     database: process.env.DB_NAME || "intranet_ti",
-    synchronize: true,
+    synchronize: false,
     logging: false,
     entities: [User_1.User, Procedure_1.Procedure, Document_1.Document, Account_1.Account, Event_1.Event, TimelineTopic_1.TimelineTopic, TimelineSubtopic_1.TimelineSubtopic, MonitoringEvent_1.MonitoringEvent],
     subscribers: [],
-    migrations: [],
+    migrations: [
+        path_1.default.join(__dirname, "migrations/**/*.{ts,js}")
+    ],
 });
 async function initializeDatabase() {
     try {
         await exports.AppDataSource.initialize();
         console.log("✅ Conexão com o banco de dados PostgreSQL estabelecida com sucesso via TypeORM.");
+        console.log("🔄 Executando migrations pendentes...");
+        await exports.AppDataSource.runMigrations();
+        console.log("✅ Migrations executadas com sucesso.");
         await runSeeds();
     }
     catch (error) {
