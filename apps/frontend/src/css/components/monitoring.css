@@ -998,6 +998,29 @@
     border: 1px solid rgba(156, 163, 175, 0.2);
 }
 
+.server-virt-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.server-virt-badge.virtual {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.server-virt-badge.physical {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
 .server-header-right {
     display: flex;
     align-items: center;
@@ -1082,6 +1105,77 @@
     border-top: 1px solid rgba(255, 255, 255, 0.04);
     padding-top: 12px;
     margin-top: 8px;
+}
+
+/* Server Resources Section */
+.server-resources-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.server-resources-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main, #fff);
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.server-resources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.resource-bar-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 0.8rem;
+}
+
+.resource-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+    font-size: 0.78rem;
+}
+
+.resource-bar-label {
+    color: var(--text-muted, #9ca3af);
+    font-weight: 500;
+}
+
+.resource-bar-value {
+    font-weight: 600;
+}
+
+.resource-bar-outer {
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.3rem;
+}
+
+.resource-bar-inner {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.resource-bar-subtext {
+    font-size: 0.68rem;
+    color: var(--text-muted, #9ca3af);
+    text-align: right;
+    display: block;
 }
 
 @media (max-width: 640px) {
