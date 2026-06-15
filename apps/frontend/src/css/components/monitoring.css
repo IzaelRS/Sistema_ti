@@ -927,9 +927,11 @@
 .server-header-left {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     min-width: 0;
     flex: 1;
+    flex-wrap: wrap;
+    overflow: visible;
 }
 
 .server-status-dot {
@@ -957,6 +959,8 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 200px;
+    flex-shrink: 1;
 }
 
 .server-ip-badge {

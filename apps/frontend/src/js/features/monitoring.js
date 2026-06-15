@@ -2696,6 +2696,16 @@ export const monitoringHandler = {
                             <span class="server-title">${srv.name}</span>
                             <span class="server-ip-badge">${srv.ip}</span>
                             <span class="server-os-badge ${osClass}">${osIcon} ${srv.os}</span>
+                            ${srv.is_virtualized != null ? (srv.is_virtualized
+                                ? `<span title="${srv.virtualization_type || 'Máquina Virtual'}" style="display:inline-flex;align-items:center;gap:4px;background:rgba(168,85,247,0.12);color:#d8b4fe;border:1px solid rgba(168,85,247,0.3);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;white-space:nowrap;flex-shrink:0;">
+                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="2" width="8" height="8" rx="1"></rect><rect x="14" y="2" width="8" height="8" rx="1"></rect><rect x="2" y="14" width="8" height="8" rx="1"></rect><rect x="14" y="14" width="8" height="8" rx="1"></rect></svg>
+                                    ${srv.virtualization_type || 'Virtual'}
+                                  </span>`
+                                : `<span title="Servidor Físico" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.09);color:#6ee7b7;border:1px solid rgba(16,185,129,0.2);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;white-space:nowrap;flex-shrink:0;">
+                                    <svg viewBox="0 0 24 24" width="10" height="10" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                    Físico
+                                  </span>`)
+                            : ''}
                         </div>
                         <div class="server-header-right">
                             ${hasMetrics && srv.online ? `
