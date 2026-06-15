@@ -2642,6 +2642,7 @@ export const monitoringHandler = {
             .map(item => item.getAttribute('data-item-id'));
 
         container.innerHTML = filtered.map(srv => {
+
             const isExpanded = expandedIds.includes(srv.id.toString());
             const activeClass = isExpanded ? 'active' : '';
 
@@ -2671,6 +2672,22 @@ export const monitoringHandler = {
             const latencyText = srv.online ? `${srv.latency}ms` : '-';
             const latencyColor = srv.online ? (srv.latency < 20 ? '#6ee7b7' : srv.latency < 80 ? '#fde047' : '#fca5a5') : 'var(--text-muted)';
 
+            // ── Hardware metric helpers ──────────────────────────────────────
+            const metricBar = (pct) => {
+                const color = pct < 60 ? '#10b981' : pct < 85 ? '#f59e0b' : '#ef4444';
+                const textColor = pct < 60 ? '#6ee7b7' : pct < 85 ? '#fde047' : '#fca5a5';
+                return { color, textColor };
+            };
+
+            const cpuPct   = srv.cpu_usage  != null ? srv.cpu_usage  : 0;
+            const ramPct   = srv.ram_usage  != null ? srv.ram_usage  : 0;
+            const diskPct  = srv.disk_usage != null ? srv.disk_usage : 0;
+            const cpuBar   = metricBar(cpuPct);
+            const ramBar   = metricBar(ramPct);
+            const diskBar  = metricBar(diskPct);
+
+            const hasMetrics = srv.cpu || srv.memory || srv.storage;
+
             return `
                 <div class="server-accordion-item ${activeClass}" data-item-id="${srv.id}">
                     <div class="server-accordion-header" data-server-id="${srv.id}">
@@ -2681,6 +2698,21 @@ export const monitoringHandler = {
                             <span class="server-os-badge ${osClass}">${osIcon} ${srv.os}</span>
                         </div>
                         <div class="server-header-right">
+                            ${hasMetrics && srv.online ? `
+                            <div style="display: flex; align-items: center; gap: 10px; margin-right: 10px;">
+                                <div title="CPU: ${cpuPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="${cpuBar.textColor}" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                                    <span style="font-size: 0.72rem; font-weight: 600; color: ${cpuBar.textColor};">${cpuPct}%</span>
+                                </div>
+                                <div title="RAM: ${ramPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="${ramBar.textColor}" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
+                                    <span style="font-size: 0.72rem; font-weight: 600; color: ${ramBar.textColor};">${ramPct}%</span>
+                                </div>
+                                <div title="Disco: ${diskPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                    <svg viewBox="0 0 24 24" width="11" height="11" stroke="${diskBar.textColor}" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                                    <span style="font-size: 0.72rem; font-weight: 600; color: ${diskBar.textColor};">${diskPct}%</span>
+                                </div>
+                            </div>` : ''}
                             <span class="server-latency" style="color: ${latencyColor}; font-weight: 500;">${latencyText}</span>
                             <svg class="server-chevron" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="6 9 12 15 18 9"></polyline>
@@ -2689,6 +2721,78 @@ export const monitoringHandler = {
                     </div>
                     <div class="server-accordion-body">
                         <div class="server-accordion-content">
+
+                            ${hasMetrics ? `
+                            <!-- ── Hardware Metrics ─────────────────────────────── -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px;">
+
+                                <!-- CPU -->
+                                ${srv.cpu ? `
+                                <div style="background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 7px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#a78bfa" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                                            <span style="font-size: 0.75rem; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.05em;">CPU</span>
+                                        </div>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${cpuBar.textColor};">${cpuPct}%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${cpuPct}%; height: 100%; background: ${cpuBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${srv.cpu}">${srv.cpu}</span>
+                                </div>` : ''}
+
+                                <!-- RAM -->
+                                ${srv.memory ? `
+                                <div style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 7px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#38bdf8" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
+                                            <span style="font-size: 0.75rem; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Memória</span>
+                                        </div>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${ramBar.textColor};">${ramPct}%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${ramPct}%; height: 100%; background: ${ramBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace;">${srv.memory}</span>
+                                </div>` : ''}
+
+                                <!-- Storage -->
+                                ${srv.storage ? `
+                                <div style="background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 7px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fb923c" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                                            <span style="font-size: 0.75rem; font-weight: 600; color: #fb923c; text-transform: uppercase; letter-spacing: 0.05em;">Armazenamento</span>
+                                        </div>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${diskBar.textColor};">${diskPct}%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${diskPct}%; height: 100%; background: ${diskBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${srv.storage}">${srv.storage}</span>
+                                </div>` : ''}
+
+                            </div>
+                            ` : ''}
+
+                            <!-- Virtualization Badge -->
+                            ${srv.is_virtualized != null ? `
+                            <div style="margin-bottom: 16px;">
+                                ${srv.is_virtualized
+                                    ? `<span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(168,85,247,0.1); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="2" width="8" height="8" rx="1"></rect><rect x="14" y="2" width="8" height="8" rx="1"></rect><rect x="2" y="14" width="8" height="8" rx="1"></rect><rect x="14" y="14" width="8" height="8" rx="1"></rect></svg>
+                                        ${srv.virtualization_type || 'Máquina Virtual'}
+                                      </span>`
+                                    : `<span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16,185,129,0.08); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                                        Servidor Físico
+                                      </span>`
+                                }
+                            </div>
+                            ` : ''}
+
                             <div class="server-details-grid">
                                 <div class="server-detail-item">
                                     <span class="server-detail-label">Descrição</span>
