@@ -108,6 +108,36 @@ export const monitoringHandler = {
             });
         }
 
+        // Sanfona de filtros dos servidores
+        const btnToggleFilters = document.getElementById('btn-toggle-server-filters');
+        if (btnToggleFilters) {
+            btnToggleFilters.addEventListener('click', () => {
+                const accordion = btnToggleFilters.closest('.server-filters-accordion');
+                if (accordion) {
+                    accordion.classList.toggle('active');
+                }
+            });
+        }
+
+        // Checkboxes de filtros dos Servidores
+        const serverFilterIds = [
+            'filter-type-physical',
+            'filter-type-virtual',
+            'filter-platform-win2019',
+            'filter-platform-win2025',
+            'filter-platform-linux',
+            'filter-activity-online',
+            'filter-activity-offline'
+        ];
+        serverFilterIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', () => {
+                    this.renderServersAccordion(serversStatusData);
+                });
+            }
+        });
+
         // Search in event history
         const eventsSearchInput = document.getElementById('monitoring-events-search-input');
         if (eventsSearchInput) {
@@ -2621,12 +2651,100 @@ export const monitoringHandler = {
         const searchInput = document.getElementById('servers-search');
         const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
+        // Atualiza o contador de filtros ativos (sanfona)
+        const filterCheckboxIds = [
+            'filter-type-physical',
+            'filter-type-virtual',
+            'filter-platform-win2019',
+            'filter-platform-win2025',
+            'filter-platform-linux',
+            'filter-activity-online',
+            'filter-activity-offline'
+        ];
+        let activeFiltersCount = 0;
+        filterCheckboxIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.checked) activeFiltersCount++;
+        });
+        const activeCountBadge = document.getElementById('server-filters-active-count');
+        if (activeCountBadge) {
+            if (activeFiltersCount > 0) {
+                activeCountBadge.textContent = activeFiltersCount;
+                activeCountBadge.style.display = 'inline-flex';
+            } else {
+                activeCountBadge.style.display = 'none';
+            }
+        }
+
         const filtered = servers.filter(srv => {
-            if (!query) return true;
-            return srv.name.toLowerCase().includes(query) ||
-                   srv.ip.toLowerCase().includes(query) ||
-                   srv.os.toLowerCase().includes(query) ||
-                   srv.model.toLowerCase().includes(query);
+            // 1. Text Search Filter
+            if (query) {
+                const matchesQuery = srv.name.toLowerCase().includes(query) ||
+                                     srv.ip.toLowerCase().includes(query) ||
+                                     (srv.os || '').toLowerCase().includes(query) ||
+                                     (srv.model || '').toLowerCase().includes(query);
+                if (!matchesQuery) return false;
+            }
+
+            // 2. Tipo Filter (Físico / Virtual)
+            const typePhys = document.getElementById('filter-type-physical');
+            const typeVirt = document.getElementById('filter-type-virtual');
+            const selectedTypes = [];
+            if (typePhys && typePhys.checked) selectedTypes.push('physical');
+            if (typeVirt && typeVirt.checked) selectedTypes.push('virtual');
+
+            if (selectedTypes.length > 0) {
+                const isVirt = !!srv.is_virtualized;
+                if (selectedTypes.includes('physical') && isVirt) return false;
+                if (selectedTypes.includes('virtual') && !isVirt) return false;
+            }
+
+            // 3. Plataforma Filter (Win 2019 / Win 2025/2022 / Linux)
+            const platWin2019 = document.getElementById('filter-platform-win2019');
+            const platWin2025 = document.getElementById('filter-platform-win2025');
+            const platLinux = document.getElementById('filter-platform-linux');
+            const selectedPlatforms = [];
+            if (platWin2019 && platWin2019.checked) selectedPlatforms.push('win2019');
+            if (platWin2025 && platWin2025.checked) selectedPlatforms.push('win2025');
+            if (platLinux && platLinux.checked) selectedPlatforms.push('linux');
+
+            if (selectedPlatforms.length > 0) {
+                const osLower = (srv.os || '').toLowerCase();
+                let matchesPlatform = false;
+
+                if (selectedPlatforms.includes('win2019') && osLower.includes('win') && osLower.includes('2019')) {
+                    matchesPlatform = true;
+                }
+                if (selectedPlatforms.includes('win2025') && osLower.includes('win') && (osLower.includes('2025') || osLower.includes('2022'))) {
+                    matchesPlatform = true;
+                }
+                if (selectedPlatforms.includes('linux') && (
+                    osLower.includes('linux') ||
+                    osLower.includes('ubuntu') ||
+                    osLower.includes('debian') ||
+                    osLower.includes('centos') ||
+                    osLower.includes('redhat')
+                )) {
+                    matchesPlatform = true;
+                }
+
+                if (!matchesPlatform) return false;
+            }
+
+            // 4. Atividade Filter (On / Off)
+            const actOnline = document.getElementById('filter-activity-online');
+            const actOffline = document.getElementById('filter-activity-offline');
+            const selectedActivity = [];
+            if (actOnline && actOnline.checked) selectedActivity.push('online');
+            if (actOffline && actOffline.checked) selectedActivity.push('offline');
+
+            if (selectedActivity.length > 0) {
+                const isOnline = srv.online === true;
+                if (selectedActivity.includes('online') && !isOnline) return false;
+                if (selectedActivity.includes('offline') && isOnline) return false;
+            }
+
+            return true;
         });
 
         if (filtered.length === 0) {
