@@ -56,6 +56,7 @@ Monitoramento em tempo real de latência (tempo de ping em milissegundos) e inte
 - **Autentique API** (GraphQL - assinaturas digitais)
 - **Sinch API** (Envio de SMS)
 - **Pluga API** (Automação de webhooks)
+- **Lansweeper API** (Ativos e switches locais)
 - **Banco de Dados Local** (PostgreSQL)
 *Lentidões ou falhas críticas geram alertas automáticos registrados imediatamente no histórico do banco.*
 

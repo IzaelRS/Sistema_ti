@@ -1318,13 +1318,14 @@ async function checkDatabaseStatus() {
 }
 
 async function runApisStatusCheckActual() {
-    const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
+    const [gnew, infocar, autentique, sinch, pluga, database, lansweeper] = await Promise.all([
         checkApiStatus("https://gnew.drmonitora.com.br/api/v2/"),
         checkApiStatus("https://api.infocar.com.br"),
         checkApiStatus("https://api.autentique.com.br/v2/graphql", "POST"),
         checkApiStatus("https://sms.api.sinch.com"),
         checkApiStatus("https://api.pluga.co"),
-        checkDatabaseStatus()
+        checkDatabaseStatus(),
+        checkLansweeperStatus()
     ]);
 
     const apis = [
@@ -1381,6 +1382,17 @@ async function runApisStatusCheckActual() {
             online: pluga.online,
             latency: pluga.latency,
             message: pluga.message,
+            status: ""
+        },
+        {
+            id: "lansweeper",
+            name: "Lansweeper API",
+            url: process.env.LANSWEEPER_URL || "Não configurada",
+            type: "Local API",
+            description: "Plataforma de monitoramento de ativos e switches locais.",
+            online: lansweeper.online,
+            latency: lansweeper.latency,
+            message: lansweeper.message,
             status: ""
         },
         {
@@ -1536,6 +1548,70 @@ app.delete("/api/monitoring/events", async (req: Request, res: Response) => {
 const lansweeperAgent = new https.Agent({
     rejectUnauthorized: false
 });
+
+async function checkLansweeperStatus(): Promise<{ online: boolean; latency: number; message: string }> {
+    const start = Date.now();
+    const url = process.env.LANSWEEPER_URL;
+    if (!url) {
+        return {
+            online: false,
+            latency: 0,
+            message: "Configuração LANSWEEPER_URL ausente no arquivo .env"
+        };
+    }
+
+    return new Promise((resolve) => {
+        try {
+            const parsedUrl = new URL(url);
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                path: "/login.aspx",
+                method: "GET",
+                agent: lansweeperAgent,
+                timeout: 5000
+            };
+
+            const transport = parsedUrl.protocol === "https:" ? https : http;
+            const req = transport.request(options, (res) => {
+                const latency = Date.now() - start;
+                resolve({
+                    online: res.statusCode !== undefined && res.statusCode < 500,
+                    latency,
+                    message: `HTTP ${res.statusCode} ${res.statusMessage || ""}`.trim()
+                });
+            });
+
+            req.on("error", (err: any) => {
+                const latency = Date.now() - start;
+                resolve({
+                    online: false,
+                    latency,
+                    message: err.message
+                });
+            });
+
+            req.on("timeout", () => {
+                req.destroy();
+                const latency = Date.now() - start;
+                resolve({
+                    online: false,
+                    latency,
+                    message: "Timeout (5s)"
+                });
+            });
+
+            req.end();
+        } catch (err: any) {
+            const latency = Date.now() - start;
+            resolve({
+                online: false,
+                latency,
+                message: err.message
+            });
+        }
+    });
+}
 
 let cachedSwitchesStatus: any = null;
 let isCheckingSwitches = false;

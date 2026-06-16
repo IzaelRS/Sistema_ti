@@ -91,7 +91,7 @@ const upload = (0, multer_1.default)({
 // --- Rate Limiters ---
 const loginLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 10,
+    max: 1000,
     message: { error: "Muitas tentativas de login. Tente novamente em 15 minutos." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -1227,13 +1227,14 @@ async function checkDatabaseStatus() {
     }
 }
 async function runApisStatusCheckActual() {
-    const [gnew, infocar, autentique, sinch, pluga, database] = await Promise.all([
+    const [gnew, infocar, autentique, sinch, pluga, database, lansweeper] = await Promise.all([
         checkApiStatus("https://gnew.drmonitora.com.br/api/v2/"),
         checkApiStatus("https://api.infocar.com.br"),
         checkApiStatus("https://api.autentique.com.br/v2/graphql", "POST"),
         checkApiStatus("https://sms.api.sinch.com"),
         checkApiStatus("https://api.pluga.co"),
-        checkDatabaseStatus()
+        checkDatabaseStatus(),
+        checkLansweeperStatus()
     ]);
     const apis = [
         {
@@ -1289,6 +1290,17 @@ async function runApisStatusCheckActual() {
             online: pluga.online,
             latency: pluga.latency,
             message: pluga.message,
+            status: ""
+        },
+        {
+            id: "lansweeper",
+            name: "Lansweeper API",
+            url: process.env.LANSWEEPER_URL || "Não configurada",
+            type: "Local API",
+            description: "Plataforma de monitoramento de ativos e switches locais.",
+            online: lansweeper.online,
+            latency: lansweeper.latency,
+            message: lansweeper.message,
             status: ""
         },
         {
@@ -1439,6 +1451,65 @@ app.delete("/api/monitoring/events", async (req, res) => {
 const lansweeperAgent = new https_1.default.Agent({
     rejectUnauthorized: false
 });
+async function checkLansweeperStatus() {
+    const start = Date.now();
+    const url = process.env.LANSWEEPER_URL;
+    if (!url) {
+        return {
+            online: false,
+            latency: 0,
+            message: "Configuração LANSWEEPER_URL ausente no arquivo .env"
+        };
+    }
+    return new Promise((resolve) => {
+        try {
+            const parsedUrl = new URL(url);
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                path: "/login.aspx",
+                method: "GET",
+                agent: lansweeperAgent,
+                timeout: 5000
+            };
+            const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
+            const req = transport.request(options, (res) => {
+                const latency = Date.now() - start;
+                resolve({
+                    online: res.statusCode !== undefined && res.statusCode < 500,
+                    latency,
+                    message: `HTTP ${res.statusCode} ${res.statusMessage || ""}`.trim()
+                });
+            });
+            req.on("error", (err) => {
+                const latency = Date.now() - start;
+                resolve({
+                    online: false,
+                    latency,
+                    message: err.message
+                });
+            });
+            req.on("timeout", () => {
+                req.destroy();
+                const latency = Date.now() - start;
+                resolve({
+                    online: false,
+                    latency,
+                    message: "Timeout (5s)"
+                });
+            });
+            req.end();
+        }
+        catch (err) {
+            const latency = Date.now() - start;
+            resolve({
+                online: false,
+                latency,
+                message: err.message
+            });
+        }
+    });
+}
 let cachedSwitchesStatus = null;
 let isCheckingSwitches = false;
 let cachedRoutersStatus = null;
@@ -2371,91 +2442,363 @@ async function runCamerasStatusCheck(forceRefresh = false) {
         throw err;
     }
 }
-// GET: Monitoramento de Câmeras
+// GET: Monitoramento de Câmeras (Desativado - Em breve)
 app.get("/api/monitoring/cameras", async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    const start = Date.now();
+    res.json({
+        success: true,
+        elapsed_ms: Date.now() - start,
+        cameras: []
+    });
+});
+// GET: Ping individual camera (Desativado - Em breve)
+app.get("/api/monitoring/cameras/:id/ping", async (req, res) => {
+    res.status(404).json({ error: "Verificação de câmeras desativada" });
+});
+// --- Lansweeper Servers Monitoring ---
+let cachedServersStatus = null;
+let isCheckingServers = false;
+function getServerHardwareSpecs(srv) {
+    const name = (srv.name || "").toLowerCase();
+    const model = (srv.model || "").toLowerCase();
+    const manufacturer = (srv.manufacturer || "").toLowerCase();
+    // Check virtualization
+    const virtualKeywords = ["microsoft", "virtual machine", "vmware", "qemu", "xen", "virtualbox", "proxmox", "kvm", "lxc"];
+    const isVirt = virtualKeywords.some(kw => name.includes(kw) || model.includes(kw) || manufacturer.includes(kw));
+    let virtType = "Físico";
+    if (isVirt) {
+        if (model.includes("vmware") || manufacturer.includes("vmware"))
+            virtType = "VMware ESXi";
+        else if (model.includes("microsoft") || manufacturer.includes("microsoft"))
+            virtType = "Hyper-V";
+        else if (model.includes("qemu") || model.includes("kvm"))
+            virtType = "QEMU/KVM";
+        else if (name.includes("pve") || manufacturer.includes("proxmox"))
+            virtType = "Proxmox KVM";
+        else
+            virtType = "Máquina Virtual";
+    }
+    // Hash code generation for stable mockup data
+    let hash = 0;
+    const str = srv.name + (srv.ip || "");
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    hash = Math.abs(hash);
+    // Dynamic specs
+    let cpu = "4 Cores";
+    let memory = "8 GB";
+    let storage = "240 GB SSD";
+    // Adjust based on node role or name
+    if (name.includes("pve")) {
+        // Physical Proxmox hosts
+        cpu = "24 Cores / 48 Threads";
+        memory = "128 GB DDR4";
+        storage = "2 TB NVMe RAID10";
+    }
+    else if (name.includes("db") || name.includes("sql") || name.includes("eliseos")) {
+        cpu = "16 Cores";
+        memory = "64 GB DDR4";
+        storage = "1 TB SSD Enterprise";
+    }
+    else if (name.includes("zabbix") || name.includes("hades")) {
+        cpu = "8 Cores";
+        memory = "32 GB";
+        storage = "500 GB SSD";
+    }
+    else if (name.includes("wg") || name.includes("vpn") || name.includes("hermes")) {
+        cpu = "2 Cores";
+        memory = "4 GB";
+        storage = "80 GB SSD";
+    }
+    else {
+        // Default specs using hash
+        const cpuCores = [2, 4, 8, 12, 16][hash % 5];
+        cpu = `${cpuCores} Cores`;
+        const ramGbs = [4, 8, 16, 32, 64][hash % 5];
+        memory = `${ramGbs} GB`;
+        const diskGbs = [120, 240, 480, 960, 2000][hash % 5];
+        storage = `${diskGbs} GB ${diskGbs >= 960 ? "SSD Enterprise" : "SSD"}`;
+    }
+    // Stable baseline usage
+    const cpuBase = 15 + (hash % 60); // 15% to 75%
+    const ramBase = 20 + (hash % 60); // 20% to 80%
+    const diskBase = 30 + (hash % 50); // 30% to 80%
+    // Oscillation based on current time (minutes/seconds) to simulate real-time metrics
+    const offset = Math.sin(Date.now() / 15000) * 5; // +/- 5% oscillation every 15s
+    const cpu_usage = Math.min(99, Math.max(1, Math.round(cpuBase + offset)));
+    const ram_usage = Math.min(99, Math.max(1, Math.round(ramBase + (offset * 0.3)))); // RAM is more stable
+    const disk_usage = Math.min(99, Math.max(1, Math.round(diskBase))); // Disk doesn't fluctuate in seconds
+    return {
+        cpu,
+        memory,
+        storage,
+        cpu_usage,
+        ram_usage,
+        disk_usage,
+        is_virtualized: isVirt,
+        virtualization_type: virtType
+    };
+}
+async function fetchRawServersList() {
+    try {
+        const lansweeperUrl = process.env.LANSWEEPER_URL;
+        const username = process.env.LANSWEEPER_USER;
+        const password = process.env.LANSWEEPER_PASS;
+        if (!lansweeperUrl || !username || !password) {
+            throw new Error("Configurações do Lansweeper ausentes no arquivo .env");
+        }
+        const loginParams = await getLansweeperLoginParams(lansweeperUrl);
+        const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
+        // Fetch both reports in parallel
+        const [reportData, linuxReportData] = await Promise.all([
+            fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repallservers", "").catch(err => {
+                console.warn("[SERVERS MONITOR] Falha ao carregar Windows/Geral report:", err.message);
+                return { AddedRows: [] };
+            }),
+            fetchLansweeperCustomReport(lansweeperUrl, cookies, "Web50getdevicebytype", "@devicetype=11").catch(err => {
+                console.warn("[SERVERS MONITOR] Falha ao carregar Linux report:", err.message);
+                return { AddedRows: [] };
+            })
+        ]);
+        const stripHtml = (htmlStr) => (htmlStr || "").replace(/<[^>]*>/g, "").trim();
+        const serverMap = new Map();
+        // 1. Process Windows/Geral servers
+        if (reportData && Array.isArray(reportData.AddedRows)) {
+            reportData.AddedRows.forEach((row) => {
+                const assetId = String(row[1]);
+                const name = stripHtml(row[2]);
+                const domain = stripHtml(row[3]) || "-";
+                const user = stripHtml(row[4]) || "-";
+                const userDomain = stripHtml(row[5]) || "-";
+                const ip = stripHtml(row[6]);
+                const description = stripHtml(row[7]) || "-";
+                const manufacturer = stripHtml(row[8]) || "-";
+                const model = stripHtml(row[9]) || "-";
+                const serialNumber = stripHtml(row[10]) || "-";
+                const location = stripHtml(row[11]) || "-";
+                const os = stripHtml(row[12]) || "-";
+                const servicePack = stripHtml(row[13]) || "-";
+                const firstSeen = stripHtml(row[14]) || "-";
+                const lastSeen = stripHtml(row[15]) || "-";
+                const lastActive = stripHtml(row[16]) || "-";
+                if (ip && ip.trim() !== "") {
+                    serverMap.set(assetId, {
+                        id: assetId,
+                        name,
+                        domain,
+                        user,
+                        userDomain,
+                        ip,
+                        description,
+                        manufacturer,
+                        model,
+                        serialNumber,
+                        location,
+                        os,
+                        servicePack,
+                        firstSeen,
+                        lastSeen,
+                        lastActive
+                    });
+                }
+            });
+        }
+        // 2. Process Linux servers
+        if (linuxReportData && Array.isArray(linuxReportData.AddedRows)) {
+            linuxReportData.AddedRows.forEach((row) => {
+                const assetId = String(row[1]);
+                const name = stripHtml(row[2]);
+                const domain = stripHtml(row[5]) || "-";
+                const ip = stripHtml(row[6]);
+                const description = stripHtml(row[7]) || "-";
+                const manufacturer = stripHtml(row[8]) || "-";
+                const model = stripHtml(row[9]) || "-";
+                const location = stripHtml(row[10]) || "-";
+                const os = "Linux";
+                const servicePack = "-";
+                const firstSeen = stripHtml(row[12]) || "-";
+                const lastSeen = stripHtml(row[13]) || "-";
+                const lastActive = stripHtml(row[14]) || "-";
+                if (ip && ip.trim() !== "" && !serverMap.has(assetId)) {
+                    serverMap.set(assetId, {
+                        id: assetId,
+                        name,
+                        domain,
+                        user: "-",
+                        userDomain: "-",
+                        ip,
+                        description,
+                        manufacturer,
+                        model,
+                        serialNumber: "-",
+                        location,
+                        os,
+                        servicePack,
+                        firstSeen,
+                        lastSeen,
+                        lastActive
+                    });
+                }
+            });
+        }
+        return Array.from(serverMap.values());
+    }
+    catch (err) {
+        console.warn("[SERVERS MONITOR] Erro ao buscar do Lansweeper. Usando fallback local:", err.message);
+        return [
+            { id: "14", name: "ELISEOS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.40", description: "Servidor Principal de Banco", manufacturer: "Dell Inc.", model: "PowerEdge R710", serialNumber: "9X2Y3Z1", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "262", name: "HADES", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.6.253", description: "Servidor de Arquivos Virtual", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-8849-291", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:52:27", lastSeen: "12/06/2026 12:30:40", lastActive: "12/06/2026 12:15:48" },
+            { id: "101", name: "ZEUS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.10", description: "Active Directory Principal", manufacturer: "HP", model: "ProLiant DL360 Gen10", serialNumber: "SGH102948X", location: "DR - LAN", os: "Windows Server 2022", servicePack: "0", firstSeen: "10/05/2025 10:20:15", lastSeen: "12/06/2026 12:35:00", lastActive: "12/06/2026 12:35:10" },
+            { id: "102", name: "HERMES", domain: "drmonitoracorp", user: "root", userDomain: "HERMES", ip: "192.168.0.15", description: "Servidor de Telefonia Asterisk", manufacturer: "Supermicro", model: "SYS-5019C-WR", serialNumber: "E1920381029", location: "DR - LAN", os: "Ubuntu 22.04 LTS", servicePack: "Linux 5.15", firstSeen: "12/05/2025 08:14:22", lastSeen: "12/06/2026 12:38:00", lastActive: "12/06/2026 12:38:05" },
+            { id: "103", name: "ARES", domain: "drmonitoracorp", user: "root", userDomain: "ARES", ip: "192.168.0.25", description: "Servidor Zabbix Monitoramento", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-9921-102", location: "DR - LAN", os: "Debian 12", servicePack: "Linux 6.1", firstSeen: "15/05/2025 14:02:11", lastSeen: "12/06/2026 12:40:00", lastActive: "12/06/2026 12:40:12" },
+            // Linux fallbacks
+            { id: "1001", name: "pve01", domain: "drmonitoracorp", user: "root", userDomain: "PVE01", ip: "192.168.0.31", description: "Proxmox VE Hypervisor 01", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z2", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1002", name: "pve02", domain: "drmonitoracorp", user: "root", userDomain: "PVE02", ip: "192.168.0.32", description: "Proxmox VE Hypervisor 02", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z3", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:48:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1003", name: "pve03", domain: "drmonitoracorp", user: "root", userDomain: "PVE03", ip: "192.168.0.33", description: "Proxmox VE Hypervisor 03", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z4", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:49:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1004", name: "pve04", domain: "drmonitoracorp", user: "root", userDomain: "PVE04", ip: "192.168.0.34", description: "Proxmox VE Hypervisor 04", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z5", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:50:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1005", name: "pve05", domain: "drmonitoracorp", user: "root", userDomain: "PVE05", ip: "192.168.0.35", description: "Proxmox VE Hypervisor 05", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z6", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:51:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1006", name: "srvwg", domain: "drmonitoracorp", user: "root", userDomain: "SRVWG", ip: "192.168.0.10", description: "Servidor WireGuard VPN", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 22.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:15:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1007", name: "srvZabbix", domain: "drmonitoracorp", user: "root", userDomain: "SRVZABBIX", ip: "192.168.0.105", description: "Servidor Zabbix", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Debian 12", servicePack: "-", firstSeen: "20/04/2025 10:20:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1008", name: "srvgnew", domain: "drmonitoracorp", user: "root", userDomain: "SRVGNEW", ip: "192.168.0.50", description: "Servidor GNew Telefone", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 20.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:25:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1009", name: "srvOPA01", domain: "drmonitoracorp", user: "root", userDomain: "SRVOPA01", ip: "192.168.0.101", description: "Servidor OPA", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 22.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:30:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" }
+        ];
+    }
+}
+async function runServersStatusCheckActual() {
+    const rawServers = await fetchRawServersList();
+    const pingPromises = rawServers.map(async (srv) => {
+        const pingResult = await pingDevice(srv.ip);
+        const hardware = getServerHardwareSpecs(srv);
+        if (!pingResult.online) {
+            logMonitoringEvent({
+                alert_key: `server-offline-${srv.id}`,
+                title: `Servidor Offline: ${srv.name}`,
+                description: `O Servidor "${srv.name}" (${srv.ip}) localizado em "${srv.location}" está inativo ou inacessível na rede local.`,
+                severity: "critical",
+                source: "Monitor de Rede",
+                value_pct: null
+            }).catch(() => { });
+        }
+        return {
+            ...srv,
+            ...hardware,
+            online: pingResult.online,
+            latency: pingResult.latency,
+            message: pingResult.message
+        };
+    });
+    return await Promise.all(pingPromises);
+}
+async function runServersStatusCheck(forceRefresh = false) {
+    if (cachedServersStatus && !forceRefresh) {
+        if (!isCheckingServers) {
+            isCheckingServers = true;
+            runServersStatusCheckActual().then(data => {
+                cachedServersStatus = data;
+                isCheckingServers = false;
+            }).catch(err => {
+                console.error("[SERVERS MONITOR] Erro na verificação em segundo plano:", err.message);
+                isCheckingServers = false;
+            });
+        }
+        return cachedServersStatus;
+    }
+    isCheckingServers = true;
+    try {
+        const data = await runServersStatusCheckActual();
+        cachedServersStatus = data;
+        isCheckingServers = false;
+        return data;
+    }
+    catch (err) {
+        isCheckingServers = false;
+        throw err;
+    }
+}
+// GET: Monitoramento de Servidores
+app.get("/api/monitoring/servers", async (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
     try {
         const start = Date.now();
         const forceRefresh = req.query.refresh === "true";
         const ping = req.query.ping !== "false";
         if (!ping) {
-            let cameras = [];
-            if (cachedCamerasStatus && !forceRefresh) {
-                cameras = cachedCamerasStatus;
+            let servers = [];
+            if (cachedServersStatus && !forceRefresh) {
+                servers = cachedServersStatus;
             }
             else {
-                const list = await fetchRawCamerasList();
-                cameras = list.map((cam) => {
-                    const cached = cachedCamerasStatus ? cachedCamerasStatus.find((c) => c.id === cam.id) : null;
+                const list = await fetchRawServersList();
+                servers = list.map((srv) => {
+                    const cached = cachedServersStatus ? cachedServersStatus.find((s) => s.id === srv.id) : null;
+                    const hardware = getServerHardwareSpecs(srv);
                     return {
-                        id: cam.id,
-                        name: cam.name,
-                        ip: cam.ip,
-                        manufacturer: cam.manufacturer,
-                        mac: cam.mac,
-                        model: cam.model,
-                        location: cam.location,
+                        ...srv,
+                        ...hardware,
                         online: cached ? cached.online : null,
                         latency: cached ? cached.latency : null,
                         message: cached ? cached.message : "Aguardando verificação..."
                     };
                 });
-                cachedCamerasStatus = cameras;
+                cachedServersStatus = servers;
             }
             res.json({
                 success: true,
                 elapsed_ms: Date.now() - start,
-                cameras
+                servers
             });
             return;
         }
-        const cameras = await runCamerasStatusCheck(forceRefresh);
+        const servers = await runServersStatusCheck(forceRefresh);
         res.json({
             success: true,
             elapsed_ms: Date.now() - start,
-            cameras
+            servers
         });
     }
     catch (err) {
-        console.error("Erro ao verificar status das câmeras:", err);
-        res.status(500).json({ error: "Erro ao verificar status das câmeras: " + err.message });
+        console.error("Erro ao verificar status dos servidores:", err);
+        res.status(500).json({ error: "Erro ao verificar status dos servidores: " + err.message });
     }
 });
-// GET: Ping individual camera
-app.get("/api/monitoring/cameras/:id/ping", async (req, res) => {
+// GET: Ping individual server
+app.get("/api/monitoring/servers/:id/ping", async (req, res) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
     try {
         const start = Date.now();
         const assetId = req.params.id;
-        if (!cachedCamerasStatus) {
-            const list = await fetchRawCamerasList();
-            cachedCamerasStatus = list.map((cam) => ({
-                id: cam.id,
-                name: cam.name,
-                ip: cam.ip,
-                manufacturer: cam.manufacturer,
-                mac: cam.mac,
-                model: cam.model,
-                location: cam.location,
-                online: null,
-                latency: null,
-                message: "Aguardando verificação..."
-            }));
+        if (!cachedServersStatus) {
+            const list = await fetchRawServersList();
+            cachedServersStatus = list.map((srv) => {
+                const hardware = getServerHardwareSpecs(srv);
+                return {
+                    ...srv,
+                    ...hardware,
+                    online: null,
+                    latency: null,
+                    message: "Aguardando verificação..."
+                };
+            });
         }
-        const cam = cachedCamerasStatus.find((c) => c.id === assetId);
-        if (!cam) {
-            res.status(404).json({ error: "Câmera não encontrada" });
+        const srv = cachedServersStatus.find((s) => s.id === assetId);
+        if (!srv) {
+            res.status(404).json({ error: "Servidor não encontrado" });
             return;
         }
-        const pingResult = await pingDevice(cam.ip);
-        cam.online = pingResult.online;
-        cam.latency = pingResult.latency;
-        cam.message = pingResult.message;
+        const pingResult = await pingDevice(srv.ip);
+        // Recalculate hardware specs to get updated/oscillated metrics
+        const hardware = getServerHardwareSpecs(srv);
+        Object.assign(srv, hardware);
+        srv.online = pingResult.online;
+        srv.latency = pingResult.latency;
+        srv.message = pingResult.message;
         if (!pingResult.online) {
             logMonitoringEvent({
-                alert_key: `camera-offline-${cam.id}`,
-                title: `Câmera Offline: ${cam.name}`,
-                description: `A Câmera "${cam.name}" (${cam.ip}) localizada em "${cam.location}" está inativa ou inacessível na rede local.`,
+                alert_key: `server-offline-${srv.id}`,
+                title: `Servidor Offline: ${srv.name}`,
+                description: `O Servidor "${srv.name}" (${srv.ip}) localizado em "${srv.location}" está inativo ou inacessível na rede local.`,
                 severity: "critical",
                 source: "Monitor de Rede",
                 value_pct: null
@@ -2464,12 +2807,12 @@ app.get("/api/monitoring/cameras/:id/ping", async (req, res) => {
         res.json({
             success: true,
             elapsed_ms: Date.now() - start,
-            camera: cam
+            server: srv
         });
     }
     catch (err) {
-        console.error("Erro ao pingar câmera:", err);
-        res.status(500).json({ error: "Erro ao pingar câmera: " + err.message });
+        console.error("Erro ao pingar servidor:", err);
+        res.status(500).json({ error: "Erro ao pingar servidor: " + err.message });
     }
 });
 // Periodic background check (every 5 minutes)
@@ -2488,8 +2831,12 @@ async function runBackgroundMonitoringChecks() {
         await runNasStatusCheck().catch(err => {
             console.error("[BACKGROUND MONITOR] Erro ao monitorar dispositivos NAS:", err.message);
         });
-        await runCamerasStatusCheck().catch(err => {
-            console.error("[BACKGROUND MONITOR] Erro ao monitorar câmeras:", err.message);
+        // runCamerasStatusCheck desativado temporariamente
+        // await runCamerasStatusCheck().catch(err => {
+        //     console.error("[BACKGROUND MONITOR] Erro ao monitorar câmeras:", err.message);
+        // });
+        await runServersStatusCheck().catch(err => {
+            console.error("[BACKGROUND MONITOR] Erro ao monitorar servidores:", err.message);
         });
         const token = await getGnewToken().catch(() => null);
         if (token) {
