@@ -431,6 +431,7 @@
                             <button class="acc-tab-btn" id="tab-monitoring-apis" data-monitoring-tab="apis">APIs Integradas</button>
                             <button class="acc-tab-btn" id="tab-monitoring-gnew" data-monitoring-tab="gnew">Gnew</button>
                             <button class="acc-tab-btn" id="tab-monitoring-infra" data-monitoring-tab="infra">Infraestrutura</button>
+                            <button class="acc-tab-btn" id="tab-monitoring-network" data-monitoring-tab="network">Rede</button>
                         </div>
 
                         <!-- ABA 1: ALERTAS ATIVOS -->
@@ -970,6 +971,133 @@
                                 <div id="monitoring-servers-accordion" class="server-accordion">
                                     <div style="text-align: center; padding: 3rem; color: var(--text-muted); background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: var(--border-radius);">
                                         Carregando lista de servidores...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ABA 6: REDE -->
+                        <div id="monitoring-tab-content-network" class="monitoring-tab-content hidden">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Monitoramento de Rede (pfSense)</h3>
+                                    <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Status de conectividade de links, gateways e estatísticas do firewall corporativo.</p>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="network-auto-refresh" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                        <span style="font-size: 0.85rem; color: var(--text-main);">Auto-Refresh (30s)</span>
+                                    </label>
+                                    <button id="btn-refresh-network-status" class="btn btn-secondary" style="height: 38px; display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="refresh-icon">
+                                            <polyline points="23 4 23 10 17 10"></polyline>
+                                            <polyline points="1 20 1 14 7 14"></polyline>
+                                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                        </svg>
+                                        <span>Atualizar</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- KPIs de Hardware/Sistema -->
+                            <div class="monitoring-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 1.5rem;">
+                                <!-- CPU Usage Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                        <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Uso de CPU</span>
+                                        <span id="network-kpi-cpu-text" style="font-size: 0.85rem; font-weight: 700; color: var(--accent);">0%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">
+                                        <div id="network-kpi-cpu-bar" style="width: 0%; height: 100%; background: var(--accent); transition: width 0.5s ease-in-out;"></div>
+                                    </div>
+                                    <div id="network-kpi-load-average" style="font-size: 0.75rem; color: var(--text-muted);">Load Average: -</div>
+                                </div>
+
+                                <!-- Memory Usage Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                        <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Uso de Memória RAM</span>
+                                        <span id="network-kpi-mem-text" style="font-size: 0.85rem; font-weight: 700; color: #10b981;">0%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid var(--glass-border);">
+                                        <div id="network-kpi-mem-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.5s ease-in-out;"></div>
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-muted);">&nbsp;</div>
+                                </div>
+
+                                <!-- Uptime Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem; justify-content: center;">
+                                    <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Uptime do Sistema</span>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent); flex-shrink:0;">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <strong id="network-kpi-uptime-text" style="font-size: 1.05rem; color: var(--text-main); word-break: break-all;">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gateways / Links -->
+                            <h4 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                    <line x1="4" y1="22" x2="4" y2="15"></line>
+                                </svg>
+                                Gateways e Links de Internet
+                            </h4>
+                            <div id="network-gateways-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 1.5rem;">
+                                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; background: var(--card-bg); border-radius: var(--border-radius); border: 1px solid var(--glass-border);">
+                                    Aguardando dados dos links...
+                                </div>
+                            </div>
+
+                            <!-- Interfaces de Rede e Servidores DNS -->
+                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 1.5rem; flex-wrap: wrap;">
+                                <!-- Interfaces de Rede -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border); background: var(--card-bg);">
+                                    <h4 style="margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                                            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                                            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                                            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                                        </svg>
+                                        Interfaces de Rede
+                                    </h4>
+                                    <div style="overflow-x: auto;">
+                                        <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; margin: 0;">
+                                            <thead>
+                                                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: var(--text-muted); font-size: 0.85rem;">
+                                                    <th style="padding: 10px 12px; font-weight: 500;">Interface</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500;">Endereço IP</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500;">Velocidade</th>
+                                                    <th style="padding: 10px 12px; font-weight: 500; text-align: right;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="network-interfaces-tbody">
+                                                <tr>
+                                                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                                                        Aguardando dados das interfaces...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Servidores DNS -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border); background: var(--card-bg);">
+                                    <h4 style="margin: 0 0 1rem 0; font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                            <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                                        </svg>
+                                        Servidores DNS
+                                    </h4>
+                                    <div id="network-dns-container" style="display: flex; flex-direction: column; gap: 10px;">
+                                        <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                                            Aguardando DNS...
+                                        </div>
                                     </div>
                                 </div>
                             </div>

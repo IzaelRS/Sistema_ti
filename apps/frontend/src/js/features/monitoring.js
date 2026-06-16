@@ -23,6 +23,7 @@ let routersAutoRefreshInterval = null;
 let nasAutoRefreshInterval = null;
 let camerasAutoRefreshInterval = null;
 let serversAutoRefreshInterval = null;
+let networkAutoRefreshInterval = null;
 let isPingingSequentially = false;
 
 export const monitoringHandler = {
@@ -42,6 +43,8 @@ export const monitoringHandler = {
             console.log('📊 [MONITORING] Clicked on Infraestrutura tab');
             this.setActiveTab('infra');
         });
+        const tabNetwork = document.getElementById('tab-monitoring-network');
+        if (tabNetwork) tabNetwork.addEventListener('click', () => this.setActiveTab('network'));
 
         // Infra subtabs click
         const tabInfraSwitches = document.getElementById('tab-infra-switches');
@@ -341,6 +344,25 @@ export const monitoringHandler = {
             if (serversAutoRefreshChk.checked) this._startServersAutoRefresh();
         }
 
+        // Refresh Network button
+        const refreshNetworkBtn = document.getElementById('btn-refresh-network-status');
+        if (refreshNetworkBtn) {
+            refreshNetworkBtn.addEventListener('click', () => this.fetchAndRenderNetworkStatus(true));
+        }
+
+        // Auto-refresh checkbox (Network tab)
+        const networkAutoRefreshChk = document.getElementById('network-auto-refresh');
+        if (networkAutoRefreshChk) {
+            networkAutoRefreshChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startNetworkAutoRefresh();
+                } else {
+                    this._stopNetworkAutoRefresh();
+                }
+            });
+            if (networkAutoRefreshChk.checked) this._startNetworkAutoRefresh();
+        }
+
         // Bind global helper
         window.monitoringHandler = this;
     },
@@ -374,6 +396,22 @@ export const monitoringHandler = {
         if (switchesAutoRefreshInterval) {
             clearInterval(switchesAutoRefreshInterval);
             switchesAutoRefreshInterval = null;
+        }
+    },
+
+    _startNetworkAutoRefresh() {
+        this._stopNetworkAutoRefresh();
+        networkAutoRefreshInterval = setInterval(() => {
+            if (activeTab === 'network') {
+                this.fetchAndRenderNetworkStatus(false);
+            }
+        }, 30000);
+    },
+
+    _stopNetworkAutoRefresh() {
+        if (networkAutoRefreshInterval) {
+            clearInterval(networkAutoRefreshInterval);
+            networkAutoRefreshInterval = null;
         }
     },
 
@@ -456,11 +494,13 @@ export const monitoringHandler = {
         const tabApis = document.getElementById('tab-monitoring-apis');
         const tabGnew = document.getElementById('tab-monitoring-gnew');
         const tabInfra = document.getElementById('tab-monitoring-infra');
+        const tabNetwork = document.getElementById('tab-monitoring-network');
         if (tabAlerts) tabAlerts.classList.toggle('active', tab === 'alerts');
         if (tabEvents) tabEvents.classList.toggle('active', tab === 'events');
         if (tabApis) tabApis.classList.toggle('active', tab === 'apis');
         if (tabGnew) tabGnew.classList.toggle('active', tab === 'gnew');
         if (tabInfra) tabInfra.classList.toggle('active', tab === 'infra');
+        if (tabNetwork) tabNetwork.classList.toggle('active', tab === 'network');
 
         // Toggle active divs
         const divAlerts = document.getElementById('monitoring-tab-content-alerts');
@@ -468,6 +508,7 @@ export const monitoringHandler = {
         const divApis = document.getElementById('monitoring-tab-content-apis');
         const divGnew = document.getElementById('monitoring-tab-content-gnew');
         const divInfra = document.getElementById('monitoring-tab-content-infra');
+        const divNetwork = document.getElementById('monitoring-tab-content-network');
         
         if (divAlerts) {
             divAlerts.classList.toggle('hidden', tab !== 'alerts');
@@ -489,6 +530,10 @@ export const monitoringHandler = {
             divInfra.classList.toggle('hidden', tab !== 'infra');
             divInfra.classList.toggle('active', tab === 'infra');
         }
+        if (divNetwork) {
+            divNetwork.classList.toggle('hidden', tab !== 'network');
+            divNetwork.classList.toggle('active', tab === 'network');
+        }
 
         if (tab === 'gnew') {
             this.fetchDiagnostics();
@@ -499,6 +544,8 @@ export const monitoringHandler = {
             this.fetchAndRenderApisStatus();
         } else if (tab === 'infra') {
             this.setInfraTab(activeInfraTab);
+        } else if (tab === 'network') {
+            this.fetchAndRenderNetworkStatus();
         } else {
             this.renderGnewServicesStatus();
         }
@@ -1666,6 +1713,217 @@ export const monitoringHandler = {
                             <span class="stat-value detail-value" title="${api.message || '-'}">${api.message || '-'}</span>
                         </div>
                     </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async fetchAndRenderNetworkStatus(forceRefresh = false) {
+        const btn = document.getElementById('btn-refresh-network-status');
+        let svg = null;
+        if (btn) {
+            svg = btn.querySelector('svg');
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            btn.style.cursor = 'not-allowed';
+            if (svg) svg.style.animation = 'spin 0.8s linear infinite';
+        }
+
+        try {
+            const url = `/monitoring/pfsense${forceRefresh ? '?refresh=true' : ''}`;
+            const res = await apiClient.get(url);
+            if (res && res.success && res.data) {
+                const info = res.data;
+                
+                // Update CPU Usage
+                const cpuText = document.getElementById('network-kpi-cpu-text');
+                const cpuBar = document.getElementById('network-kpi-cpu-bar');
+                const loadAvgText = document.getElementById('network-kpi-load-average');
+                if (cpuText) cpuText.textContent = `${info.cpu_usage}%`;
+                if (cpuBar) cpuBar.style.width = `${info.cpu_usage}%`;
+                if (loadAvgText) loadAvgText.textContent = `Load Average: ${info.load_average}`;
+
+                // Update Memory Usage
+                const memText = document.getElementById('network-kpi-mem-text');
+                const memBar = document.getElementById('network-kpi-mem-bar');
+                if (memText) memText.textContent = `${info.memory_usage}%`;
+                if (memBar) memBar.style.width = `${info.memory_usage}%`;
+
+                // Update Uptime
+                const uptimeText = document.getElementById('network-kpi-uptime-text');
+                if (uptimeText) uptimeText.textContent = info.uptime || 'Desconhecido';
+
+                // Render Gateways
+                this.renderNetworkGateways(info.gateways);
+
+                // Render Interfaces
+                this.renderNetworkInterfaces(info.interfaces);
+
+                // Render DNS
+                this.renderNetworkDns(info.dns_servers);
+            } else {
+                throw new Error(res.error || 'Falha ao processar dados do pfSense.');
+            }
+        } catch (err) {
+            console.error('Erro ao buscar status da rede pfSense:', err);
+            const gatewaysContainer = document.getElementById('network-gateways-container');
+            if (gatewaysContainer) {
+                gatewaysContainer.innerHTML = `
+                    <div style="grid-column: 1 / -1; background: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 2rem; text-align: center; color: #fca5a5;">
+                        <p style="margin: 0; font-size: 0.95rem; font-weight: 600;">Falha ao obter status dos Gateways</p>
+                        <p style="margin: 6px 0 0 0; font-size: 0.82rem; opacity: 0.85;">${err.message}</p>
+                    </div>
+                `;
+            }
+            const interfacesTbody = document.getElementById('network-interfaces-tbody');
+            if (interfacesTbody) {
+                interfacesTbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: #fca5a5;">
+                            Erro ao carregar interfaces: ${err.message}
+                        </td>
+                    </tr>
+                `;
+            }
+            const dnsContainer = document.getElementById('network-dns-container');
+            if (dnsContainer) {
+                dnsContainer.innerHTML = `
+                    <div style="color: #fca5a5; font-size: 0.85rem; text-align: center; padding: 1rem;">
+                        Erro ao carregar DNS
+                    </div>
+                `;
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '';
+                btn.style.cursor = 'pointer';
+                if (svg) svg.style.animation = '';
+            }
+        }
+    },
+
+    renderNetworkGateways(gateways) {
+        const container = document.getElementById('network-gateways-container');
+        if (!container) return;
+
+        if (!gateways || gateways.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic; background: var(--card-bg); border-radius: var(--border-radius); border: 1px solid var(--glass-border);">
+                    Nenhum gateway detectado.
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = gateways.map(gw => {
+            let statusBadgeClass = 'online';
+            let statusBorderColor = '#10b981';
+            let statusBadgeStyle = 'background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid #10b981;';
+            
+            const isOnline = gw.status.toLowerCase().includes('online');
+            const isWarning = gw.status.toLowerCase().includes('warning') || gw.status.toLowerCase().includes('loss') || gw.status.toLowerCase().includes('high');
+            
+            if (isWarning) {
+                statusBadgeClass = 'warning';
+                statusBorderColor = '#f59e0b';
+                statusBadgeStyle = 'background: rgba(245, 158, 11, 0.1); color: #fde047; border: 1px solid #f59e0b;';
+            } else if (!isOnline) {
+                statusBadgeClass = 'offline';
+                statusBorderColor = '#ef4444';
+                statusBadgeStyle = 'background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid #ef4444;';
+            }
+
+            const lossPercent = parseFloat(gw.loss) || 0;
+            const lossColor = lossPercent > 5 ? '#fca5a5' : lossPercent > 0 ? '#fde047' : 'var(--text-main)';
+
+            return `
+                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 12px; padding: 1.25rem; border-left: 4px solid ${statusBorderColor}; position: relative; background: var(--card-bg); border-radius: var(--border-radius); border-top: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; font-size: 1rem; color: var(--text-main);">${gw.name}</span>
+                        <span class="api-badge ${statusBadgeClass}" style="${statusBadgeStyle} display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                            <span class="status-dot"></span>
+                            ${gw.status}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); font-family: monospace;">IP: ${gw.ip}</div>
+                    <div style="display: flex; gap: 15px; margin-top: 5px;">
+                        <div style="flex: 1; background: rgba(255,255,255,0.02); border-radius: 6px; padding: 8px; border: 1px solid rgba(255,255,255,0.04);">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Latência (RTT)</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); font-family: monospace;">${gw.rtt}</div>
+                        </div>
+                        <div style="flex: 1; background: rgba(255,255,255,0.02); border-radius: 6px; padding: 8px; border: 1px solid rgba(255,255,255,0.04);">
+                            <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase;">Perda</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: ${lossColor}; font-family: monospace;">${gw.loss}</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); text-align: right; margin-top: 2px;">RTTsd: ${gw.rttsd}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    renderNetworkInterfaces(interfaces) {
+        const tbody = document.getElementById('network-interfaces-tbody');
+        if (!tbody) return;
+
+        if (!interfaces || interfaces.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
+                        Nenhuma interface de rede detectada.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = interfaces.map(iface => {
+            const isUp = iface.status === 'up';
+            const badgeClass = isUp ? 'online' : 'offline';
+            const badgeStyle = isUp 
+                ? 'background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border: 1px solid #10b981;' 
+                : 'background: rgba(239, 68, 68, 0.1); color: #fca5a5; border: 1px solid #ef4444;';
+            const badgeText = isUp ? 'UP' : 'DOWN';
+
+            return `
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
+                    <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${iface.name} <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal; font-family: monospace;">(${iface.interface})</span></td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${iface.ip}</td>
+                    <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${iface.speed}</td>
+                    <td style="padding: 12px; text-align: right;">
+                        <span class="api-badge ${badgeClass}" style="${badgeStyle} display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                            <span class="status-dot"></span>
+                            ${badgeText}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    renderNetworkDns(dnsServers) {
+        const container = document.getElementById('network-dns-container');
+        if (!container) return;
+
+        if (!dnsServers || dnsServers.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 1rem; color: var(--text-muted); font-style: italic;">
+                    Nenhum servidor DNS listado.
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = dnsServers.map(dns => {
+            return `
+                <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent); flex-shrink: 0;">
+                        <rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="2" x2="12" y2="22"></line>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                    </svg>
+                    <span style="font-family: monospace; font-size: 0.9rem; color: var(--text-main); font-weight: 600;">${dns}</span>
                 </div>
             `;
         }).join('');

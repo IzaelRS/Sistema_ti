@@ -1,0 +1,3083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<link rel="apple-touch-icon-precomposed" href="/apple-touch/apple-touch-icon-iphone-60x60-precomposed.png">
+	<link rel="apple-touch-icon-precomposed" sizes="60x60" href="/apple-touch/apple-touch-icon-ipad-76x76-precomposed.png">
+	<link rel="apple-touch-icon-precomposed" sizes="114x114" href="/apple-touch/apple-touch-icon-iphone-retina-120x120-precomposed.png">
+	<link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch/apple-touch-icon-ipad-retina-152x152-precomposed.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+	<link rel="manifest" href="/manifest.json">
+	<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+	<meta name="theme-color" content="#ffffff">
+
+	<link rel="stylesheet" href="/vendor/font-awesome/css/all.min.css?v=1756397406">
+	<link rel="stylesheet" href="/vendor/sortable/sortable-theme-bootstrap.css?v=1756397406">
+	<link rel="stylesheet" href="/vendor/jquery-treegrid/css/jquery.treegrid.css?v=1756397406">
+	<link rel="stylesheet" href="/css/pfSense-dark-BETA.css?v=1756397406" />
+
+	<title>fw01.drmonitoracorp.com - Status: Dashboard</title>
+	<script type="text/javascript">
+	//<![CDATA[
+	var events = events || [];
+	//]]>
+	</script>
+<script type="text/javascript">if (top != self) {top.location.href = self.location.href;}</script><script type="text/javascript">var csrfMagicToken = "sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988";var csrfMagicName = "__csrf_magic";</script><script src="/csrf/csrf-magic.js" type="text/javascript"></script></head>
+
+<body id="4">
+<nav id="topmenu" class="navbar navbar-fixed-top navbar-inverse">
+	<div class="container">
+		<div class="navbar-header">
+			<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#pf-navbar">
+				<span class="sr-only">Toggle navigation</span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</button>
+			<a class="navbar-brand" href="/">
+				<svg id="logo" role="img" aria-labelledby="pfsense-logo" x="0px" y="0px" viewBox="0 0 282.8 84.2">
+	<title id="pfsense-logo-svg">pfSense Logo</title>
+	<path class="logo-st0" d="M27.8,57.7c2.9,0,5.4-0.9,7.5-2.6c2.1-1.7,3.6-4,4.4-6.8c0.8-2.8,0.6-5.1-0.5-6.8c-1.1-1.7-3.2-2.6-6.1-2.6 c-2.9,0-5.4,0.9-7.5,2.6c-2.1,1.7-3.5,4-4.3,6.8c-0.8,2.8-0.7,5.1,0.5,6.8C22.8,56.9,24.8,57.7,27.8,57.7"/>
+	<path class="logo-st0" d="M115.1,46.6c-1.5-0.8-3-1.4-4.7-1.8c-1.7-0.4-3.2-0.7-4.7-1.1c-1.5-0.3-2.7-0.7-3.6-1.1c-0.9-0.4-1.4-1.1-1.4-2 c0-1.1,0.5-1.9,1.4-2.4c0.9-0.5,1.9-0.7,2.8-0.7c2.8,0,5,1,6.7,3.1l7-7c-1.7-1.8-3.9-3.1-6.4-3.8c-2.5-0.7-5-1.1-7.4-1.1 c-1.9,0-3.9,0.2-5.7,0.7c-1.9,0.5-3.6,1.2-5,2.3c-1.5,1-2.6,2.3-3.5,3.9c-0.9,1.6-1.3,3.5-1.3,5.7c0,2.3,0.5,4.2,1.4,5.6 c0.9,1.4,2.1,2.5,3.6,3.3c1.5,0.8,3,1.3,4.7,1.7c1.7,0.4,3.2,0.7,4.7,1.1c1.5,0.3,2.7,0.7,3.6,1.2c0.9,0.5,1.4,1.2,1.4,2.2 c0,1-0.5,1.7-1.6,2.1c-1.1,0.4-2.3,0.6-3.6,0.6c-1.7,0-3.3-0.3-4.6-1c-1.3-0.7-2.5-1.7-3.6-3l-7,7.7c1.8,1.9,4.1,3.2,6.7,3.9 c2.7,0.7,5.3,1.1,7.9,1.1c2,0,4-0.2,6.1-0.6c2-0.4,3.9-1,5.5-2c1.6-0.9,3-2.2,4-3.8c1-1.6,1.6-3.5,1.6-5.9c0-2.3-0.5-4.2-1.4-5.6 C117.7,48.6,116.5,47.4,115.1,46.6"/>
+	<path class="logo-st0" d="M156.3,34.1c-1.5-1.7-3.3-3-5.5-3.9c-2.2-0.9-4.6-1.4-7.2-1.4c-2.9,0-5.6,0.5-8.1,1.4c-2.5,0.9-4.7,2.2-6.6,3.9 c-1.9,1.7-3.3,3.8-4.4,6.2c-1.1,2.4-1.6,5.1-1.6,8c0,3,0.5,5.6,1.6,8c1.1,2.4,2.5,4.5,4.4,6.2c1.9,1.7,4.1,3,6.6,3.9 c2.5,0.9,5.2,1.4,8.1,1.4c3,0,5.9-0.6,8.7-1.9c2.8-1.3,5.1-3.1,7-5.4l-8-5.9c-1,1.3-2.1,2.4-3.4,3.3c-1.3,0.8-2.9,1.3-4.8,1.3 c-2.2,0-4.1-0.7-5.7-2c-1.5-1.3-2.5-3.1-3-5.2H161v-3.6c0-3-0.4-5.6-1.2-8C159,37.9,157.8,35.8,156.3,34.1 M134.3,44.1 c0.1-0.9,0.3-1.8,0.7-2.6c0.4-0.8,0.9-1.6,1.6-2.2c0.7-0.6,1.5-1.2,2.5-1.6c1-0.4,2.1-0.6,3.4-0.6c2.1,0,3.8,0.7,5.1,2.1 c1.3,1.4,2,3,1.9,5H134.3z"/>
+	<path class="logo-st0" d="M198.3,33.8c-1-1.6-2.4-2.8-4.2-3.7c-1.8-0.9-4.1-1.3-7-1.3c-1.4,0-2.7,0.2-3.8,0.5c-1.2,0.4-2.2,0.8-3.1,1.4 c-0.9,0.6-1.7,1.2-2.4,1.9c-0.7,0.7-1.2,1.4-1.5,2.1H176v-5.1h-11v37.2h11.5V48.4c0-1.2,0.1-2.4,0.2-3.5c0.2-1.1,0.5-2.1,1-3 c0.5-0.9,1.2-1.6,2.1-2.1c0.9-0.5,2.1-0.8,3.6-0.8c1.5,0,2.6,0.3,3.4,0.9c0.8,0.6,1.4,1.4,1.8,2.4c0.4,1,0.6,2,0.7,3.2 c0.1,1.1,0.1,2.3,0.1,3.3v18.2h11.5V46.4c0-2.5-0.2-4.8-0.5-7C199.9,37.3,199.3,35.4,198.3,33.8"/>
+	<path class="logo-st0" d="M231.5,46.6c-1.5-0.8-3-1.4-4.7-1.8c-1.7-0.4-3.2-0.7-4.7-1.1c-1.5-0.3-2.7-0.7-3.6-1.1c-0.9-0.4-1.4-1.1-1.4-2 c0-1.1,0.5-1.9,1.4-2.4c0.9-0.5,1.9-0.7,2.8-0.7c2.8,0,5,1,6.7,3.1l7-7c-1.7-1.8-3.9-3.1-6.4-3.8c-2.5-0.7-5-1.1-7.4-1.1 c-1.9,0-3.9,0.2-5.7,0.7c-1.9,0.5-3.6,1.2-5,2.3c-1.5,1-2.6,2.3-3.5,3.9c-0.9,1.6-1.3,3.5-1.3,5.7c0,2.3,0.5,4.2,1.4,5.6 c0.9,1.4,2.1,2.5,3.6,3.3c1.5,0.8,3,1.3,4.7,1.7c1.7,0.4,3.2,0.7,4.7,1.1c1.5,0.3,2.7,0.7,3.6,1.2c0.9,0.5,1.4,1.2,1.4,2.2 c0,1-0.5,1.7-1.6,2.1c-1.1,0.4-2.3,0.6-3.6,0.6c-1.7,0-3.3-0.3-4.6-1c-1.3-0.7-2.5-1.7-3.6-3l-7,7.7c1.8,1.9,4.1,3.2,6.7,3.9 c2.7,0.7,5.3,1.1,7.9,1.1c2,0,4-0.2,6.1-0.6c2-0.4,3.9-1,5.5-2c1.6-0.9,3-2.2,4-3.8c1-1.6,1.6-3.5,1.6-5.9c0-2.3-0.5-4.2-1.4-5.6 C234.1,48.6,232.9,47.4,231.5,46.6"/>
+	<path class="logo-st0" d="M277.4,51.9v-4.2c-0.1-2.7-0.5-5.2-1.2-7.4c-0.8-2.4-2-4.5-3.5-6.2c-1.5-1.7-3.3-3-5.5-3.9 c-2.2-0.9-4.6-1.4-7.2-1.4c-2.9,0-5.6,0.5-8.1,1.4c-2.5,0.9-4.7,2.2-6.6,3.9c-1.9,1.7-3.3,3.8-4.4,6.2c-1.1,2.4-1.6,5.1-1.6,8 c0,3,0.5,5.6,1.6,8c1.1,2.4,2.5,4.5,4.4,6.2c1.9,1.7,4.1,3,6.6,3.9c2.5,0.9,5.2,1.4,8.1,1.4c3,0,5.9-0.6,8.7-1.9 c2.8-1.3,5.1-3.1,7-5.4l-8-5.9c-1,1.3-2.1,2.4-3.4,3.3c-1.3,0.8-2.9,1.3-4.8,1.3c-2.2,0-4.1-0.7-5.7-2c-1.5-1.3-2.5-3.1-3-5.2H277.4 z M250.7,44.1c0.1-0.9,0.3-1.8,0.7-2.6c0.4-0.8,0.9-1.6,1.6-2.2c0.7-0.6,1.5-1.2,2.5-1.6c1-0.4,2.1-0.6,3.4-0.6 c2.1,0,3.8,0.7,5.1,2.1c1.3,1.4,2,3,1.9,5H250.7z"/>
+	<path class="logo-st1" d="M52.6,38.9l2.6-9.2h4.6l1.8-6.6c0.6-2,1.3-4,2.2-5.8c0.8-1.8,2-3.4,3.4-4.8c1.4-1.4,3.2-2.5,5.3-3.3 c2.1-0.8,4.8-1.2,7.9-1.2c0.8,0,1.5,0,2.3,0.1c-0.7-2.9-3.3-5-6.3-5.1H11.9c-3.6,0-6.5,3-6.5,6.6V67l10.5-37.3h10.6l-1.4,4.9h0.2 c0.6-0.7,1.4-1.3,2.4-2c1-0.7,2-1.3,3.1-1.9c1.1-0.6,2.3-1,3.6-1.4c1.3-0.4,2.6-0.5,3.9-0.5c2.8,0,5.1,0.5,7.1,1.4 c2,0.9,3.5,2.3,4.7,4c1,1.5,1.6,3.3,1.9,5.4l0.8-0.6H52.6z"/>
+	<path class="logo-st2" d="M82.1,17.9c-0.5-0.1-1.1-0.2-1.8-0.2c-1.8,0-3.3,0.4-4.5,1.2c-1.1,0.8-2.1,2.4-2.8,4.9l-1.7,5.9h6.5l1.6,5.1 l-4.2,4.1h-6.5l-7.9,28H49.4l7.9-28h-4.4L52,39.5c0,0.2,0.1,0.5,0.1,0.7c0.2,2.3-0.1,4.9-0.9,7.7c-0.7,2.6-1.8,5.1-3.3,7.5 c-1.5,2.4-3.2,4.5-5.1,6.3c-2,1.8-4.2,3.3-6.6,4.4c-2.4,1.1-4.9,1.6-7.6,1.6c-2.4,0-4.5-0.4-6.4-1.1c-1.9-0.7-3.2-2-4-3.8h-0.2 l-5,17.7h63.3c3.6,0,6.6-2.9,6.6-6.6V18.2C82.6,18.1,82.3,18,82.1,17.9"/>
+	<path class="logo-st0" d="M277.6,68.5h0.8c0.4,0,0.6-0.1,0.7-0.2c0.1-0.1,0.2-0.2,0.2-0.4c0-0.1,0-0.2-0.1-0.3c-0.1-0.1-0.1-0.2-0.3-0.2 c-0.1,0-0.3-0.1-0.6-0.1h-0.7V68.5z M277,70.6v-3.8h1.3c0.5,0,0.8,0,1,0.1c0.2,0.1,0.4,0.2,0.5,0.4c0.1,0.2,0.2,0.4,0.2,0.6 c0,0.3-0.1,0.5-0.3,0.7c-0.2,0.2-0.5,0.3-0.8,0.3c0.1,0.1,0.2,0.1,0.3,0.2c0.2,0.2,0.3,0.4,0.6,0.8l0.5,0.7h-0.8l-0.3-0.6 c-0.3-0.5-0.5-0.8-0.6-0.9c-0.1-0.1-0.3-0.1-0.5-0.1h-0.4v1.6H277z M278.6,65.7c-0.5,0-1,0.1-1.5,0.4c-0.5,0.3-0.8,0.6-1.1,1.1 c-0.3,0.5-0.4,1-0.4,1.5c0,0.5,0.1,1,0.4,1.5c0.3,0.5,0.6,0.8,1.1,1.1c0.5,0.3,1,0.4,1.5,0.4c0.5,0,1-0.1,1.5-0.4 c0.5-0.3,0.8-0.6,1.1-1.1c0.3-0.5,0.4-1,0.4-1.5c0-0.5-0.1-1-0.4-1.5c-0.3-0.5-0.6-0.8-1.1-1.1C279.6,65.8,279.1,65.7,278.6,65.7z M278.6,65.1c0.6,0,1.2,0.2,1.8,0.5c0.6,0.3,1,0.7,1.3,1.3c0.3,0.6,0.5,1.2,0.5,1.8c0,0.6-0.2,1.2-0.5,1.8c-0.3,0.6-0.8,1-1.3,1.3 c-0.6,0.3-1.2,0.5-1.8,0.5c-0.6,0-1.2-0.2-1.8-0.5c-0.6-0.3-1-0.8-1.3-1.3c-0.3-0.6-0.5-1.2-0.5-1.8c0-0.6,0.2-1.2,0.5-1.8 c0.3-0.6,0.8-1,1.3-1.3C277.4,65.2,278,65.1,278.6,65.1z"/>
+</svg>
+				<span style="color:white;font-size:.5em;text-transform:uppercase;letter-spacing:1px;">Community Edition</span>
+			</a>
+		</div>
+		<div class="collapse navbar-collapse" id="pf-navbar">
+			<ul class="nav navbar-nav">
+							<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+						System						<span class="caret"></span>
+					</a>
+					<ul class="dropdown-menu dropdown-menu-fixed" role="menu"><li><a href="/index.php?logout" class="navlnk" usepost>Logout (tv)</a></li>
+</ul>
+				</li>
+
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+						Status						<span class="caret"></span>
+					</a>
+					<ul class="dropdown-menu dropdown-menu-fixed" role="menu"><li><a href="/index.php" class="navlnk" >Dashboard</a></li>
+</ul>
+				</li>
+
+				<li class="dropdown">
+					<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+						fw01						<span class="caret"></span>
+					</a>
+					<ul class="dropdown-menu dropdown-menu-fixed" role="menu"><li><a href="https://redirects.netgate.com/issues" target="_blank" class="navlnk" >Bug Database</a></li>
+<li><a href="https://redirects.netgate.com/docs" target="_blank" class="navlnk" >Documentation</a></li>
+<li><a href="https://redirects.netgate.com/fbsdhandbook" target="_blank" class="navlnk" >FreeBSD Handbook</a></li>
+<li><a href="https://redirects.netgate.com/support" target="_blank" class="navlnk" >Paid Support</a></li>
+<li><a href="https://redirects.netgate.com/book" target="_blank" class="navlnk" >pfSense Book</a></li>
+<li><a href="https://redirects.netgate.com/upgrade" target="_blank" class="navlnk" >Upgrade to pfSense Plus</a></li>
+<li><a href="https://redirects.netgate.com/forum" target="_blank" class="navlnk" >User Forum</a></li>
+<li><a href="https://redirects.netgate.com/survey_1" target="_blank" class="navlnk" >User survey</a></li>
+</ul>
+				</li>
+
+			</ul>
+			<ul class="nav navbar-nav navbar-right">
+									<li class="dropdown">
+						<a href="/index.php?logout" usepost>
+							<i class="fa-solid fa-right-from-bracket" title="Logout (tv@fw01.drmonitoracorp.com)"></i>
+						</a>
+					</li>
+			</ul>
+		</div>
+	</div>
+</nav>
+
+<div class="container fixed" style="max-width: 2340px;width: 100%">
+
+
+	<header class="header">
+
+<ol class="breadcrumb"><li>Status</li><li><a href="/index.php">Dashboard</a></li></ol>		<ul class="context-links">
+
+			<li>
+			<a href="#" title="Save dashboard layout" id="btnstore" class="invisible">
+				<i class="fa-solid fa-save icon-pointer"></i>
+			</a>
+		</li>
+	
+			<li>
+			<a onclick="$('#widget-available').toggle(360);" title="Available widgets">
+				<i class="fa-solid fa-plus icon-pointer"></i>
+			</a>
+		</li>
+	
+	
+	
+	
+	
+			</ul>
+	</header>
+
+<div class="panel panel-default collapse out" id="widget-available">
+	<div class="panel-heading">
+		<h2 class="panel-title">Available Widgets			<span class="widget-heading-icon">
+				<a data-toggle="collapse" href="#widget-available_panel-body" id="widgets-available">
+					<i class="fa-solid fa-plus-circle"></i>
+				</a>
+			</span>
+		</h2>
+	</div>
+	<div id="widget-available_panel-body" class="panel-body collapse in">
+		<div class="content">
+			<div class="row">
+		<div class="col-sm-3"><a href="#" id="btnadd-pfblockerng"><i class="fa-solid fa-plus"></i> <span title="Click to open Unified Log tab">pfBlockerNG</span></a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-captive_portal_status"><i class="fa-solid fa-plus"></i> Captive Portal Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-carp_status"><i class="fa-solid fa-plus"></i> CARP Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-dyn_dns_status"><i class="fa-solid fa-plus"></i> Dynamic DNS Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-log"><i class="fa-solid fa-plus"></i> Firewall Logs</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-gateways"><i class="fa-solid fa-plus"></i> Gateways</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-gmirror_status"><i class="fa-solid fa-plus"></i> GEOM Mirror Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-installed_packages"><i class="fa-solid fa-plus"></i> Installed Packages</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-interface_statistics"><i class="fa-solid fa-plus"></i> Interface Statistics</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-interfaces"><i class="fa-solid fa-plus"></i> Interfaces</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-ipsec"><i class="fa-solid fa-plus"></i> IPsec</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-netgate_services_and_support"><i class="fa-solid fa-plus"></i> Netgate Services And Support</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-openvpn"><i class="fa-solid fa-plus"></i> OpenVPN</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-picture"><i class="fa-solid fa-plus"></i> Picture</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-rss"><i class="fa-solid fa-plus"></i> RSS</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-smart_status"><i class="fa-solid fa-plus"></i> S.M.A.R.T. Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-services_status"><i class="fa-solid fa-plus"></i> Services Status</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-system_information"><i class="fa-solid fa-plus"></i> System Information</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-thermal_sensors"><i class="fa-solid fa-plus"></i> Thermal Sensors</a></div>
+			<div class="col-sm-3"><a href="#" id="btnadd-wake_on_lan"><i class="fa-solid fa-plus"></i> Wake-on-Lan</a></div>
+				</div>
+<p style="text-align:center">Other dashboard settings are available from the <a href="/system.php">General Setup</a> page.</p>
+		</div>
+	</div>
+</div>
+
+<div class="hidden" id="widgetSequence">
+	<form action="/" method="post" id="widgetSequence_form" name="widgetForm"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<input type="hidden" name="sequence" value="" />
+	</form>
+</div>
+
+
+<div class="row">
+<div class="col-md-3" id="widgets-col1">				<div class="panel panel-default" id="widget-system_information-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							System Information							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-system_information-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-system_information-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-system_information-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-system_information-0_panel-body" class="panel-body collapse in">
+						
+<div class="table-responsive">
+<table class="table table-hover table-striped table-condensed">
+	<tbody>
+		<tr>
+			<th>Name</th>
+			<td>fw01.drmonitoracorp.com</td>
+		</tr>
+		<tr>
+			<th>Version</th>
+			<td>
+				<strong>2.8.1-RELEASE</strong>
+				(amd64)
+				<br />
+				built on Mon Dec 15 14:31:00 -03 2025							<br />
+				<span title="FreeBSD fw01.drmonitoracorp.com 15.0-CURRENT FreeBSD 15.0-CURRENT #21 RELENG_2_8_1-n256095-47c932dcc0e9: Thu Aug 28 16:27:48 UTC 2025     root@pfsense-build-release-amd64-1.eng.atx.netgate.com:/var/jenkins/workspace/pfSense-CE-snapshots-2_8_1-main/obj/amd">FreeBSD 15.0-CURRENT</span>
+										<br /><br />
+				<div id='updatestatus'>Obtaining update status <i class='fa-solid fa-rotate fa-spin'></i></div>
+						</td>
+		</tr>
+		<tr>
+			<th>Uptime</th>
+			<td id="uptime">5 Days 17 Hours 02 Minutes 19 Seconds</td>
+		</tr>
+		<tr>
+			<th>Current date/time</th>
+			<td><div id="datetime">Tue Jun 16 11:26:26 -03 2026</div></td>
+		</tr>
+		<tr>
+			<th>DNS server(s)</th>
+			<td>
+				<ul style="margin-bottom:0px">
+				<li>127.0.0.1</li><li>::1</li><li>8.8.8.8</li><li>1.1.1.1</li><li>8.8.4.4</li><li>149.112.112.112</li><li>9.9.9.9</li><li>1.0.0.1</li>				</ul>
+			</td>
+		</tr>
+				<tr>
+			<th>Last config change</th>
+			<td>Tue Jun 16 11:00:00 -03 2026</td>
+		</tr>
+				<tr>
+			<th>MBUF Usage</th>
+			<td>
+								<div class="progress">
+					<div id="mbufPB" class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+					</div>
+				</div>
+				<span id="mbufusagemeter">0%</span>&nbsp;<span id="mbuf">(3302/1000000)</span>
+			</td>
+		</tr>
+				<tr>
+			<th>CPU usage</th>
+			<td>
+				<div class="progress">
+					<div id="cpuPB" class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+					</div>
+				</div>
+				<span id="cpumeter">Retrieving CPU data <i class="fa-solid fa-gear fa-spin"></i></span>
+			</td>
+		</tr>
+		<tr>
+			<th>Memory usage</th>
+			<td>
+				
+				<div class="progress" >
+					<div id="memUsagePB" class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="7" aria-valuemin="0" aria-valuemax="100" style="width: 7%">
+					</div>
+				</div>
+				<span id="memusagemeter">7</span><span>% of 16327 MiB</span>
+			</td>
+		</tr>
+
+	</tbody>
+</table>
+</div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-system_information-0_panel-footer" class="panel-footer collapse">
+
+<form action="/widgets/widgets/system_information.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+    <div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="system_information-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Item</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Name</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="name" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>User</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="user" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>System</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="system" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>BIOS</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="bios" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>Version</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="version" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>CPU Type</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="cpu_type" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>Hardware Crypto</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="hwcrypto" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>Kernel PTI</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="pti" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>MDS Mitigation</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="mds" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>Uptime</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="uptime" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Current Date/Time</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="current_datetime" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>DNS Server(s)</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="dns_servers" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Last Config Change</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="last_config_change" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>State Table Size</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="state_table_size" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>MBUF Usage</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="mbuf_usage" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Temperature</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="temperature" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Load Average</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="load_average" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>CPU Usage</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="cpu_usage" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Memory Usage</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="memory_usage" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Swap Usage</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="swap_usage" type="checkbox" ></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-system_information-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+<script type="text/javascript">
+//<![CDATA[
+
+var lastTotal = 0;
+var lastUsed = 0;
+
+// Collect some PHP values required by the states calculation
+var adaptiveend = 0;
+var adaptivestart = 0;
+var maxstates = 0;
+var state_tt = "";
+
+function setProgress(barName, percent) {
+	$('[id="' + barName + '"]').css('width', percent + '%').attr('aria-valuenow', percent);
+}
+
+function stats(x) {
+	var values = x.split("|");
+	if ($.each(values,function(key,value) {
+		if (value == 'undefined' || value == null)
+			return true;
+		else
+			return false;
+	}))
+
+	if (lastTotal === 0) {
+		lastTotal = values[0];
+		lastUsed = values[1];
+	} else {
+		updateCPU(values[0], values[1]);
+	}
+
+	updateUptime(values[3]);
+	updateDateTime(values[6]);
+	updateMemory(values[2]);
+	updateState(values[4]);
+	updateTemp(values[5]);
+	updateCpuFreq(values[7]);
+	updateLoadAverage(values[8]);
+	updateMbuf(values[9]);
+	updateMbufMeter(values[10]);
+	updateStateMeter(values[11]);
+}
+
+function updateMemory(x) {
+	if ($('#memusagemeter')) {
+		$('[id="memusagemeter"]').html(x);
+	}
+	if ($('#memUsagePB')) {
+		setProgress('memUsagePB', parseInt(x));
+	}
+}
+
+function updateMbuf(x) {
+	if ($('#mbuf')) {
+		$('[id="mbuf"]').html('(' + x + ')');
+	}
+}
+
+function updateMbufMeter(x) {
+	if ($('#mbufusagemeter')) {
+		$('[id="mbufusagemeter"]').html(x + '%');
+	}
+	if ($('#mbufPB')) {
+		setProgress('mbufPB', parseInt(x));
+	}
+}
+
+function updateCPU(total, used) {
+	if ((lastTotal <= total) && (lastUsed <= used)) { // Just in case it wraps
+		// Calculate the total ticks and the used ticks since the last time it was checked
+		var d_total = total - lastTotal;
+		var d_used = used - lastUsed;
+
+		// Convert to percent
+		var x = Math.floor(((d_total - d_used)/d_total) * 100);
+
+		if ($('#cpumeter')) {
+			$('[id="cpumeter"]').html(x + '%');
+		}
+
+		if ($('#cpuPB')) {
+			setProgress('cpuPB', parseInt(x));
+		}
+
+		/* Load CPU Graph widget if enabled */
+		if (widgetActive('cpu_graphs')) {
+			GraphValue(graph[0], x);
+		}
+	}
+
+	// Update the saved "last" values
+	lastTotal = total;
+	lastUsed = used;
+}
+
+function updateTemp(x) {
+	$("#tempmeter").html(function() {
+		return this.dataset.units === "F" ? parseInt(x * 1.8 + 32, 10) : x;
+	});
+	setProgress('tempPB', parseInt(x));
+}
+
+function updateDateTime(x) {
+	if ($('#datetime')) {
+		$('[id="datetime"]').html(x);
+	}
+}
+
+function updateUptime(x) {
+	if ($('#uptime')) {
+		$('[id="uptime"]').html(x);
+	}
+}
+
+function updateState(x) {
+	if ($('#pfstate')) {
+		$('[id="pfstate"]').html('(' + x + ')');
+
+		// get numeric part of string before the '/'
+		x = x.split('/')[0]
+
+		if (x > adaptivestart) {
+			var scalingfactor = Math.round((adaptiveend - x) / (adaptiveend - adaptivestart) * 100);
+			var disphtml = 	'<br /><a href="#" data-toggle="tooltip" title="" data-placement="right" data-original-title="' +
+				state_tt +  scalingfactor + '%">' +
+				'Scaling ' + scalingfactor + '%</a>';
+
+			// Only update the display if the tooltip is not visible. Otherwise the tip will go away
+			if ($('.tooltip').length == 0) {
+				$('#scaledstates').html(disphtml);
+			}
+
+			// Renable the tooltip
+			$(function () {
+				$('[data-toggle="tooltip"]').tooltip()
+			})
+
+			$('#statePB').addClass('progress-bar-warning');
+		} else {
+			$('#scaledstates').html('');
+			$('#statePB').removeClass('progress-bar-warning');
+		}
+	}
+}
+
+function updateStateMeter(x) {
+	if ($('#pfstateusagemeter')) {
+		$('[id="pfstateusagemeter"]').html(x + '%');
+	}
+	if ($('#statePB')) {
+		setProgress('statePB', parseInt(x));
+	}
+}
+
+function updateCpuFreq(x) {
+	if ($('#cpufreq')) {
+		$('[id="cpufreq"]').html(x);
+	}
+}
+
+function updateLoadAverage(x) {
+	if ($('#load_average')) {
+		$('[id="load_average"]').html(x);
+	}
+}
+
+function widgetActive(x) {
+	var widget = $('#' + x + '-container');
+	if ((widget != null) && (widget.css('display') != null) && (widget.css('display') != "none")) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+
+
+events.push(function() {
+
+	$('#scaledstates').html('');
+
+	// Enable tooltips
+	$(function () {
+		$('[data-toggle="tooltip"]').tooltip()
+	})
+
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function meters_callback(s) {
+		stats(s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		skipitems: ["user","system","bios","cpu_type","hwcrypto","pti","mds","state_table_size","load_average","swap_usage"]	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var metersObject = new Object();
+	metersObject.name = "Meters";
+	metersObject.url = "/getstats.php";
+	metersObject.callback = meters_callback;
+	metersObject.parms = postdata;
+	metersObject.freq = 5;
+
+	// Register the AJAX object
+	register_ajax(metersObject);
+
+
+	// Callback function called by refresh system when data is retrieved
+	function version_callback(s) {
+		$('[id^=widget-system_information] #updatestatus').html(s);
+
+		// The click handler has to be attached after the div is updated
+		$('#updver').click(function() {
+			updver_ajax();
+		});
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		getupdatestatus: "1",
+		skipitems: ["user","system","bios","cpu_type","hwcrypto","pti","mds","state_table_size","load_average","swap_usage"]	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var versionObject = new Object();
+	versionObject.name = "Version";
+	versionObject.url = "/widgets/widgets/system_information.widget.php";
+	versionObject.callback = version_callback;
+	versionObject.parms = postdata;
+	versionObject.freq = 100;
+
+	//Register the AJAX object
+	register_ajax(versionObject);
+	// ---------------------------------------------------------------------------------------------------
+
+	set_widget_checkbox_events("#widget-system_information-0_panel-footer [id^=show]", "widget-system_information-0_showallnone");
+
+	// AJAX function to update the version display with non-cached data
+	function updver_ajax() {
+
+		// Display the "updating" message
+		$('[id^=widget-system_information] #updatestatus').html("Obtaining update status <i class='fa-solid fa-rotate fa-spin'></i>"); // Obtaining update status <i class='fa-solid fa-rotate fa-spin'></i>");
+
+		$.ajax({
+			type: 'POST',
+			url: "/widgets/widgets/system_information.widget.php",
+			dataType: 'html',
+			data: {
+				ajax: "ajax",
+				getupdatestatus: "2",
+				skipitems: ["user","system","bios","cpu_type","hwcrypto","pti","mds","state_table_size","load_average","swap_usage"]			},
+
+			success: function(data){
+				// Display the returned data
+				$('[id^=widget-system_information] #updatestatus').html(data);
+
+				// Re-attach the click handler (The binding was lost when the <div> content was replaced)
+				$('#updver').click(function() {
+					updver_ajax();
+				});
+			},
+
+			error: function(e){
+			}
+		});
+	}
+});
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-disks-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							Disks							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-disks-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-disks-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-disks-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-disks-0_panel-body" class="panel-body collapse in">
+						
+	<div class="table-responsive">
+		<table id="disks-0-table" class="table table-striped table-hover table-condensed">
+			<thead><th>Mount</th><th>Used</th><th>Size</th><th style="width:50%">Usage</th></thead><tbody><tr class="treegrid-root"><td>/</td><td>970M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="2" aria-valuemin="0" aria-valuemax="100" style="width:2%"></div></div><span>2% of 50G (zfs)</span></td></tr><tr class="treegrid-root-cf treegrid-parent-root"><td>/cf</td><td>4.0M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-home treegrid-parent-root"><td>/home</td><td>140K</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-tmp treegrid-parent-root"><td>/tmp</td><td>51M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var treegrid-parent-root"><td>/var</td><td>400K</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-cache treegrid-parent-root-var"><td>/var/cache</td><td>96K</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-cache-pkg treegrid-parent-root-var-cache"><td>/var/cache/pkg</td><td>428M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="1" aria-valuemin="0" aria-valuemax="100" style="width:1%"></div></div><span>1% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-db treegrid-parent-root-var"><td>/var/db</td><td>5.4M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-db-pkg treegrid-parent-root-var-db"><td>/var/db/pkg</td><td>5.2M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-log treegrid-parent-root-var"><td>/var/log</td><td>30M</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr><tr class="treegrid-root-var-run treegrid-parent-root-var"><td>/var/run</td><td>148K</td><td>4.0M</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="4" aria-valuemin="0" aria-valuemax="100" style="width:4%"></div></div><span>4% of 4.0M (tmpfs)</span></td></tr><tr class="treegrid-root-var-tmp treegrid-parent-root-var"><td>/var/tmp</td><td>400K</td><td>50G</td><td><div class="progress"><div class="progress-bar progress-bar-success progress-bar-striped" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width:0%"></div></div><span>0% of 50G (zfs)</span></td></tr></tbody>		</table>
+	</div>
+</div>
+
+<div id="widget-disks-0_panel-footer" class="panel-footer collapse">
+
+	<form action="/widgets/widgets/disks.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<input type="hidden" name="widgetkey" value="disks-0" />
+		<input type="hidden" name="save" value="save" />
+		<div class="panel panel-default col-sm-12">
+			<div class="panel-body">
+				<input type="hidden" name="widgetkey" value="disks-0">
+				<div class="table responsive">
+					<table class="table table-striped table-hover table-condensed">
+						<thead>
+							<tr>
+								<th>Mount</th>
+								<th>
+									<span><i class="fa-solid fa-thumbtack" style="vertical-align:middle;"></i></span>
+									Pin								</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>/cf</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/cf" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/home</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/home" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/tmp</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/tmp" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/cache</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/cache" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/cache/pkg</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/cache/pkg" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/db</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/db" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/db/pkg</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/db/pkg" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/log</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/log" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/run</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/run" type="checkbox" ></td>
+							</tr>
+							<tr>
+								<td>/var/tmp</td>
+								<td class="col-sm-2"><input id="disks-0_disk_filter[]" name ="disks-0_disk_filter[]" value="/var/tmp" type="checkbox" ></td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="disks-0_autoshow_threshold" class="col-sm-4 control-label">Auto Show Threshold</label>
+			<div class="col-sm-8">
+				<input type="number" id="disks-0_autoshow_threshold" name="disks-0_autoshow_threshold" value="75" placeholder="75" min="0" max="100" class="form-control" />
+				<span class="help-block">
+					Automatically show mounts when utilization exceeds the specified threshold (%).					<br />
+					<span class="text-danger">Note:</span>
+					The default is 75% (0% to disable).				</span>
+			</div>
+		</div>
+
+		<nav class="action-buttons">
+			<button type="submit" class="btn btn-primary">
+				<i class="fa-solid fa-save icon-embed-btn"></i>
+				Save			</button>
+			<button id="widget-disks-0_showallnone" type="button" class="btn btn-info">
+				<i class="fa-solid fa-undo icon-embed-btn"></i>
+				All			</button>
+		</nav>
+	</form>
+
+	<script type="text/javascript">
+	//<![CDATA[
+	events.push(function() {
+		// Callback function called by refresh system when data is retrieved
+		function disks_callback(s) {
+			var tree = $("#disks-0-table");
+
+			tree.removeData();
+
+			tree.html(s);
+
+			initTreegrid(true);
+		}
+
+		// POST data to send via AJAX
+		var postdata = {
+			ajax: "ajax",
+			widgetkey: "disks-0"		};
+
+		// Create an object defining the widget refresh AJAX call
+		var disksObject = new Object();
+		disksObject.name = "disks";
+		disksObject.url = "/widgets/widgets/disks.widget.php";
+		disksObject.callback = disks_callback;
+		disksObject.parms = postdata;
+		disksObject.freq = 30;
+
+		// Register the AJAX object
+		register_ajax(disksObject);
+
+		function initTreegrid(isAjax) {
+			var tree = $("#disks-0-table");
+
+			if (!isAjax) {
+				tree.removeData();
+			}
+
+			tree.treegrid({
+				expanderExpandedClass: 'fa-solid fa-chevron-down',
+				expanderCollapsedClass: 'fa-solid fa-chevron-right',
+				initialState: 'collapsed',
+				saveState: true
+			});
+		}
+
+		initTreegrid(false);
+
+		set_widget_checkbox_events("#widget-disks-0_panel-footer [id^=disks-0_disk_filter]", "widget-disks-0_showallnone");
+	});
+	//]]>
+	</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-ntp_status-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_ntpd.php"> NTP Status</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-ntp_status-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-ntp_status-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-ntp_status-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-ntp_status-0_panel-body" class="panel-body collapse in">
+						<script type="text/javascript">
+//<![CDATA[
+// Have to convert the date to UTC time to match the PHP clock not the local client clock.
+function convertDateToUTC(date,offset) {
+	var hours_offset = offset/3600;
+	var minute_offset = (offset % 3600)/60;
+	var d = new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours() + hours_offset, date.getUTCMinutes() + minute_offset, date.getUTCSeconds())
+	return d;
+}
+
+var ntp_d = convertDateToUTC(new Date('2026-06-16T11:26:27-03:00'), '-10800');
+var tz = '-03';
+setInterval(function() {
+	ntp_d.setSeconds(ntp_d.getSeconds() + 1);
+	var thisSecond = ntp_d.getSeconds();
+	var thisMinute = ntp_d.getMinutes();
+	var thisHour = ntp_d.getHours();
+
+	// Add leading zeros to minutes and seconds as required
+	thisMinute = thisMinute < 10 ? "0" + thisMinute : thisMinute;
+	thisSecond = thisSecond < 10 ? "0" + thisSecond : thisSecond;
+
+	$('[id="ntpStatusClock"]').html(thisHour +':' + thisMinute + ':' + thisSecond + ' ' + tz);
+}, 1000);
+//]]>
+</script>
+<table id="ntpstatus" class="table table-striped table-hover">
+	<tbody>
+		<tr>
+					<td>Updating...</td>
+				</tr>
+	</tbody>
+</table>
+<script type="text/javascript">
+//<![CDATA[
+
+events.push(function(){
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function ntp_callback(s) {
+		$('[id="ntpstatus"]').prop('innerHTML', s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+	 	updateme : "yes"
+	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var ntpObject = new Object();
+	ntpObject.name = "NTP";
+	ntpObject.url = "/widgets/widgets/ntp_status.widget.php";
+	ntpObject.callback = ntp_callback;
+	ntpObject.parms = postdata;
+	ntpObject.freq = 60;
+
+	// Register the AJAX object
+	register_ajax(ntpObject);
+
+	// ---------------------------------------------------------------------------------------------------
+});
+
+//]]>
+</script>
+					</div>
+				</div>
+				</div><div class="col-md-3" id="widgets-col2">				<div class="panel panel-default" id="widget-interfaces-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_interfaces.php"> Interfaces</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-interfaces-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-interfaces-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-interfaces-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-interfaces-0_panel-body" class="panel-body collapse in">
+						
+<div class="table-responsive" id="ifaces_status_interfaces-0">
+	<table class="table table-striped table-hover table-condensed">
+		<tbody>
+
+	<tr>
+		<td title="vtnet0 (bc:24:11:be:74:87)" style="white-space: nowrap;">
+			<i class="fa-solid fa-sitemap"></i>
+			<a href="/interfaces.php?if=wan">
+				L1_AMERICANET			</a>
+		</td>
+		<td>
+							<i class="fa-solid fa-arrow-up text-success" title="up"></i>
+					</td>
+		<td>
+							10Gbase-T &lt;full-duplex&gt;					</td>
+
+		<td >
+							186.225.109.58									</td>
+	</tr>
+	<tr>
+		<td title="vtnet1 (bc:24:11:29:1e:7c)" style="white-space: nowrap;">
+			<i class="fa-solid fa-sitemap"></i>
+			<a href="/interfaces.php?if=opt1">
+				L2_VIVO			</a>
+		</td>
+		<td>
+							<i class="fa-solid fa-arrow-up text-success" title="up"></i>
+					</td>
+		<td>
+							10Gbase-T &lt;full-duplex&gt;					</td>
+
+		<td >
+							189.109.250.74									</td>
+	</tr>
+	<tr>
+		<td title="vtnet2 (bc:24:11:89:2b:29)" style="white-space: nowrap;">
+			<i class="fa-solid fa-sitemap"></i>
+			<a href="/interfaces.php?if=opt2">
+				L3_IMAXIMA			</a>
+		</td>
+		<td>
+							<i class="fa-solid fa-arrow-up text-success" title="up"></i>
+					</td>
+		<td>
+							10Gbase-T &lt;full-duplex&gt;					</td>
+
+		<td >
+							187.0.169.118									</td>
+	</tr>
+	<tr>
+		<td title="vtnet3 (bc:24:11:9f:14:c8)" style="white-space: nowrap;">
+			<i class="fa-solid fa-sitemap"></i>
+			<a href="/interfaces.php?if=lan">
+				LAN			</a>
+		</td>
+		<td>
+							<i class="fa-solid fa-arrow-up text-success" title="up"></i>
+					</td>
+		<td>
+							10Gbase-T &lt;full-duplex&gt;					</td>
+
+		<td >
+							192.168.0.11									</td>
+	</tr>
+		</tbody>
+	</table>
+</div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-interfaces-0_panel-footer" class="panel-footer collapse">
+
+<form action="/widgets/widgets/interfaces.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+	<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Interfaces" class="form-control" />  </div></div>	<div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="interfaces-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Interface</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>L1_AMERICANET</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="wan" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>L2_VIVO</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt1" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>L3_IMAXIMA</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt2" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>LAN</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="lan" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>SYNC</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt3" type="checkbox" ></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-interfaces-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+	events.push(function(){
+
+		/// --------------------- Centralized widget refresh system ------------------------------
+
+		// Callback function called by refresh system when data is retrieved
+		function interfaces_callback(s) {
+			$("#ifaces_status_interfaces-0").html(s);
+		}
+
+		// POST data to send via AJAX
+		var postdata = {
+			widgetkey :"interfaces-0",
+			ajax: "ajax"
+		};
+
+		// Create an object defining the widget refresh AJAX call
+		var interfacesObject = new Object();
+		interfacesObject.name = "Interfaces";
+		interfacesObject.url = "/widgets/widgets/interfaces.widget.php";
+		interfacesObject.callback = interfaces_callback;
+		interfacesObject.parms = postdata;
+		interfacesObject.freq = 15;
+
+		// Register the AJAX object
+		register_ajax(interfacesObject);
+
+		// ---------------------------------------------------------------------------------------------------
+
+		set_widget_checkbox_events("#widget-interfaces-0_panel-footer [id^=show]", "widget-interfaces-0_showallnone");
+
+	});
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-gateways-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_gateways.php"> Gateways</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-gateways-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-gateways-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-gateways-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-gateways-0_panel-body" class="panel-body collapse in">
+						
+<div class="table-responsive">
+	<table class="table table-striped table-hover table-condensed">
+		<thead>
+			<tr>
+				<th></th>
+				<th>Name</th>
+				<th>RTT</th>
+				<th>RTTsd</th>
+				<th>Loss</th>
+				<th>Status</th>
+			</tr>
+		</thead>
+		<tbody id="gateways-0-gwtblbody">
+<tr>
+<td title='Gateway enabled'><i class='fa-regular fa-circle-check'></i></td>
+<td title='Default gateway'>
+AmericaNET <i class="fa-solid fa-globe"></i><br /><div id="gateway" style="display:inline"><b>186.225.109.57</b></div>
+</td>
+<td>3.0ms</td>
+<td>0.2ms</td>
+<td>0.0%</td>
+<td class="bg-success">Online</td>
+</tr>
+<tr>
+<td title='Gateway enabled'><i class='fa-regular fa-circle-check'></i></td>
+<td title=''>
+VIVO<br /><div id="gateway1" style="display:inline"><b>189.109.250.73</b></div>
+</td>
+<td>3.8ms</td>
+<td>2.2ms</td>
+<td>0.0%</td>
+<td class="bg-success">Online</td>
+</tr>
+<tr>
+<td title='Gateway enabled'><i class='fa-regular fa-circle-check'></i></td>
+<td title=''>
+iMaxima<br /><div id="gateway2" style="display:inline"><b>187.0.169.117</b></div>
+</td>
+<td>3.7ms</td>
+<td>0.5ms</td>
+<td>0.0%</td>
+<td class="bg-success">Online</td>
+</tr>
+		</tbody>
+	</table>
+</div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-gateways-0_panel-footer" class="panel-footer collapse">
+<form action="/widgets/widgets/gateways.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+	<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Gateways" class="form-control" />  </div></div>	<div class="form-group">
+		<label class="col-sm-4 control-label">Display</label>
+		<div class="col-sm-6">
+			<div class="radio">
+				<label><input name="display_type" type="radio" id="display_type_gw_ip" value="gw_ip" checked /> Gateway IP</label>
+			</div>
+			<div class="radio">
+				<label><input name="display_type" type="radio" id="display_type_monitor_ip" value="monitor_ip"  />Monitor IP</label>
+			</div>
+			<div class="radio">
+				<label><input name="display_type" type="radio" id="display_type_both_ip" value="both_ip"  />Both</label>
+			</div>
+		</div>
+	</div>
+
+	<br />
+
+    <div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="gateways-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Gateway</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>AmericaNET</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="AmericaNET" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Wifi</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="Wifi" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>VIVO</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="VIVO" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>iMaxima</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="iMaxima" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>GCP</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="GCP" type="checkbox" ></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-gateways-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+<script>
+//<![CDATA[
+
+events.push(function(){
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function gateways_callback(s) {
+		$("#gateways-0-gwtblbody").html(s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		widgetkey : "gateways-0"	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var gatewaysObject = new Object();
+	gatewaysObject.name = "Gateways";
+	gatewaysObject.url = "/widgets/widgets/gateways.widget.php";
+	gatewaysObject.callback = gateways_callback;
+	gatewaysObject.parms = postdata;
+	gatewaysObject.freq = 20;
+
+	// Register the AJAX object
+	register_ajax(gatewaysObject);
+
+	// ---------------------------------------------------------------------------------------------------
+});
+
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-services_status-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_services.php"> Services Status</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-services_status-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-services_status-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-services_status-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-services_status-0_panel-body" class="panel-body collapse in">
+						<div class="table-responsive">
+	<table class="table table-striped table-hover table-condensed">
+		<thead>
+			<tr>
+				<th></th>
+				<th>Service</th>
+				<th>Description</th>
+				<th>Action</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>bsnmpd</td>
+				<td>SNMP Service</td>
+				<td><a href="#" id="restartservice-bsnmpd" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-bsnmpd"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>dpinger</td>
+				<td>Gateway Monitoring Daemon</td>
+				<td><a href="#" id="restartservice-dpinger" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-dpinger"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>iperf</td>
+				<td>iperf Network Performance Testing Daemon</td>
+				<td><a href="#" id="restartservice-iperf" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-iperf"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>ntpd</td>
+				<td>NTP clock sync</td>
+				<td><a href="#" id="restartservice-ntpd" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-ntpd"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>pfb_filter</td>
+				<td>pfBlockerNG firewall filter service</td>
+				<td><a href="#" id="restartservice-pfb_filter" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-pfb_filter"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>sshd</td>
+				<td>Secure Shell Daemon</td>
+				<td><a href="#" id="restartservice-sshd" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-sshd"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>syslogd</td>
+				<td>System Logger Daemon</td>
+				<td><a href="#" id="restartservice-syslogd" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-syslogd"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+			<tr>
+				<td><i class="text-success fa-solid fa-check-circle fa-1x" title="Running"><span style="display: none">Running</span></i></td>
+				<td>unbound</td>
+				<td>DNS Resolver</td>
+				<td><a href="#" id="restartservice-unbound" ><i class="fa-solid fa-arrow-rotate-right" title="Restart Service"></i></a>
+<a href="#" id="stopservice-unbound"><i class="fa-regular fa-circle-stop" title="Stop Service"></i></a></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-services_status-0_panel-footer" class="panel-footer collapse">
+
+<form action="/widgets/widgets/services_status.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+	<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Services Status" class="form-control" />  </div></div>    <div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="services_status-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Service</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>bsnmpd</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="bsnmpd" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>dpinger</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="dpinger" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>iperf</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="iperf" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>ntpd</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="ntpd" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>pfb_dnsbl</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="pfb_dnsbl" type="checkbox" ></td>
+						</tr>
+						<tr>
+							<td>pfb_filter</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="pfb_filter" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>sshd</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="sshd" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>syslogd</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="syslogd" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>unbound</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="unbound" type="checkbox" checked></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-services_status-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+<script type="text/javascript">
+//<![CDATA[
+	events.push(function(){
+		set_widget_checkbox_events("#widget-services_status-0_panel-footer [id^=show]", "widget-services_status-0_showallnone");
+	});
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-dyn_dns_status-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="services_dyndns.php"> Dynamic DNS Status</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-dyn_dns_status-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-dyn_dns_status-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-dyn_dns_status-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-dyn_dns_status-0_panel-body" class="panel-body collapse in">
+						
+<div class="table-responsive">
+<table id="dyn_dns_status" class="table table-hover table-striped table-condensed">
+	<thead>
+	<tr>
+		<th style="width:5%;">Int.</th>
+		<th style="width:20%;">Service</th>
+		<th style="width:25%;">Hostname</th>
+		<th style="width:25%;">Cached IP</th>
+	</tr>
+	</thead>
+	<tbody>
+		<tr ondblclick="document.location='services_dyndns_edit.php?id=0'">
+		<td>WanGroup</td>
+		<td>No-IP (free)</td>
+				<td>drmonitora<wbr>.ddns<wbr>.net</td>
+		<td><div id="dyndnsstatus0">Checking ...</div></td>
+	</tr>
+		<tr ondblclick="document.location='services_dyndns_edit.php?id=1'">
+		<td>WanGroup</td>
+		<td>No-IP (free)</td>
+				<td>traumadr<wbr>.ddns<wbr>.net</td>
+		<td><div id="dyndnsstatus1">Checking ...</div></td>
+	</tr>
+			</tbody>
+</table>
+</div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-dyn_dns_status-0_panel-footer" class="panel-footer collapse">
+
+<form action="/widgets/widgets/dyn_dns_status.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+	<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Dynamic DNS Status" class="form-control" />  </div></div>    <div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="dyn_dns_status-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Interface</th>
+							<th>Service</th>
+							<th>Hostname</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>WanGroup</td>
+							<td>No-IP (free)</td>
+														<td>drmonitora.ddns.net</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="0" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>WanGroup</td>
+							<td>No-IP (free)</td>
+														<td>traumadr.ddns.net</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="1" type="checkbox" checked></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-dyn_dns_status-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+<script type="text/javascript">
+//<![CDATA[
+
+	events.push(function(){
+		// --------------------- Centralized widget refresh system ------------------------------
+
+		// Callback function called by refresh system when data is retrieved
+		function dyndnscallback_dyn_dns_status0(s) {
+			// The server returns a string of statuses separated by vertical bars
+			var responseStrings = s.split("|");
+			for (var count=0; count<responseStrings.length; count++) {
+				var divlabel = "#widget-dyn_dns_status-0 #dyndnsstatus" + count;
+				$(divlabel).prop('innerHTML',responseStrings[count]);
+			}
+		}
+
+		// POST data to send via AJAX
+		var postdata = {
+			ajax: "ajax",
+			getdyndnsstatus : "dyn_dns_status-0"		 };
+
+		// Create an object defining the widget refresh AJAX call
+		var dyndnsObject = new Object();
+		dyndnsObject.name = "DynDNS";
+		dyndnsObject.url = "/widgets/widgets/dyn_dns_status.widget.php";
+		dyndnsObject.callback =  dyndnscallback_dyn_dns_status0;
+		dyndnsObject.parms = postdata;
+		dyndnsObject.freq = 30;
+
+		// Register the AJAX object
+		register_ajax(dyndnsObject);
+
+		// ---------------------------------------------------------------------------------------------------
+
+		set_widget_checkbox_events("#widget-dyn_dns_status-0_panel-footer [id^=show]", "widget-dyn_dns_status-0_showallnone");
+	});
+
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-interface_statistics-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_interfaces.php"> Interface Statistics</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-interface_statistics-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-interface_statistics-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-interface_statistics-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-interface_statistics-0_panel-body" class="panel-body collapse in">
+						<table id="interface_statistics-0-iftbl" class="table table-striped table-hover">
+	<tr><td>Retrieving interface data</td></tr>
+</table>
+
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div><div id="widget-interface_statistics-0_panel-footer" class="panel-footer collapse">
+
+<form action="/widgets/widgets/interface_statistics.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+	<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Interface Statistics" class="form-control" />  </div></div>	<div class="form-group">
+		<label class="col-sm-3 control-label">Orientation</label>
+				<div class="col-sm-6">
+			<div class="radio">
+				<label><input name="orientation_type" type="radio" id="orientation_type_if_columns" value="if_columns" checked /> Each interface in a column</label>
+			</div>
+			<div class="radio">
+				<label><input name="orientation_type" type="radio" id="orientation_type_if_rows" value="if_rows"  />Each interface in a row</label>
+			</div>
+		</div>
+	</div>
+
+    <div class="panel panel-default col-sm-10">
+		<div class="panel-body">
+			<input type="hidden" name="widgetkey" value="interface_statistics-0">
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Interface</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>L1_AMERICANET</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="wan" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>L2_VIVO</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt1" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>L3_IMAXIMA</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt2" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>LAN</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="lan" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>SYNC</td>
+							<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt3" type="checkbox" checked></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="table responsive">
+				<table class="table table-striped table-hover table-condensed">
+					<thead>
+						<tr>
+							<th>Stats Item</th>
+							<th>Show</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Packets In</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="inpkts" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Packets Out</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="outpkts" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Bytes In</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="inbytes" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Bytes Out</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="outbytes" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Errors In</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="inerrs" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Errors Out</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="outerrs" type="checkbox" checked></td>
+						</tr>
+						<tr>
+							<td>Collisions</td>
+							<td class="col-sm-2"><input id="showifstat[]" name ="showifstat[]" value="collisions" type="checkbox" checked></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-3 col-sm-6">
+			<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			<button id="widget-interface_statistics-0_showallnone" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+		</div>
+	</div>
+</form>
+
+<script type="text/javascript">
+//<![CDATA[
+/*
+	function get_if_stats_interface_statistics0() {
+		var ajaxRequest;
+
+		ajaxRequest = $.ajax({
+				url: "/widgets/widgets/interface_statistics.widget.php",
+				type: "post",
+				data: { ajax: "ajax", widgetkey: "interface_statistics-0"}
+			});
+
+		// Deal with the results of the above ajax call
+		ajaxRequest.done(function (response, textStatus, jqXHR) {
+			$("#interface_statistics-0-iftbl").html(response);
+
+			// and do it again
+			setTimeout(get_if_stats_interface_statistics0, "10000");
+		});
+	}
+*/
+	events.push(function() {
+		// --------------------- Centralized widget refresh system ------------------------------
+
+		// Callback function called by refresh system when data is retrieved
+		function interface_statistics_callback(s) {
+			$("#interface_statistics-0-iftbl").html(s);
+		}
+
+		// POST data to send via AJAX
+		var postdata = {
+			ajax : "ajax",
+			widgetkey : "interface_statistics-0"		 };
+
+		// Create an object defining the widget refresh AJAX call
+		var ifstatObject = new Object();
+		ifstatObject.name = "IFstats";
+		ifstatObject.url = "/widgets/widgets/interface_statistics.widget.php";
+		ifstatObject.callback = interface_statistics_callback;
+		ifstatObject.parms = postdata;
+		ifstatObject.freq = 10;
+
+		// Register the AJAX object
+		register_ajax(ifstatObject);
+
+		// ---------------------------------------------------------------------------------------------------
+		// Note: This manages all settings checkboxes with id starting with "show"
+		// (i.e. both the interface and stats item selection groups)
+		// using a single All/None button
+		set_widget_checkbox_events("#widget-interface_statistics-0_panel-footer [id^=show]", "widget-interface_statistics-0_showallnone");
+
+	});
+//]]>
+</script>
+					</div>
+				</div>
+				</div><div class="col-md-3" id="widgets-col3">				<div class="panel panel-default" id="widget-log-1">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_logs_filter.php"> AmericaNET</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-log-1_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-log-1_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-log-1">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-log-1_panel-body" class="panel-body collapse in">
+						<script type="text/javascript">
+//<![CDATA[
+	var logWidgetLastRefreshlog1 = 1781619987;
+//]]>
+</script>
+
+
+<table class="table table-striped table-hover">
+	<thead>
+		<tr>
+			<th>Act</th>
+			<th>Time</th>
+			<th>Interface</th>
+			<th>Source</th>
+			<th>Destination</th>
+		</tr>
+	</thead>
+	<tbody>
+
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.6.84"
+				title="Reverse Resolve with DNS">15.177.6.84</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.30.124"
+				title="Reverse Resolve with DNS">15.177.30.124</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+	</tbody>
+</table>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+events.push(function(){
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function logs_callback(s) {
+		$("#widget-log-1_panel-body").html(s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		widgetkey : "log-1",
+		lastsawtime: logWidgetLastRefreshlog1	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var logsObject = new Object();
+	logsObject.name = "NewFirewall Logs";
+	logsObject.url = "/widgets/widgets/log.widget.php";
+	logsObject.callback = logs_callback;
+	logsObject.parms = postdata;
+	logsObject.freq = 5;
+
+	// Register the AJAX object
+	register_ajax(logsObject);
+
+	// ---------------------------------------------------------------------------------------------------
+});
+//]]>
+</script>
+
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div>
+<div id="widget-log-1_panel-footer" class="panel-footer collapse">
+
+	<form action="/widgets/widgets/log.widget.php" method="post"
+		class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<input type="hidden" name="widgetkey" value="log-1">
+		<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="AmericaNET" class="form-control" />  </div></div>
+		<div class="form-group">
+			<label for="filterlogentries" class="col-sm-4 control-label">Number of entries</label>
+			<div class="col-sm-6">
+				<input type="number" name="filterlogentries" id="filterlogentries" value="5" placeholder="5"
+					min="1" max="50" class="form-control" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label class="col-sm-4 control-label">Filter actions</label>
+			<div class="col-sm-6 checkbox">
+						<label><input name="actpass" type="checkbox" value="Pass"
+				checked />
+				Pass			</label>
+			<label><input name="actblock" type="checkbox" value="Block"
+				 />
+				Block			</label>
+			<label><input name="actreject" type="checkbox" value="Reject"
+				 />
+				Reject			</label>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterfaces" class="col-sm-4 control-label">
+				Filter interface			</label>
+			<div class="col-sm-6 checkbox">
+				<select name="filterlogentriesinterfaces" id="filterlogentriesinterfaces" class="form-control">
+							<option value="All"
+						>ALL</option>
+							<option value="wan"
+						selected>L1_AMERICANET</option>
+							<option value="opt1"
+						>L2_VIVO</option>
+							<option value="opt2"
+						>L3_IMAXIMA</option>
+							<option value="lan"
+						>LAN</option>
+							<option value="opt3"
+						>SYNC</option>
+							</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterval" class="col-sm-4 control-label">Update interval</label>
+			<div class="col-sm-4">
+				<input type="number" name="filterlogentriesinterval" id="filterlogentriesinterval" value="5" placeholder="60"
+					min="5" class="form-control" />
+			</div>
+			Seconds		</div>
+
+		<div class="form-group">
+			<div class="col-sm-offset-4 col-sm-6">
+<!-- In the past:		<button type="submit" class="btn btn-primary"><i class="fa fa-save icon-embed-btn"></i>Save</button> -->
+				<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			</div>
+		</div>
+	</form>
+
+<script type="text/javascript">
+//<![CDATA[
+if (typeof getURL == 'undefined') {
+	getURL = function(url, callback) {
+		if (!url)
+			throw 'No URL for getURL';
+		try {
+			if (typeof callback.operationComplete == 'function')
+				callback = callback.operationComplete;
+		} catch (e) {}
+			if (typeof callback != 'function')
+				throw 'No callback function for getURL';
+		var http_request = null;
+		if (typeof XMLHttpRequest != 'undefined') {
+			http_request = new XMLHttpRequest();
+		}
+		else if (typeof ActiveXObject != 'undefined') {
+			try {
+				http_request = new ActiveXObject('Msxml2.XMLHTTP');
+			} catch (e) {
+				try {
+					http_request = new ActiveXObject('Microsoft.XMLHTTP');
+				} catch (e) {}
+			}
+		}
+		if (!http_request)
+			throw 'Both getURL and XMLHttpRequest are undefined';
+		http_request.onreadystatechange = function() {
+			if (http_request.readyState == 4) {
+				callback( { success : true,
+					content : http_request.responseText,
+					contentType : http_request.getResponseHeader("Content-Type") } );
+			}
+		};
+		http_request.open('GET', url, true);
+		http_request.send(null);
+	};
+}
+
+function outputrule(req) {
+	alert(req.content);
+}
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-log-3">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_logs_filter.php"> Vivo</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-log-3_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-log-3_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-log-3">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-log-3_panel-body" class="panel-body collapse in">
+						<script type="text/javascript">
+//<![CDATA[
+	var logWidgetLastRefreshlog3 = 1781619987;
+//]]>
+</script>
+
+
+<table class="table table-striped table-hover">
+	<thead>
+		<tr>
+			<th>Act</th>
+			<th>Time</th>
+			<th>Interface</th>
+			<th>Source</th>
+			<th>Destination</th>
+		</tr>
+	</thead>
+	<tbody>
+
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.6.84"
+				title="Reverse Resolve with DNS">15.177.6.84</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.30.124"
+				title="Reverse Resolve with DNS">15.177.30.124</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:17">Jun 16 11:26:17</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.30.223"
+				title="Reverse Resolve with DNS">15.177.30.223</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:18">Jun 16 11:26:18</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.6.188"
+				title="Reverse Resolve with DNS">15.177.6.188</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:18">Jun 16 11:26:18</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.2.28"
+				title="Reverse Resolve with DNS">15.177.2.28</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:23">Jun 16 11:26:23</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.22.144"
+				title="Reverse Resolve with DNS">15.177.22.144</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.26.139"
+				title="Reverse Resolve with DNS">15.177.26.139</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+	</tbody>
+</table>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+events.push(function(){
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function logs_callback(s) {
+		$("#widget-log-3_panel-body").html(s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		widgetkey : "log-3",
+		lastsawtime: logWidgetLastRefreshlog3	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var logsObject = new Object();
+	logsObject.name = "NewFirewall Logs";
+	logsObject.url = "/widgets/widgets/log.widget.php";
+	logsObject.callback = logs_callback;
+	logsObject.parms = postdata;
+	logsObject.freq = 5;
+
+	// Register the AJAX object
+	register_ajax(logsObject);
+
+	// ---------------------------------------------------------------------------------------------------
+});
+//]]>
+</script>
+
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div>
+<div id="widget-log-3_panel-footer" class="panel-footer collapse">
+
+	<form action="/widgets/widgets/log.widget.php" method="post"
+		class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<input type="hidden" name="widgetkey" value="log-3">
+		<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="Vivo" class="form-control" />  </div></div>
+		<div class="form-group">
+			<label for="filterlogentries" class="col-sm-4 control-label">Number of entries</label>
+			<div class="col-sm-6">
+				<input type="number" name="filterlogentries" id="filterlogentries" value="5" placeholder="5"
+					min="1" max="50" class="form-control" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label class="col-sm-4 control-label">Filter actions</label>
+			<div class="col-sm-6 checkbox">
+						<label><input name="actpass" type="checkbox" value="Pass"
+				checked />
+				Pass			</label>
+			<label><input name="actblock" type="checkbox" value="Block"
+				 />
+				Block			</label>
+			<label><input name="actreject" type="checkbox" value="Reject"
+				 />
+				Reject			</label>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterfaces" class="col-sm-4 control-label">
+				Filter interface			</label>
+			<div class="col-sm-6 checkbox">
+				<select name="filterlogentriesinterfaces" id="filterlogentriesinterfaces" class="form-control">
+							<option value="All"
+						>ALL</option>
+							<option value="wan"
+						>L1_AMERICANET</option>
+							<option value="opt1"
+						selected>L2_VIVO</option>
+							<option value="opt2"
+						>L3_IMAXIMA</option>
+							<option value="lan"
+						>LAN</option>
+							<option value="opt3"
+						>SYNC</option>
+							</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterval" class="col-sm-4 control-label">Update interval</label>
+			<div class="col-sm-4">
+				<input type="number" name="filterlogentriesinterval" id="filterlogentriesinterval" value="5" placeholder="60"
+					min="5" class="form-control" />
+			</div>
+			Seconds		</div>
+
+		<div class="form-group">
+			<div class="col-sm-offset-4 col-sm-6">
+<!-- In the past:		<button type="submit" class="btn btn-primary"><i class="fa fa-save icon-embed-btn"></i>Save</button> -->
+				<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			</div>
+		</div>
+	</form>
+
+<script type="text/javascript">
+//<![CDATA[
+if (typeof getURL == 'undefined') {
+	getURL = function(url, callback) {
+		if (!url)
+			throw 'No URL for getURL';
+		try {
+			if (typeof callback.operationComplete == 'function')
+				callback = callback.operationComplete;
+		} catch (e) {}
+			if (typeof callback != 'function')
+				throw 'No callback function for getURL';
+		var http_request = null;
+		if (typeof XMLHttpRequest != 'undefined') {
+			http_request = new XMLHttpRequest();
+		}
+		else if (typeof ActiveXObject != 'undefined') {
+			try {
+				http_request = new ActiveXObject('Msxml2.XMLHTTP');
+			} catch (e) {
+				try {
+					http_request = new ActiveXObject('Microsoft.XMLHTTP');
+				} catch (e) {}
+			}
+		}
+		if (!http_request)
+			throw 'Both getURL and XMLHttpRequest are undefined';
+		http_request.onreadystatechange = function() {
+			if (http_request.readyState == 4) {
+				callback( { success : true,
+					content : http_request.responseText,
+					contentType : http_request.getResponseHeader("Content-Type") } );
+			}
+		};
+		http_request.open('GET', url, true);
+		http_request.send(null);
+	};
+}
+
+function outputrule(req) {
+	alert(req.content);
+}
+//]]>
+</script>
+					</div>
+				</div>
+								<div class="panel panel-default" id="widget-log-2">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_logs_filter.php"> iMaxima</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-log-2_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-log-2_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-log-2">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-log-2_panel-body" class="panel-body collapse in">
+						<script type="text/javascript">
+//<![CDATA[
+	var logWidgetLastRefreshlog2 = 1781619987;
+//]]>
+</script>
+
+
+<table class="table table-striped table-hover">
+	<thead>
+		<tr>
+			<th>Act</th>
+			<th>Time</th>
+			<th>Interface</th>
+			<th>Source</th>
+			<th>Destination</th>
+		</tr>
+	</thead>
+	<tbody>
+
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.6.84"
+				title="Reverse Resolve with DNS">15.177.6.84</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=71,1735875564,pass', outputrule);"
+			title="Rule that triggered this action: @71 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 450 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875564&quot; ridentifier 1735875564">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=18.229.7.71"
+				title="Reverse Resolve with DNS">18.229.7.71</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:450			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L1_AMERICANET</td>
+			<td><a href="diag_dns.php?host=15.177.30.124"
+				title="Reverse Resolve with DNS">15.177.30.124</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:17">Jun 16 11:26:17</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.30.223"
+				title="Reverse Resolve with DNS">15.177.30.223</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:18">Jun 16 11:26:18</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.6.188"
+				title="Reverse Resolve with DNS">15.177.6.188</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:18">Jun 16 11:26:18</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.2.28"
+				title="Reverse Resolve with DNS">15.177.2.28</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:23">Jun 16 11:26:23</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.22.144"
+				title="Reverse Resolve with DNS">15.177.22.144</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L2_VIVO</td>
+			<td><a href="diag_dns.php?host=15.177.26.139"
+				title="Reverse Resolve with DNS">15.177.26.139</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:21">Jun 16 11:26:21</td>
+			<td>L3_IMAXIMA</td>
+			<td><a href="diag_dns.php?host=15.177.2.118"
+				title="Reverse Resolve with DNS">15.177.2.118</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:22">Jun 16 11:26:22</td>
+			<td>L3_IMAXIMA</td>
+			<td><a href="diag_dns.php?host=15.177.18.68"
+				title="Reverse Resolve with DNS">15.177.18.68</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:24">Jun 16 11:26:24</td>
+			<td>L3_IMAXIMA</td>
+			<td><a href="diag_dns.php?host=15.177.22.49"
+				title="Reverse Resolve with DNS">15.177.22.49</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:25">Jun 16 11:26:25</td>
+			<td>L3_IMAXIMA</td>
+			<td><a href="diag_dns.php?host=15.177.6.188"
+				title="Reverse Resolve with DNS">15.177.6.188</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+		<tr>
+			<td><i class="fa-solid fa-check text-success" style="cursor: pointer;" onclick="javascript:getURL('status_logs_filter.php?getrulenum=73,1735875528,pass', outputrule);"
+			title="Rule that triggered this action: @73 pass in log quick on WANs inet proto tcp from any to 192.168.0.100 port = 90 flags S/SA keep state label &quot;USER_RULE: NAT Proxy-Reverso&quot; label &quot;id:1735875528&quot; ridentifier 1735875528">
+			</a></td>
+			<td title="Jun 16 11:26:26">Jun 16 11:26:26</td>
+			<td>L3_IMAXIMA</td>
+			<td><a href="diag_dns.php?host=15.177.26.221"
+				title="Reverse Resolve with DNS">15.177.26.221</a>
+			</td>
+			<td><a href="diag_dns.php?host=192.168.0.100"
+				title="Reverse Resolve with DNS">192.168.0.100</a>:90			</td>
+		</tr>
+
+	
+	</tbody>
+</table>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+events.push(function(){
+	// --------------------- Centralized widget refresh system ------------------------------
+
+	// Callback function called by refresh system when data is retrieved
+	function logs_callback(s) {
+		$("#widget-log-2_panel-body").html(s);
+	}
+
+	// POST data to send via AJAX
+	var postdata = {
+		ajax: "ajax",
+		widgetkey : "log-2",
+		lastsawtime: logWidgetLastRefreshlog2	 };
+
+	// Create an object defining the widget refresh AJAX call
+	var logsObject = new Object();
+	logsObject.name = "NewFirewall Logs";
+	logsObject.url = "/widgets/widgets/log.widget.php";
+	logsObject.callback = logs_callback;
+	logsObject.parms = postdata;
+	logsObject.freq = 5;
+
+	// Register the AJAX object
+	register_ajax(logsObject);
+
+	// ---------------------------------------------------------------------------------------------------
+});
+//]]>
+</script>
+
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div>
+<div id="widget-log-2_panel-footer" class="panel-footer collapse">
+
+	<form action="/widgets/widgets/log.widget.php" method="post"
+		class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<input type="hidden" name="widgetkey" value="log-2">
+		<div class="form-group">  <label for="descr" class="col-sm-4 control-label">Widget title</label>  <div class="col-sm-4">    <input type="text" name="descr" id="descr" value="iMaxima" class="form-control" />  </div></div>
+		<div class="form-group">
+			<label for="filterlogentries" class="col-sm-4 control-label">Number of entries</label>
+			<div class="col-sm-6">
+				<input type="number" name="filterlogentries" id="filterlogentries" value="5" placeholder="5"
+					min="1" max="50" class="form-control" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label class="col-sm-4 control-label">Filter actions</label>
+			<div class="col-sm-6 checkbox">
+						<label><input name="actpass" type="checkbox" value="Pass"
+				checked />
+				Pass			</label>
+			<label><input name="actblock" type="checkbox" value="Block"
+				 />
+				Block			</label>
+			<label><input name="actreject" type="checkbox" value="Reject"
+				 />
+				Reject			</label>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterfaces" class="col-sm-4 control-label">
+				Filter interface			</label>
+			<div class="col-sm-6 checkbox">
+				<select name="filterlogentriesinterfaces" id="filterlogentriesinterfaces" class="form-control">
+							<option value="All"
+						>ALL</option>
+							<option value="wan"
+						>L1_AMERICANET</option>
+							<option value="opt1"
+						>L2_VIVO</option>
+							<option value="opt2"
+						selected>L3_IMAXIMA</option>
+							<option value="lan"
+						>LAN</option>
+							<option value="opt3"
+						>SYNC</option>
+							</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="filterlogentriesinterval" class="col-sm-4 control-label">Update interval</label>
+			<div class="col-sm-4">
+				<input type="number" name="filterlogentriesinterval" id="filterlogentriesinterval" value="5" placeholder="60"
+					min="5" class="form-control" />
+			</div>
+			Seconds		</div>
+
+		<div class="form-group">
+			<div class="col-sm-offset-4 col-sm-6">
+<!-- In the past:		<button type="submit" class="btn btn-primary"><i class="fa fa-save icon-embed-btn"></i>Save</button> -->
+				<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+			</div>
+		</div>
+	</form>
+
+<script type="text/javascript">
+//<![CDATA[
+if (typeof getURL == 'undefined') {
+	getURL = function(url, callback) {
+		if (!url)
+			throw 'No URL for getURL';
+		try {
+			if (typeof callback.operationComplete == 'function')
+				callback = callback.operationComplete;
+		} catch (e) {}
+			if (typeof callback != 'function')
+				throw 'No callback function for getURL';
+		var http_request = null;
+		if (typeof XMLHttpRequest != 'undefined') {
+			http_request = new XMLHttpRequest();
+		}
+		else if (typeof ActiveXObject != 'undefined') {
+			try {
+				http_request = new ActiveXObject('Msxml2.XMLHTTP');
+			} catch (e) {
+				try {
+					http_request = new ActiveXObject('Microsoft.XMLHTTP');
+				} catch (e) {}
+			}
+		}
+		if (!http_request)
+			throw 'Both getURL and XMLHttpRequest are undefined';
+		http_request.onreadystatechange = function() {
+			if (http_request.readyState == 4) {
+				callback( { success : true,
+					content : http_request.responseText,
+					contentType : http_request.getResponseHeader("Content-Type") } );
+			}
+		};
+		http_request.open('GET', url, true);
+		http_request.send(null);
+	};
+}
+
+function outputrule(req) {
+	alert(req.content);
+}
+//]]>
+</script>
+					</div>
+				</div>
+				</div><div class="col-md-3" id="widgets-col4">				<div class="panel panel-default" id="widget-traffic_graphs-0">
+					<div class="panel-heading">
+						<h2 class="panel-title">
+							<a href="status_graph.php"> Traffic Graphs</a>							<span class="widget-heading-icon">
+								<a data-toggle="collapse" href="#widget-traffic_graphs-0_panel-footer" class="config hidden">
+									<i class="fa-solid fa-wrench"></i>
+								</a>
+								<a data-toggle="collapse" href="#widget-traffic_graphs-0_panel-body">
+									<!--  actual icon is determined in css based on state of body -->
+									<i class="fa-solid fa-plus-circle"></i>
+								</a>
+								<a data-toggle="close" href="#widget-traffic_graphs-0">
+									<i class="fa-solid fa-times-circle"></i>
+								</a>
+							</span>
+						</h2>
+					</div>
+					<div id="widget-traffic_graphs-0_panel-body" class="panel-body collapse in">
+							<script src="/vendor/d3/d3.min.js?v=1756397406"></script>
+	<script src="/vendor/nvd3/nv.d3.min.js?v=1756397406"></script>
+	<script src="/vendor/visibility/visibility-1.2.3.min.js?v=1756397406"></script>
+
+	<link href="/vendor/nvd3/nv.d3.min.css" media="screen, projection" rel="stylesheet" type="text/css">
+
+	<div id="traffic-chart-error" class="alert alert-danger" style="display: none;"></div>
+<div id="traffic-chart-wan" class="d3-chart traffic-widget-chart">	<svg></svg></div><div id="traffic-chart-opt1" class="d3-chart traffic-widget-chart">	<svg></svg></div><div id="traffic-chart-opt2" class="d3-chart traffic-widget-chart">	<svg></svg></div>
+<!-- close the body we're wrapped in and add a configuration-panel -->
+</div>
+
+<div id="widget-traffic_graphs-0_panel-footer" class="panel-footer collapse">
+
+	<form action="/widgets/widgets/traffic_graphs.widget.php" method="post" class="form-horizontal"><input type='hidden' name='__csrf_magic' value="sid:0b7611bb7550ae2793442dbde74838e8c6f04178,1781619988" />
+		<div class="form-group">
+			<label for="traffic-graph-interval" class="col-sm-3 control-label">Refresh Interval</label>
+			<div class="col-sm-9">
+				<input type="number" id="refreshinterval" name="refreshinterval" value="1" min="1" max="10" class="form-control" />
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="invert" class="col-sm-3 control-label">Inverse</label>
+			<div class="col-sm-9">
+				<select class="form-control" id="invert" name="invert">
+				<option value="true" selected>On</option><option value="false">Off</option>				</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="size" class="col-sm-3 control-label">Unit Size</label>
+			<div class="col-sm-9">
+				<select class="form-control" id="size" name="size">
+				<option value="8" selected>Bits</option><option value="1">Bytes</option>				</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="backgroundupdate" class="col-sm-3 control-label">Background updates</label>
+			<div class="col-sm-9">
+				<select class="form-control" id="backgroundupdate" name="backgroundupdate">
+				<option value="true" selected>Keep graphs updated on inactive tab. (increases cpu usage)</option><option value="false">Clear graphs when not visible.</option>				</select>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<label for="smoothfactor" class="col-sm-3 control-label">Graph Smoothing</label>
+			<div class="col-sm-9">
+				<input type='range' id="smoothfactor" name='smoothfactor' class='form-control' min='0' max='5'value="0"/>
+			</div>
+		</div>
+
+		<div class="panel panel-default col-sm-10">
+			<div class="panel-body">
+				<div class="table responsive">
+					<table class="table table-striped table-hover table-condensed">
+						<thead>
+							<tr>
+								<th>Interface</th>
+								<th>Show</th>
+							</tr>
+						</thead>
+						<tbody>
+								<tr>
+								<td>L1_AMERICANET</td>
+								<td class="col-sm-2"><input id="show[]" name ="show[]" value="wan" type="checkbox" checked></td>
+							</tr>
+								<tr>
+								<td>L2_VIVO</td>
+								<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt1" type="checkbox" checked></td>
+							</tr>
+								<tr>
+								<td>L3_IMAXIMA</td>
+								<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt2" type="checkbox" checked></td>
+							</tr>
+								<tr>
+								<td>LAN</td>
+								<td class="col-sm-2"><input id="show[]" name ="show[]" value="lan" type="checkbox" ></td>
+							</tr>
+								<tr>
+								<td>SYNC</td>
+								<td class="col-sm-2"><input id="show[]" name ="show[]" value="opt3" type="checkbox" ></td>
+							</tr>
+							</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<div class="form-group">
+			<div class="col-sm-offset-3 col-sm-6">
+				<button type="submit" class="btn btn-primary"><i class="fa-solid fa-save icon-embed-btn"></i>Save</button>
+				<button id="showalltgitems" type="button" class="btn btn-info"><i class="fa-solid fa-undo icon-embed-btn"></i>All</button>
+			</div>
+		</div>
+	</form>
+
+<script type="text/javascript">
+//<![CDATA[
+// Used by /js/traffic-graphs.js to display description from name
+var graph_interfacenames = {"wan":"L1_AMERICANET","opt1":"L2_VIVO","opt2":"L3_IMAXIMA","lan":"LAN","opt3":"SYNC"};
+
+events.push(function() {
+
+	var InterfaceString = "wan|opt1|opt2";
+	var RealInterfaceString = "vtnet0|vtnet1|vtnet2";
+	window.graph_backgroundupdate = true;
+
+	window.interval = 1;
+	window.invert = JSON.parse(true);
+	window.size = 8;
+	window.smoothing = 0;
+	window.interfaces = InterfaceString.split("|").filter(function(entry) { return entry.trim() != ''; });
+	window.realinterfaces = RealInterfaceString.split("|").filter(function(entry) { return entry.trim() != ''; });
+
+	graph_init();
+	graph_visibilitycheck();
+
+	set_widget_checkbox_events("#widget-traffic_graphs-0_panel-footer [id^=show]", "showalltgitems");
+});
+//]]>
+</script>
+
+<script src="/js/traffic-graphs.js?v=1756397406"></script>
+					</div>
+				</div>
+				</div>
+</div>
+
+
+<script type="text/javascript">
+//<![CDATA[
+
+dirty = false;
+function updateWidgets(newWidget) {
+	var sequence = '';
+
+	$('.container .col-md-3').each(function(idx, col) {
+		$('.panel', col).each(function(idx, widget) {
+			var isOpen = $('.panel-body', widget).hasClass('in');
+			var widget_basename = widget.id.split('-')[1];
+
+			// Only save details for panels that have id's like 'widget-*'
+			// Some widgets create other panels, so ignore any of those.
+			if ((widget.id.split('-')[0] == 'widget') && (typeof widget_basename !== 'undefined')) {
+				sequence += widget_basename + ':' + col.id.split('-')[1] + ':' + (isOpen ? 'open' : 'close') + ':' + widget.id.split('-')[2] + ',';
+			}
+		});
+	});
+
+	if (typeof newWidget !== 'undefined') {
+		// The system_information widget is always added to column one. Others go in column two
+		if (newWidget == "system_information") {
+			sequence += newWidget.split('-')[0] + ':' + 'col1:open:next';
+		} else {
+			sequence += newWidget.split('-')[0] + ':' + 'col2:open:next';
+		}
+	}
+
+	$('input[name=sequence]', $('#widgetSequence_form')).val(sequence);
+}
+
+// Determine if all the checkboxes are checked
+function are_all_checked(checkbox_panel_ref) {
+	var allBoxesChecked = true;
+	$(checkbox_panel_ref).each(function() {
+		if ((this.type == 'checkbox') && !this.checked) {
+			allBoxesChecked = false;
+		}
+	});
+	return allBoxesChecked;
+}
+
+// If the checkboxes are all checked, then clear them all.
+// Otherwise set them all.
+function set_clear_checkboxes(checkbox_panel_ref) {
+	checkTheBoxes = !are_all_checked(checkbox_panel_ref);
+
+	$(checkbox_panel_ref).each(function() {
+		$(this).prop("checked", checkTheBoxes);
+	});
+}
+
+// Set the given id to All or None button depending if the checkboxes are all checked.
+function set_all_none_button(checkbox_panel_ref, all_none_button_id) {
+	if (are_all_checked(checkbox_panel_ref)) {
+		text = "None";
+	} else {
+		text = "All";
+	}
+
+	$("#" + all_none_button_id).html('<i class="fa-solid fa-undo icon-embed-btn"></i>' + text);
+}
+
+// Setup the necessary events to manage the All/None button and included checkboxes
+// used for selecting the items to show on a widget.
+function set_widget_checkbox_events(checkbox_panel_ref, all_none_button_id) {
+		set_all_none_button(checkbox_panel_ref, all_none_button_id);
+
+		$(checkbox_panel_ref).change(function() {
+			set_all_none_button(checkbox_panel_ref, all_none_button_id);
+		});
+
+		$("#" + all_none_button_id).click(function() {
+			set_clear_checkboxes(checkbox_panel_ref);
+			set_all_none_button(checkbox_panel_ref, all_none_button_id);
+		});
+}
+
+// ---------------------Centralized widget refresh system -------------------------------------------
+// These need to live outside of the events.push() function to enable the widgets to see them
+var ajaxspecs = new Array();	// Array to hold widget refresh specifications (objects )
+var ajaxcntr = 0;
+
+// Add a widget refresh object to the array list
+function register_ajax(ws) {
+  ajaxspecs.push(ws);
+}
+// ---------------------------------------------------------------------------------------------------
+
+events.push(function() {
+	// Make panels destroyable
+	$('.container .panel-heading a[data-toggle="close"]').each(function (idx, el) {
+		$(el).on('click', function(e) {
+			$(el).parents('.panel').remove();
+			updateWidgets();
+			// Submit the form save/display all selected widgets
+			$('[name=widgetForm]').submit();
+		})
+	});
+
+	// Make panels sortable
+	$('.container .col-md-3').sortable({
+		handle: '.panel-heading',
+		cursor: 'grabbing',
+		connectWith: '.container .col-md-3',
+		update: function(){
+			dirty = true;
+			$('#btnstore').removeClass('invisible');
+		}
+	});
+
+	// On clicking a widget to install . .
+	$('[id^=btnadd-]').click(function(event) {
+		// Add the widget name to the list of displayed widgets
+		updateWidgets(this.id.replace('btnadd-', ''));
+
+		// Submit the form save/display all selected widgets
+		$('[name=widgetForm]').submit();
+	});
+
+
+	$('#btnstore').click(function() {
+		updateWidgets();
+		dirty = false;
+		$(this).addClass('invisible');
+		$('[name=widgetForm]').submit();
+	});
+
+	// provide a warning message if the user tries to change page before saving
+	$(window).bind('beforeunload', function(){
+		if (dirty) {
+			return ("One or more widgets have been moved but have not yet been saved");
+		} else {
+			return undefined;
+		}
+	});
+
+	// Show the fa-save icon in the breadcrumb bar if the user opens or closes a panel (In case he/she wants to save the new state)
+	// (Sometimes this will cause us to see the icon when we don't need it, but better that than the other way round)
+	$('.panel').on('hidden.bs.collapse shown.bs.collapse', function (e) {
+	    if (e.currentTarget.id != 'widget-available') {
+			$('#btnstore').removeClass("invisible");
+		}
+	});
+
+	// --------------------- Centralized widget refresh system ------------------------------
+	ajaxtimeout = false;
+
+	function make_ajax_call(wd) {
+		$.ajax({
+			type: 'POST',
+			url: wd.url,
+			dataType: 'html',
+			data: wd.parms,
+
+			success: function(data){
+				if (data.length > 0 ) {
+					// If the session has timed out, display a pop-up
+					if (data.indexOf("SESSION_TIMEOUT") === -1) {
+						wd.callback(data);
+					} else {
+						if (ajaxtimeout === false) {
+							ajaxtimeout = true;
+							alert("The dashboard web session has timed out.\nIt will not update until you refresh the page and log-in again.");
+						}
+					}
+				}
+
+			},
+
+			error: function(e){
+				console.log("Error: " + e);
+			}
+		});
+	}
+
+	function execute_ajax_call(item){
+		if ((ajaxcntr % item.freq) === 0) {
+			make_ajax_call(item);
+		}
+	}
+
+	// Loop through each AJAX widget refresh object, make the AJAX call and pass the
+	// results back to the widget's callback function
+	function executewidget() {
+		ajaxspecs.forEach(execute_ajax_call);
+
+		if (++ajaxcntr >= 4096) {
+			ajaxcntr = 0;
+		}
+
+		setTimeout(function() { executewidget(); }, 1000);
+	}
+
+	// Kick it off
+	executewidget();
+
+	//----------------------------------------------------------------------------------------------------
+});
+//]]>
+</script>
+
+	</div>
+	<footer class="footer">
+		<div class="container">
+			<p class="text-muted">
+				<a id="tpl" style="display: none;" href="#" title="Top of page"><i class="fa-regular fa-square-caret-up pull-left"></i></a>
+				<a target="_blank" href="https://pfsense.org">pfSense</a> is developed and maintained by <a target="_blank" href="https://netgate.com">Netgate. </a> &copy; ESF 2004 - 2026<a target="_blank" href="https://pfsense.org/license"> View license.</a>				<a id="tpr" style="display: none;" href="#" title="Top of page"><i class="fa-regular fa-square-caret-up pull-right"></i></a>
+			</p>
+		</div>
+	</footer>
+
+	<!-- This use of filemtime() is intended to fool the browser into reloading the file (not using the cached version) if the file is changed -->
+
+	<script src="/vendor/jquery/jquery-3.7.1.min.js?v=1756397406"></script>
+ 	<script src="/vendor/jquery-ui/jquery-ui-1.13.2.min.js?v=1756397406"></script>
+	<script src="/vendor/bootstrap/js/bootstrap.min.js?v=1756397406"></script>
+	<script src="/js/pfSense.js?v=1756397406"></script>
+	<script src="/js/pfSenseHelpers.js?v=1756397406"></script>
+	<script src="/js/polyfills.js?v=1756397406"></script>
+	<script src="/vendor/sortable/sortable.js?v=1756397406"></script>
+
+	<script type="text/javascript" src="/vendor/jquery-treegrid/js/jquery.treegrid.min.js?v=1756397406"></script>
+	<script type="text/javascript" src="/vendor/js-cookie/js.cookie.js?v=1756397406"></script>
+
+	<script type="text/javascript">
+	//<![CDATA[
+		// Un-hide the "Top of page" icons if the page is larger than the window
+		if ($(document).height() > $(window).height()) {
+		    $('[id^=tp]').show();
+		}
+	//]]>
+	</script>
+<script type="text/javascript">CsrfMagic.end();</script></body>
+</html>

@@ -3100,6 +3100,260 @@ setInterval(runBackgroundMonitoringChecks, 5 * 60 * 1000);
 // Run initial check after server starts (with 5 seconds delay)
 setTimeout(runBackgroundMonitoringChecks, 5000);
 
+// --- pfSense Integration & Scraping ---
+let cachedPfSenseData: any = null;
+let lastPfSenseFetchTime = 0;
+const PFSENSE_CACHE_TTL = 15000; // 15 seconds cache
+
+let lastCpuTotalTicks = 0;
+let lastCpuUsedTicks = 0;
+
+async function fetchPfSenseDataActual(): Promise<any> {
+    const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
+    const username = process.env.PFSENSE_USER || "tv";
+    const password = process.env.PFSENSE_PASS || "tv1945";
+
+    const makeGet = (urlStr: string, cookie = ""): Promise<{ html: string; headers: http.IncomingHttpHeaders }> => {
+        return new Promise((resolve, reject) => {
+            const parsedUrl = new URL(urlStr);
+            const options: https.RequestOptions = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: "GET",
+                agent: lansweeperAgent,
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
+                    "Cookie": cookie
+                }
+            };
+
+            const transport = parsedUrl.protocol === "https:" ? https : http;
+            const req = transport.get(options, (res) => {
+                let data = "";
+                res.on("data", chunk => data += chunk);
+                res.on("end", () => {
+                    resolve({ html: data, headers: res.headers });
+                });
+            });
+            req.on("error", reject);
+        });
+    };
+
+    const makePost = (urlStr: string, body: string, cookie = ""): Promise<{ html: string; headers: http.IncomingHttpHeaders; statusCode?: number }> => {
+        return new Promise((resolve, reject) => {
+            const parsedUrl = new URL(urlStr);
+            const options: https.RequestOptions = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: "POST",
+                agent: lansweeperAgent,
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Content-Length": Buffer.byteLength(body),
+                    "Cookie": cookie
+                }
+            };
+
+            const transport = parsedUrl.protocol === "https:" ? https : http;
+            const req = transport.request(options, (res) => {
+                let data = "";
+                res.on("data", chunk => data += chunk);
+                res.on("end", () => {
+                    resolve({ html: data, headers: res.headers, statusCode: res.statusCode });
+                });
+            });
+
+            req.on("error", reject);
+            req.write(body);
+            req.end();
+        });
+    };
+
+    // 1. Get Login Page to obtain csrf magic token and initial cookie
+    const initialRes = await makeGet(url);
+    const setCookieHeaders = initialRes.headers["set-cookie"] || [];
+    const initialCookie = setCookieHeaders.map(c => c.split(";")[0]).join("; ");
+
+    const csrfMatch = initialRes.html.match(/name='__csrf_magic' value="([^"]*)"/);
+    if (!csrfMatch) {
+        throw new Error("Não foi possível encontrar __csrf_magic na página do pfSense.");
+    }
+    const csrfToken = csrfMatch[1];
+
+    // 2. Perform Login POST request
+    const loginParams = new URLSearchParams();
+    loginParams.append("__csrf_magic", csrfToken);
+    loginParams.append("usernamefld", username);
+    loginParams.append("passwordfld", password);
+    loginParams.append("login", "Sign In");
+
+    const postRes = await makePost(url + "/index.php", loginParams.toString(), initialCookie);
+    const loginCookiesHeaders = postRes.headers["set-cookie"] || [];
+    const authCookie = loginCookiesHeaders.length > 0 
+        ? loginCookiesHeaders.map(c => c.split(";")[0]).join("; ")
+        : initialCookie;
+
+    // 3. Query index.php to parse static components (interfaces, gateways, DNS, Uptime)
+    const indexRes = await makeGet(url + "/index.php", authCookie);
+    const indexHtml = indexRes.html;
+
+    // 4. Query getstats.php to get real-time ticks and load averages
+    const statsRes = await makeGet(url + "/getstats.php", authCookie);
+    const statsHtml = statsRes.html;
+
+    // Parse Stats (from getstats.php)
+    const statsValues = statsHtml.split("|");
+    let cpuUsage = 0;
+    let memoryUsage = 0;
+    let loadAverage = "0.00, 0.00, 0.00";
+    let uptime = "Desconhecido";
+
+    if (statsValues.length >= 9) {
+        const totalTicks = parseInt(statsValues[0]);
+        const usedTicks = parseInt(statsValues[1]);
+        memoryUsage = parseInt(statsValues[2]) || 0;
+        uptime = statsValues[3] || "Desconhecido";
+        loadAverage = statsValues[8] || "0.00, 0.00, 0.00";
+
+        if (lastCpuTotalTicks > 0 && totalTicks > lastCpuTotalTicks) {
+            const d_total = totalTicks - lastCpuTotalTicks;
+            const d_used = usedTicks - lastCpuUsedTicks;
+            cpuUsage = d_total > 0 ? Math.floor(((d_total - d_used) / d_total) * 100) : 0;
+        } else {
+            cpuUsage = 0;
+        }
+
+        lastCpuTotalTicks = totalTicks;
+        lastCpuUsedTicks = usedTicks;
+    }
+
+    // Parse DNS
+    const dnsList: string[] = [];
+    const dnsBlockMatch = indexHtml.match(/<th>DNS server\(s\)<\/th>\s*<td>\s*<ul.*?>([\s\S]*?)<\/ul>/i);
+    if (dnsBlockMatch) {
+        const liMatches = dnsBlockMatch[1].matchAll(/<li>(.*?)<\/li>/gi);
+        for (const match of liMatches) {
+            dnsList.push(match[1].trim());
+        }
+    }
+
+    // Parse Interfaces
+    const interfacesList: any[] = [];
+    const ifacesBlockMatch = indexHtml.match(/<div class="table-responsive" id="ifaces_status_interfaces-0">([\s\S]*?)<\/div>/i);
+    if (ifacesBlockMatch) {
+        const rowMatches = ifacesBlockMatch[1].match(/<tr>([\s\S]*?)<\/tr>/gi);
+        if (rowMatches) {
+            for (const rowHtml of rowMatches) {
+                const nameMatch = rowHtml.match(/href="\/interfaces\.php\?if=(.*?)"[^>]*>\s*([\s\S]*?)\s*<\/a>/i);
+                if (!nameMatch) continue;
+                const ifId = nameMatch[1].trim();
+                const ifName = nameMatch[2].replace(/<[^>]*>/g, "").trim();
+                const status = rowHtml.includes('title="up"') ? "up" : "down";
+
+                const tdMatches = rowHtml.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+                let speed = "Desconhecido";
+                let ip = "Desconhecido";
+                if (tdMatches && tdMatches.length >= 4) {
+                    speed = tdMatches[2].replace(/<[^>]*>/g, "").trim();
+                    ip = tdMatches[3].replace(/<[^>]*>/g, "").trim();
+                }
+
+                interfacesList.push({
+                    name: ifName,
+                    interface: ifId,
+                    status,
+                    speed,
+                    ip
+                });
+            }
+        }
+    }
+
+    // Parse Gateways
+    const gatewaysList: any[] = [];
+    const gwtblMatch = indexHtml.match(/<tbody id="gateways-0-gwtblbody">([\s\S]*?)<\/tbody>/i);
+    if (gwtblMatch) {
+        const rowMatches = gwtblMatch[1].match(/<tr>([\s\S]*?)<\/tr>/gi);
+        if (rowMatches) {
+            for (const rowHtml of rowMatches) {
+                const tdMatches = rowHtml.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+                if (tdMatches && tdMatches.length >= 5) {
+                    const nameTdHtml = tdMatches[1];
+                    const name = nameTdHtml.split("<br")[0].replace(/<[^>]*>/g, "").trim();
+                    
+                    const ipMatch = nameTdHtml.match(/<b>(.*?)<\/b>/i);
+                    const ip = ipMatch ? ipMatch[1].trim() : "Desconhecido";
+                    
+                    const rtt = tdMatches[2].replace(/<[^>]*>/g, "").trim();
+                    const rttsd = tdMatches[3].replace(/<[^>]*>/g, "").trim();
+                    const loss = tdMatches[4].replace(/<[^>]*>/g, "").trim();
+                    
+                    const statusTdHtml = tdMatches[tdMatches.length - 1];
+                    const status = statusTdHtml.replace(/<[^>]*>/g, "").trim();
+                    const classMatch = statusTdHtml.match(/class="([^"]*)"/i);
+                    const statusClass = classMatch ? classMatch[1].trim() : "";
+                    
+                    gatewaysList.push({
+                        name,
+                        ip,
+                        rtt,
+                        rttsd,
+                        loss,
+                        status,
+                        status_class: statusClass
+                    });
+                }
+            }
+        }
+    }
+
+    return {
+        uptime,
+        cpu_usage: cpuUsage,
+        memory_usage: memoryUsage,
+        load_average: loadAverage,
+        dns_servers: dnsList,
+        interfaces: interfacesList,
+        gateways: gatewaysList
+    };
+}
+
+async function getPfSenseData(forceRefresh = false): Promise<any> {
+    const now = Date.now();
+    if (cachedPfSenseData && (now - lastPfSenseFetchTime < PFSENSE_CACHE_TTL) && !forceRefresh) {
+        return cachedPfSenseData;
+    }
+
+    try {
+        const data = await fetchPfSenseDataActual();
+        cachedPfSenseData = data;
+        lastPfSenseFetchTime = now;
+        return data;
+    } catch (err) {
+        console.error("Error fetching pfSense status:", err);
+        if (cachedPfSenseData) return cachedPfSenseData;
+        throw err;
+    }
+}
+
+app.get("/api/monitoring/pfsense", async (req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const forceRefresh = req.query.refresh === "true";
+        const data = await getPfSenseData(forceRefresh);
+        res.json({
+            success: true,
+            data
+        });
+    } catch (err: any) {
+        console.error("Erro na rota pfSense:", err);
+        res.status(500).json({ error: "Erro ao obter dados do pfSense: " + err.message });
+    }
+});
+
 // 404 Catch-all para rotas da API
 app.use("/api", (req: Request, res: Response) => {
     console.warn(`[404 NOT FOUND API] ${req.method} ${req.url}`);
