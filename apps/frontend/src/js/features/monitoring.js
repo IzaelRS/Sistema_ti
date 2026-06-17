@@ -24,6 +24,9 @@ let nasAutoRefreshInterval = null;
 let camerasAutoRefreshInterval = null;
 let serversAutoRefreshInterval = null;
 let networkAutoRefreshInterval = null;
+let trafficCharts = {};
+let lastTrafficData = null;
+let trafficPollingInterval = null;
 let isPingingSequentially = false;
 
 export const monitoringHandler = {
@@ -363,6 +366,18 @@ export const monitoringHandler = {
             if (networkAutoRefreshChk.checked) this._startNetworkAutoRefresh();
         }
 
+        // Enable traffic graphs checkbox
+        const trafficEnableChk = document.getElementById('network-traffic-enable');
+        if (trafficEnableChk) {
+            trafficEnableChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    this._startTrafficPolling();
+                } else {
+                    this._stopTrafficPolling();
+                }
+            });
+        }
+
         // Bind global helper
         window.monitoringHandler = this;
     },
@@ -537,17 +552,23 @@ export const monitoringHandler = {
 
         if (tab === 'gnew') {
             this.fetchDiagnostics();
+            this._stopTrafficPolling();
         } else if (tab === 'events') {
             eventsCurrentPage = 1; // sempre começa na página 1 ao abrir a aba
             this.fetchAndRenderEventHistory();
+            this._stopTrafficPolling();
         } else if (tab === 'apis') {
             this.fetchAndRenderApisStatus();
+            this._stopTrafficPolling();
         } else if (tab === 'infra') {
             this.setInfraTab(activeInfraTab);
+            this._stopTrafficPolling();
         } else if (tab === 'network') {
             this.fetchAndRenderNetworkStatus();
+            this._startTrafficPolling();
         } else {
             this.renderGnewServicesStatus();
+            this._stopTrafficPolling();
         }
     },
 
@@ -1735,6 +1756,12 @@ export const monitoringHandler = {
             if (res && res.success && res.data) {
                 const info = res.data;
                 
+                // Toggle simulation badge
+                const badge = document.getElementById('network-simulation-badge');
+                if (badge) {
+                    badge.style.display = info.isSimulated ? 'inline-block' : 'none';
+                }
+                
                 // Update CPU Usage
                 const cpuText = document.getElementById('network-kpi-cpu-text');
                 const cpuBar = document.getElementById('network-kpi-cpu-bar');
@@ -1752,6 +1779,12 @@ export const monitoringHandler = {
                 // Update Uptime
                 const uptimeText = document.getElementById('network-kpi-uptime-text');
                 if (uptimeText) uptimeText.textContent = info.uptime || 'Desconhecido';
+
+                // Update Active Links
+                const cableLinkText = document.getElementById('network-kpi-main-cable');
+                const wifiLinkText = document.getElementById('network-kpi-main-wifi');
+                if (cableLinkText) cableLinkText.textContent = info.main_cable_link || 'Sem Conexão';
+                if (wifiLinkText) wifiLinkText.textContent = info.main_wifi_link || 'Sem Conexão';
 
                 // Render Gateways
                 this.renderNetworkGateways(info.gateways);
@@ -3274,6 +3307,241 @@ export const monitoringHandler = {
                 if (span) span.textContent = originalText;
                 if (icon) icon.style.animation = '';
             }
+        }
+    },
+
+    _startTrafficPolling() {
+        this._stopTrafficPolling();
+        
+        const chk = document.getElementById('network-traffic-enable');
+        const chartsContainer = document.getElementById('network-charts-container');
+        if (chk && !chk.checked) {
+            if (chartsContainer) {
+                chartsContainer.style.opacity = '0.35';
+                chartsContainer.style.pointerEvents = 'none';
+            }
+            const interfaces = ['lan', 'wan', 'opt1', 'opt2'];
+            interfaces.forEach(iface => {
+                const textEl = document.getElementById(`traffic-text-${iface}`);
+                if (textEl) textEl.textContent = 'Tráfego pausado';
+            });
+            return;
+        }
+
+        if (activeTab !== 'network') return;
+
+        if (chartsContainer) {
+            chartsContainer.style.opacity = '1';
+            chartsContainer.style.pointerEvents = 'auto';
+        }
+
+        this.initTrafficCharts();
+
+        console.log('📈 [MONITORING] Iniciando polling de tráfego do pfSense...');
+        lastTrafficData = null;
+
+        this.fetchAndRenderTraffic();
+
+        trafficPollingInterval = setInterval(() => {
+            const currentChk = document.getElementById('network-traffic-enable');
+            if (activeTab === 'network' && (!currentChk || currentChk.checked)) {
+                this.fetchAndRenderTraffic();
+            } else {
+                this._stopTrafficPolling();
+            }
+        }, 3000);
+    },
+
+    _stopTrafficPolling() {
+        if (trafficPollingInterval) {
+            clearInterval(trafficPollingInterval);
+            trafficPollingInterval = null;
+            console.log('📈 [MONITORING] Polling de tráfego parado.');
+        }
+        
+        const chk = document.getElementById('network-traffic-enable');
+        if (!chk || !chk.checked) {
+            const chartsContainer = document.getElementById('network-charts-container');
+            if (chartsContainer) {
+                chartsContainer.style.opacity = '0.35';
+                chartsContainer.style.pointerEvents = 'none';
+            }
+            const interfaces = ['lan', 'wan', 'opt1', 'opt2'];
+            interfaces.forEach(iface => {
+                const textEl = document.getElementById(`traffic-text-${iface}`);
+                if (textEl) textEl.textContent = 'Tráfego pausado';
+            });
+        }
+    },
+
+    initTrafficCharts() {
+        if (!window.Chart) {
+            console.warn('Chart.js is not loaded.');
+            return;
+        }
+
+        const interfaces = ['lan', 'wan', 'opt1', 'opt2'];
+        interfaces.forEach(iface => {
+            const canvas = document.getElementById(`chart-traffic-${iface}`);
+            if (!canvas) return;
+
+            if (trafficCharts[iface]) return;
+
+            const ctx = canvas.getContext('2d');
+            const maxPoints = 20;
+            const labels = Array(maxPoints).fill('');
+            const initialData = Array(maxPoints).fill(0);
+
+            trafficCharts[iface] = new window.Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Download (In)',
+                            data: [...initialData],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Upload (Out)',
+                            data: [...initialData],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 2,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        label += formatTrafficSpeed(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: false
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                font: {
+                                    size: 9,
+                                    family: 'monospace'
+                                },
+                                callback: function(value) {
+                                    return formatTrafficSpeed(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        function formatTrafficSpeed(bps) {
+            if (bps >= 1000000) {
+                return (bps / 1000000).toFixed(1) + ' Mbps';
+            }
+            if (bps >= 1000) {
+                return (bps / 1000).toFixed(1) + ' Kbps';
+            }
+            return bps.toFixed(0) + ' bps';
+        }
+    },
+
+    async fetchAndRenderTraffic() {
+        try {
+            const res = await apiClient.get('/monitoring/pfsense/traffic');
+            if (res && res.success && res.traffic) {
+                const current = res.traffic;
+                
+                // Toggle simulation badge
+                const badge = document.getElementById('traffic-simulation-badge');
+                if (badge) {
+                    badge.style.display = current.isSimulated ? 'inline-block' : 'none';
+                }
+                
+                if (lastTrafficData) {
+                    const dt = current.wan.timestamp - lastTrafficData.wan.timestamp;
+                    
+                    if (dt > 0) {
+                        const interfaces = ['lan', 'wan', 'opt1', 'opt2'];
+                        
+                        interfaces.forEach(iface => {
+                            const curData = current[iface];
+                            const lastData = lastTrafficData[iface];
+                            
+                            if (curData && lastData) {
+                                const diffIn = curData.inBytes - lastData.inBytes;
+                                const diffOut = curData.outBytes - lastData.outBytes;
+                                
+                                const bpsIn = diffIn >= 0 ? Math.floor((diffIn * 8) / dt) : 0;
+                                const bpsOut = diffOut >= 0 ? Math.floor((diffOut * 8) / dt) : 0;
+                                
+                                const textEl = document.getElementById(`traffic-text-${iface}`);
+                                if (textEl) {
+                                    textEl.textContent = `In: ${formatBps(bpsIn)} | Out: ${formatBps(bpsOut)}`;
+                                }
+                                
+                                const chart = trafficCharts[iface];
+                                if (chart) {
+                                    const inDataset = chart.data.datasets[0].data;
+                                    const outDataset = chart.data.datasets[1].data;
+                                    
+                                    inDataset.shift();
+                                    inDataset.push(bpsIn);
+                                    
+                                    outDataset.shift();
+                                    outDataset.push(bpsOut);
+                                    
+                                    chart.update('none');
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                lastTrafficData = current;
+            }
+        } catch (err) {
+            console.error('Erro ao buscar tráfego de rede pfSense:', err);
+        }
+
+        function formatBps(bps) {
+            if (bps >= 1000000) {
+                return (bps / 1000000).toFixed(2) + ' Mbps';
+            }
+            if (bps >= 1000) {
+                return (bps / 1000).toFixed(1) + ' Kbps';
+            }
+            return bps + ' bps';
         }
     }
 };

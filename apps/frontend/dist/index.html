@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-BsU3tkQj.js"></script>
+  <script type="module" crossorigin src="/assets/index-ulvNXPLF.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-BCc0sOuE.css">
 </head>
 
@@ -981,7 +981,10 @@
                         <div id="monitoring-tab-content-network" class="monitoring-tab-content hidden">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px;">
                                 <div>
-                                    <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Monitoramento de Rede (pfSense)</h3>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main);">Monitoramento de Rede (pfSense)</h3>
+                                        <span id="network-simulation-badge" class="monitor-badge virtual" style="display: none; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: rgba(168, 85, 247, 0.12); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3);">Modo de Demonstração</span>
+                                    </div>
                                     <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">Status de conectividade de links, gateways e estatísticas do firewall corporativo.</p>
                                 </div>
                                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -1035,6 +1038,25 @@
                                             <polyline points="12 6 12 12 16 14"></polyline>
                                         </svg>
                                         <strong id="network-kpi-uptime-text" style="font-size: 1.05rem; color: var(--text-main); word-break: break-all;">-</strong>
+                                    </div>
+                                </div>
+
+                                <!-- Active Links Status Card -->
+                                <div class="kpi-card" style="display: flex; flex-direction: column; gap: 10px; padding: 1.25rem; justify-content: center;">
+                                    <span class="kpi-label" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Links Principais Ativos</span>
+                                    <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                            <span style="color: var(--text-muted);">Link de Rede:</span>
+                                            <strong id="network-kpi-main-cable" style="color: #10b981; font-weight: 600;">-</strong>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                            <span style="color: var(--text-muted);">Link de Wi-Fi:</span>
+                                            <strong id="network-kpi-main-wifi" style="color: #3b82f6; font-weight: 600;">-</strong>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                                        <span>Operando normalmente</span>
                                     </div>
                                 </div>
                             </div>
@@ -1098,6 +1120,75 @@
                                     <div id="network-dns-container" style="display: flex; flex-direction: column; gap: 10px;">
                                         <div style="text-align: center; padding: 2rem; color: var(--text-muted); font-style: italic;">
                                             Aguardando DNS...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gráficos de Tráfego em Tempo Real -->
+                            <div class="kpi-card" style="margin-top: 1.5rem; display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--border-radius); border: 1px solid var(--glass-border); background: var(--card-bg);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <h4 style="margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                                <line x1="18" y1="20" x2="18" y2="10"></line>
+                                                <line x1="12" y1="20" x2="12" y2="4"></line>
+                                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                                            </svg>
+                                            Tráfego de Rede em Tempo Real (LAN / WAN)
+                                        </h4>
+                                        <span id="traffic-simulation-badge" class="monitor-badge virtual" style="display: none; font-size: 0.7rem; padding: 2px 8px; border-radius: 12px; background: rgba(168, 85, 247, 0.12); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.3);">Modo de Demonstração</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+                                            <input type="checkbox" id="network-traffic-enable" checked style="width: 16px; height: 16px; accent-color: var(--accent);">
+                                            <span style="font-size: 0.85rem; color: var(--text-main); font-weight: 500;">Habilitar Gráficos</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div id="network-charts-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                                    <!-- Chart: LAN -->
+                                    <div class="kpi-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 8px; height: 220px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">LAN (Rede Interna)</span>
+                                            <span id="traffic-text-lan" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">In: 0 bps | Out: 0 bps</span>
+                                        </div>
+                                        <div style="flex: 1; position: relative;">
+                                            <canvas id="chart-traffic-lan"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <!-- Chart: AmericaNET -->
+                                    <div class="kpi-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 8px; height: 220px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">AmericaNET (WAN)</span>
+                                            <span id="traffic-text-wan" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">In: 0 bps | Out: 0 bps</span>
+                                        </div>
+                                        <div style="flex: 1; position: relative;">
+                                            <canvas id="chart-traffic-wan"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <!-- Chart: VIVO -->
+                                    <div class="kpi-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 8px; height: 220px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">VIVO (WAN 2)</span>
+                                            <span id="traffic-text-opt1" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">In: 0 bps | Out: 0 bps</span>
+                                        </div>
+                                        <div style="flex: 1; position: relative;">
+                                            <canvas id="chart-traffic-opt1"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <!-- Chart: iMaxima -->
+                                    <div class="kpi-card" style="padding: 1rem; display: flex; flex-direction: column; gap: 8px; height: 220px; background: rgba(255,255,255,0.01); border: 1px solid rgba(255,255,255,0.04);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">iMaxima (WAN 3)</span>
+                                            <span id="traffic-text-opt2" style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">In: 0 bps | Out: 0 bps</span>
+                                        </div>
+                                        <div style="flex: 1; position: relative;">
+                                            <canvas id="chart-traffic-opt2"></canvas>
                                         </div>
                                     </div>
                                 </div>

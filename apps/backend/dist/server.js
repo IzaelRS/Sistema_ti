@@ -2885,66 +2885,74 @@ let lastPfSenseFetchTime = 0;
 const PFSENSE_CACHE_TTL = 15000; // 15 seconds cache
 let lastCpuTotalTicks = 0;
 let lastCpuUsedTicks = 0;
-async function fetchPfSenseDataActual() {
+let pfsenseSessionCookie = "";
+let pfsenseLastLoginTime = 0;
+const PFSENSE_SESSION_MAX_AGE = 30 * 60 * 1000; // 30 minutes session validity
+const makePfSenseGet = (urlStr, cookie = "") => {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(urlStr);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: "GET",
+            agent: lansweeperAgent,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
+                "Cookie": cookie
+            }
+        };
+        const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
+        const req = transport.get(options, (res) => {
+            let data = "";
+            res.on("data", chunk => data += chunk);
+            res.on("end", () => {
+                resolve({ html: data, headers: res.headers });
+            });
+        });
+        req.on("error", reject);
+    });
+};
+const makePfSensePost = (urlStr, body, cookie = "") => {
+    return new Promise((resolve, reject) => {
+        const parsedUrl = new URL(urlStr);
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: "POST",
+            agent: lansweeperAgent,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": Buffer.byteLength(body),
+                "Cookie": cookie
+            }
+        };
+        const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
+        const req = transport.request(options, (res) => {
+            let data = "";
+            res.on("data", chunk => data += chunk);
+            res.on("end", () => {
+                resolve({ html: data, headers: res.headers, statusCode: res.statusCode });
+            });
+        });
+        req.on("error", reject);
+        req.write(body);
+        req.end();
+    });
+};
+async function getPfsenseSession(forceLogin = false) {
+    const now = Date.now();
+    if (pfsenseSessionCookie && !forceLogin && (now - pfsenseLastLoginTime < PFSENSE_SESSION_MAX_AGE)) {
+        return pfsenseSessionCookie;
+    }
+    console.log("🔑 [PFSENSE] Iniciando novo login no pfSense...");
     const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
     const username = process.env.PFSENSE_USER || "tv";
     const password = process.env.PFSENSE_PASS || "tv1945";
-    const makeGet = (urlStr, cookie = "") => {
-        return new Promise((resolve, reject) => {
-            const parsedUrl = new URL(urlStr);
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
-                path: parsedUrl.pathname + parsedUrl.search,
-                method: "GET",
-                agent: lansweeperAgent,
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
-                    "Cookie": cookie
-                }
-            };
-            const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
-            const req = transport.get(options, (res) => {
-                let data = "";
-                res.on("data", chunk => data += chunk);
-                res.on("end", () => {
-                    resolve({ html: data, headers: res.headers });
-                });
-            });
-            req.on("error", reject);
-        });
-    };
-    const makePost = (urlStr, body, cookie = "") => {
-        return new Promise((resolve, reject) => {
-            const parsedUrl = new URL(urlStr);
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port ? parseInt(parsedUrl.port) : 443,
-                path: parsedUrl.pathname + parsedUrl.search,
-                method: "POST",
-                agent: lansweeperAgent,
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "Content-Length": Buffer.byteLength(body),
-                    "Cookie": cookie
-                }
-            };
-            const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
-            const req = transport.request(options, (res) => {
-                let data = "";
-                res.on("data", chunk => data += chunk);
-                res.on("end", () => {
-                    resolve({ html: data, headers: res.headers, statusCode: res.statusCode });
-                });
-            });
-            req.on("error", reject);
-            req.write(body);
-            req.end();
-        });
-    };
     // 1. Get Login Page to obtain csrf magic token and initial cookie
-    const initialRes = await makeGet(url);
+    const initialRes = await makePfSenseGet(url);
     const setCookieHeaders = initialRes.headers["set-cookie"] || [];
     const initialCookie = setCookieHeaders.map(c => c.split(";")[0]).join("; ");
     const csrfMatch = initialRes.html.match(/name='__csrf_magic' value="([^"]*)"/);
@@ -2958,16 +2966,34 @@ async function fetchPfSenseDataActual() {
     loginParams.append("usernamefld", username);
     loginParams.append("passwordfld", password);
     loginParams.append("login", "Sign In");
-    const postRes = await makePost(url + "/index.php", loginParams.toString(), initialCookie);
+    const postRes = await makePfSensePost(url + "/index.php", loginParams.toString(), initialCookie);
     const loginCookiesHeaders = postRes.headers["set-cookie"] || [];
     const authCookie = loginCookiesHeaders.length > 0
         ? loginCookiesHeaders.map(c => c.split(";")[0]).join("; ")
         : initialCookie;
-    // 3. Query index.php to parse static components (interfaces, gateways, DNS, Uptime)
-    const indexRes = await makeGet(url + "/index.php", authCookie);
+    pfsenseSessionCookie = authCookie;
+    pfsenseLastLoginTime = now;
+    console.log("🔑 [PFSENSE] Login efetuado com sucesso.");
+    return authCookie;
+}
+async function fetchPfSenseDataActual() {
+    const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
+    let authCookie = await getPfsenseSession();
+    let indexRes = await makePfSenseGet(url + "/index.php", authCookie);
+    // Se a página de login for retornada, a sessão expirou
+    if (indexRes.html.includes("usernamefld")) {
+        console.log("⚠️ [PFSENSE] Sessão expirada no dashboard. Efetuando login forçado...");
+        authCookie = await getPfsenseSession(true);
+        indexRes = await makePfSenseGet(url + "/index.php", authCookie);
+    }
     const indexHtml = indexRes.html;
-    // 4. Query getstats.php to get real-time ticks and load averages
-    const statsRes = await makeGet(url + "/getstats.php", authCookie);
+    let statsRes = await makePfSenseGet(url + "/getstats.php", authCookie);
+    // Se getstats.php retornar algo inválido ou página de login
+    if (statsRes.html.includes("usernamefld")) {
+        console.log("⚠️ [PFSENSE] Sessão expirada no getstats.php. Efetuando login forçado...");
+        authCookie = await getPfsenseSession(true);
+        statsRes = await makePfSenseGet(url + "/getstats.php", authCookie);
+    }
     const statsHtml = statsRes.html;
     // Parse Stats (from getstats.php)
     const statsValues = statsHtml.split("|");
@@ -3064,6 +3090,29 @@ async function fetchPfSenseDataActual() {
             }
         }
     }
+    let main_cable_link = "Sem Conexão";
+    let main_wifi_link = "Sem Conexão";
+    const isWanOnline = gatewaysList.some(gw => gw.name === "WAN_GW" && gw.status.toLowerCase().includes("online"));
+    const isVivoOnline = gatewaysList.some(gw => gw.name === "VIVO_GW" && gw.status.toLowerCase().includes("online"));
+    const isImaximaOnline = gatewaysList.some(gw => gw.name === "IMAXIMA_GW" && gw.status.toLowerCase().includes("online"));
+    if (isWanOnline) {
+        main_cable_link = "AmericaNET (WAN)";
+    }
+    else if (isVivoOnline) {
+        main_cable_link = "VIVO (WAN2) [Backup]";
+    }
+    else if (isImaximaOnline) {
+        main_cable_link = "iMaxima (WAN3) [Backup]";
+    }
+    if (isVivoOnline) {
+        main_wifi_link = "VIVO (WAN2)";
+    }
+    else if (isImaximaOnline) {
+        main_wifi_link = "iMaxima (WAN3) [Backup]";
+    }
+    else if (isWanOnline) {
+        main_wifi_link = "AmericaNET (WAN) [Backup]";
+    }
     return {
         uptime,
         cpu_usage: cpuUsage,
@@ -3071,13 +3120,139 @@ async function fetchPfSenseDataActual() {
         load_average: loadAverage,
         dns_servers: dnsList,
         interfaces: interfacesList,
-        gateways: gatewaysList
+        gateways: gatewaysList,
+        main_cable_link,
+        main_wifi_link
     };
+}
+let simulatedTrafficData = {
+    wan: { inBytes: 1500000000, outBytes: 500000000, lastTime: Date.now() / 1000 },
+    lan: { inBytes: 2500000000, outBytes: 2200000000, lastTime: Date.now() / 1000 },
+    opt1: { inBytes: 800000000, outBytes: 300000000, lastTime: Date.now() / 1000 },
+    opt2: { inBytes: 100000000, outBytes: 50000000, lastTime: Date.now() / 1000 }
+};
+function getSimulatedTrafficData() {
+    const now = Date.now() / 1000;
+    const interfaces = ["wan", "lan", "opt1", "opt2"];
+    interfaces.forEach(iface => {
+        const item = simulatedTrafficData[iface];
+        const dt = now - item.lastTime;
+        if (dt > 0) {
+            let speedIn = 0;
+            let speedOut = 0;
+            if (iface === "wan") {
+                speedIn = Math.floor((15 + Math.sin(now / 60) * 10 + Math.random() * 5) * 1000000); // 5-30 Mbps
+                speedOut = Math.floor((3 + Math.sin(now / 80) * 2 + Math.random() * 1) * 1000000); // 1-6 Mbps
+            }
+            else if (iface === "lan") {
+                speedIn = Math.floor((40 + Math.sin(now / 50) * 25 + Math.random() * 8) * 1000000); // 15-73 Mbps
+                speedOut = Math.floor((35 + Math.sin(now / 70) * 20 + Math.random() * 6) * 1000000); // 15-61 Mbps
+            }
+            else if (iface === "opt1") {
+                speedIn = Math.floor((8 + Math.sin(now / 90) * 5 + Math.random() * 2) * 1000000); // 3-15 Mbps
+                speedOut = Math.floor((2 + Math.sin(now / 100) * 1 + Math.random() * 0.5) * 1000000); // 1-3.5 Mbps
+            }
+            else {
+                speedIn = Math.floor((1 + Math.sin(now / 120) * 0.8 + Math.random() * 0.2) * 1000000); // 0-2 Mbps
+                speedOut = Math.floor((0.5 + Math.sin(now / 150) * 0.4 + Math.random() * 0.1) * 1000000); // 0-1 Mbps
+            }
+            const addedIn = Math.floor((speedIn * dt) / 8);
+            const addedOut = Math.floor((speedOut * dt) / 8);
+            item.inBytes += addedIn;
+            item.outBytes += addedOut;
+            item.lastTime = now;
+        }
+    });
+    return {
+        isSimulated: true,
+        wan: { timestamp: now, inBytes: simulatedTrafficData.wan.inBytes, outBytes: simulatedTrafficData.wan.outBytes },
+        lan: { timestamp: now, inBytes: simulatedTrafficData.lan.inBytes, outBytes: simulatedTrafficData.lan.outBytes },
+        opt1: { timestamp: now, inBytes: simulatedTrafficData.opt1.inBytes, outBytes: simulatedTrafficData.opt1.outBytes },
+        opt2: { timestamp: now, inBytes: simulatedTrafficData.opt2.inBytes, outBytes: simulatedTrafficData.opt2.outBytes }
+    };
+}
+function getSimulatedPfSenseData() {
+    const now = Date.now();
+    return {
+        isSimulated: true,
+        uptime: "15 dias, 4 horas, 32 minutos",
+        cpu_usage: Math.floor(10 + Math.sin(now / 10000) * 5 + Math.random() * 3),
+        memory_usage: 42,
+        load_average: "0.22, 0.28, 0.25",
+        dns_servers: ["192.168.0.1", "8.8.8.8", "1.1.1.1"],
+        interfaces: [
+            { name: "WAN (AmericaNET)", interface: "wan", status: "up", speed: "1000baseT <full-duplex>", ip: "191.185.20.12" },
+            { name: "LAN (Rede Interna)", interface: "lan", status: "up", speed: "1000baseT <full-duplex>", ip: "192.168.0.1" },
+            { name: "WAN2 (VIVO)", interface: "opt1", status: "up", speed: "1000baseT <full-duplex>", ip: "186.200.15.42" },
+            { name: "WAN3 (iMaxima)", interface: "opt2", status: "up", speed: "1000baseT <full-duplex>", ip: "177.85.90.114" }
+        ],
+        gateways: [
+            { name: "WAN_GW", ip: "191.185.20.1", rtt: "4.5ms", rttsd: "0.8ms", loss: "0.0%", status: "online", status_class: "bg-success" },
+            { name: "VIVO_GW", ip: "186.200.15.1", rtt: "12.8ms", rttsd: "1.1ms", loss: "0.0%", status: "online", status_class: "bg-success" },
+            { name: "IMAXIMA_GW", ip: "177.85.90.1", rtt: "8.2ms", rttsd: "0.9ms", loss: "0.0%", status: "online", status_class: "bg-success" }
+        ],
+        main_cable_link: "AmericaNET (WAN)",
+        main_wifi_link: "VIVO (WAN2)"
+    };
+}
+async function getPfSenseTrafficData() {
+    if (process.env.PFSENSE_MOCK === "true") {
+        return getSimulatedTrafficData();
+    }
+    try {
+        const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
+        let authCookie = await getPfsenseSession();
+        const fetchInterfaceStats = async (ifName) => {
+            let statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+            // Se retornar página de login, faz login forçado e tenta de novo
+            if (statsRes.html.includes("usernamefld")) {
+                console.log(`⚠️ [PFSENSE] Sessão expirada ao buscar tráfego de ${ifName}. Forçando relogin...`);
+                authCookie = await getPfsenseSession(true);
+                statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+            }
+            const parts = statsRes.html.split("|");
+            if (parts.length >= 3) {
+                return {
+                    timestamp: parseFloat(parts[0]) || Date.now() / 1000,
+                    inBytes: parseInt(parts[1]) || 0,
+                    outBytes: parseInt(parts[2]) || 0
+                };
+            }
+            return {
+                timestamp: Date.now() / 1000,
+                inBytes: 0,
+                outBytes: 0
+            };
+        };
+        // Buscamos as interfaces em paralelo
+        const [wan, opt1, opt2, lan] = await Promise.all([
+            fetchInterfaceStats("wan"),
+            fetchInterfaceStats("opt1"),
+            fetchInterfaceStats("opt2"),
+            fetchInterfaceStats("lan")
+        ]);
+        return {
+            wan,
+            opt1,
+            opt2,
+            lan
+        };
+    }
+    catch (err) {
+        console.warn("⚠️ [PFSENSE] Falha ao obter tráfego real do pfSense. Usando modo simulado como fallback. Erro:", err);
+        return getSimulatedTrafficData();
+    }
 }
 async function getPfSenseData(forceRefresh = false) {
     const now = Date.now();
     if (cachedPfSenseData && (now - lastPfSenseFetchTime < PFSENSE_CACHE_TTL) && !forceRefresh) {
         return cachedPfSenseData;
+    }
+    if (process.env.PFSENSE_MOCK === "true") {
+        const data = getSimulatedPfSenseData();
+        cachedPfSenseData = data;
+        lastPfSenseFetchTime = now;
+        return data;
     }
     try {
         const data = await fetchPfSenseDataActual();
@@ -3086,10 +3261,11 @@ async function getPfSenseData(forceRefresh = false) {
         return data;
     }
     catch (err) {
-        console.error("Error fetching pfSense status:", err);
-        if (cachedPfSenseData)
-            return cachedPfSenseData;
-        throw err;
+        console.warn("⚠️ [PFSENSE] Falha ao obter dados reais do pfSense. Usando modo simulado como fallback. Erro:", err);
+        const data = getSimulatedPfSenseData();
+        cachedPfSenseData = data;
+        lastPfSenseFetchTime = now;
+        return data;
     }
 }
 app.get("/api/monitoring/pfsense", async (req, res) => {
@@ -3105,6 +3281,20 @@ app.get("/api/monitoring/pfsense", async (req, res) => {
     catch (err) {
         console.error("Erro na rota pfSense:", err);
         res.status(500).json({ error: "Erro ao obter dados do pfSense: " + err.message });
+    }
+});
+app.get("/api/monitoring/pfsense/traffic", async (req, res) => {
+    res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    try {
+        const traffic = await getPfSenseTrafficData();
+        res.json({
+            success: true,
+            traffic
+        });
+    }
+    catch (err) {
+        console.error("Erro na rota de tráfego do pfSense:", err);
+        res.status(500).json({ error: "Erro ao obter tráfego do pfSense: " + err.message });
     }
 });
 // 404 Catch-all para rotas da API

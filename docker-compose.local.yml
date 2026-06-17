@@ -34,6 +34,10 @@ services:
       LANSWEEPER_PASS: ${LANSWEEPER_PASS}
       GNEW_USERNAME: ${GNEW_USERNAME}
       GNEW_PASSWORD: ${GNEW_PASSWORD}
+      PFSENSE_URL: ${PFSENSE_URL}
+      PFSENSE_USER: ${PFSENSE_USER}
+      PFSENSE_PASS: ${PFSENSE_PASS}
+      PFSENSE_MOCK: ${PFSENSE_MOCK}
     depends_on:
       - db
     volumes:
