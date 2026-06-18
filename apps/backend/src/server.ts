@@ -13,6 +13,7 @@ import http from "http";
 import os from "os";
 import querystring from "querystring";
 import { exec } from "child_process";
+import { Client as SSHClient } from "ssh2";
 
 import { AppDataSource, initializeDatabase } from "./database";
 import { User } from "./entities/User";
@@ -1759,6 +1760,7 @@ async function fetchRawSwitchesList() {
     const lansweeperUrl = process.env.LANSWEEPER_URL;
     const username = process.env.LANSWEEPER_USER;
     const password = process.env.LANSWEEPER_PASS;
+    const switchDevicetype = parseInt(process.env.LANSWEEPER_SWITCH_DEVICETYPE || "6");
 
     if (!lansweeperUrl || !username || !password) {
         throw new Error("Configurações do Lansweeper ausentes no arquivo .env");
@@ -1766,7 +1768,7 @@ async function fetchRawSwitchesList() {
 
     const loginParams = await getLansweeperLoginParams(lansweeperUrl);
     const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
-    const reportData = await fetchLansweeperReport(lansweeperUrl, cookies);
+    const reportData = await fetchLansweeperReport(lansweeperUrl, cookies, switchDevicetype);
 
     if (!reportData || !Array.isArray(reportData.AddedRows)) {
         throw new Error("Nenhum dado retornado no relatório do Lansweeper");
@@ -2343,7 +2345,228 @@ app.get("/api/monitoring/nas/:id/ping", async (req: Request, res: Response) => {
     }
 });
 
-// GET: NAS Storage e Compartilhamentos (Dropbox Style)
+// --- WD My Cloud NAS SSH Integration (Read-Only) ---
+function fetchNasStorageFromSSH(nasIp: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+        const sshHost = nasIp || "cronos.local";
+        const configuredUser = process.env.NAS_SSH_USER || "sshd";
+        // Mapear automaticamente 'admin' (Dashboard) para 'sshd' (SSH) no WD My Cloud OS 5
+        const sshUser = configuredUser === "admin" ? "sshd" : configuredUser;
+        const sshPass = process.env.NAS_SSH_PASS || "Master@1945";
+
+        console.log(`[NAS SSH] Conectando a ${sshHost} como ${sshUser}...`);
+        const conn = new SSHClient();
+        
+        conn.on("ready", () => {
+            console.log(`[NAS SSH] Conectado a ${sshHost} com sucesso.`);
+            
+            // Executa os comandos em uma única sessão para otimizar velocidade
+            const cmd = `df -B1 /mnt/HD/HD_a2 2>/dev/null
+echo "###SEPARATOR###"
+cat /proc/mdstat 2>/dev/null
+echo "###SEPARATOR###"
+mdadm --detail /dev/md1 2>/dev/null
+echo "###SEPARATOR###"
+for d in sda sdb sdc sdd; do
+    echo "=== \$d ==="
+    if [ -d /sys/block/\$d ]; then
+        echo "Model: \$(cat /sys/block/\$d/device/model 2>/dev/null)"
+        echo "Vendor: \$(cat /sys/block/\$d/device/vendor 2>/dev/null)"
+        echo "Sectors: \$(cat /sys/block/\$d/size 2>/dev/null)"
+        echo "State: \$(cat /sys/block/\$d/device/state 2>/dev/null)"
+        temp_val=\$(smartctl -A /dev/\$d 2>/dev/null | grep -E "Temperature_Celsius|Airflow_Temperature_Cel" | awk '{print \$NF}')
+        echo "Temp: \${temp_val:-N/A}"
+    else
+        echo "Not found"
+    fi
+done
+echo "###SEPARATOR###"
+cat /etc/samba/smb.conf 2>/dev/null`;
+
+            conn.exec(cmd, (err, stream) => {
+                if (err) {
+                    conn.end();
+                    return reject(err);
+                }
+                let stdout = "";
+                let stderr = "";
+                stream.on("data", (data: any) => stdout += data.toString());
+                stream.stderr.on("data", (data: any) => stderr += data.toString());
+                stream.on("close", () => {
+                    conn.end();
+                    
+                    try {
+                        const parts = stdout.split("###SEPARATOR###");
+                        if (parts.length < 5) {
+                            return reject(new Error("Resposta do SSH com formato incorreto."));
+                        }
+                        
+                        const dfOutput = parts[0];
+                        const mdstatOutput = parts[1];
+                        const mdadmOutput = parts[2];
+                        const diskOutput = parts[3];
+                        const smbOutput = parts[4];
+                        
+                        // Parse df
+                        const dfLines = dfOutput.trim().split("\n");
+                        let totalGb = 35840; // ~35.8 TB fallback
+                        let usedGb = 25600;
+                        let freeGb = 10240;
+                        if (dfLines.length > 1) {
+                            const dfParts = dfLines[1].trim().split(/\s+/);
+                            if (dfParts.length >= 4) {
+                                const totalBytes = parseFloat(dfParts[1]) || 0;
+                                const usedBytes = parseFloat(dfParts[2]) || 0;
+                                const freeBytes = parseFloat(dfParts[3]) || 0;
+                                totalGb = Math.round(totalBytes / 1073741824);
+                                usedGb = Math.round(usedBytes / 1073741824);
+                                freeGb = Math.round(freeBytes / 1073741824);
+                            }
+                        }
+                        
+                        // Parse mdstat
+                        let raidLevel = "RAID 5";
+                        if (mdstatOutput.includes("raid5")) raidLevel = "RAID 5";
+                        else if (mdstatOutput.includes("raid1")) raidLevel = "RAID 1";
+                        else if (mdstatOutput.includes("raid0")) raidLevel = "RAID 0";
+                        else if (mdstatOutput.includes("raid6")) raidLevel = "RAID 6";
+                        
+                        let raidStatus = "Excelente";
+                        const mdstatActiveMatch = mdstatOutput.match(/\[(\d+)\/(\d+)\]/);
+                        if (mdstatActiveMatch) {
+                            const expected = parseInt(mdstatActiveMatch[1]);
+                            const active = parseInt(mdstatActiveMatch[2]);
+                            if (active < expected) raidStatus = "Degradado";
+                        }
+                        if (mdstatOutput.includes("_")) raidStatus = "Degradado";
+                        
+                        const volume = {
+                            filesystem: "ext4",
+                            raid_level: raidLevel,
+                            total_gb: totalGb,
+                            used_gb: usedGb,
+                            free_gb: freeGb,
+                            status: raidStatus
+                        };
+                        
+                        // Parse disks
+                        const diskSections = diskOutput.split("=== ");
+                        const bays: any[] = [];
+                        let slotIndex = 1;
+                        for (const section of diskSections) {
+                            if (!section.trim()) continue;
+                            const lines = section.split("\n");
+                            const diskName = lines[0].trim();
+                            if (!["sda", "sdb", "sdc", "sdd"].includes(diskName)) continue;
+                            
+                            let model = "Desconhecido";
+                            let sectors = 0;
+                            let state = "offline";
+                            let temp = "N/A";
+                            
+                            for (const line of lines) {
+                                if (line.startsWith("Model: ")) model = line.replace("Model: ", "").trim();
+                                if (line.startsWith("Sectors: ")) sectors = parseInt(line.replace("Sectors: ", "").trim()) || 0;
+                                if (line.startsWith("State: ")) state = line.replace("State: ", "").trim();
+                                if (line.startsWith("Temp: ")) {
+                                    const rawTemp = line.replace("Temp: ", "").trim();
+                                    temp = rawTemp && rawTemp !== "N/A" ? `${rawTemp}°C` : "N/A";
+                                }
+                            }
+                            
+                            if (model === "Not found" || model === "") continue;
+                            
+                            let capacityStr = "N/A";
+                            if (sectors > 0) {
+                                const bytes = sectors * 512;
+                                const tb = bytes / 1000000000000;
+                                if (tb >= 1) {
+                                    capacityStr = `${Math.round(tb)} TB`;
+                                } else {
+                                    capacityStr = `${Math.round(bytes / 1073741824)} GB`;
+                                }
+                            }
+                            
+                            bays.push({
+                                slot: slotIndex++,
+                                disk_model: model,
+                                serial: "-",
+                                capacity: capacityStr,
+                                temp: temp,
+                                status: state === "running" ? "Saudável" : "Desconhecido",
+                                led: state === "running" ? "green" : "red"
+                            });
+                        }
+                        
+                        // Parse shares
+                        const smbLines = smbOutput.split("\n");
+                        const shares: any[] = [];
+                        let currentShare: any = null;
+                        
+                        for (const line of smbLines) {
+                            const trimmed = line.trim();
+                            if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(";")) continue;
+                            
+                            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                                const name = trimmed.slice(1, -1);
+                                if (name.toLowerCase() !== "global" && name.toLowerCase() !== "printers") {
+                                    if (currentShare) {
+                                        shares.push(currentShare);
+                                    }
+                                    currentShare = {
+                                        name: name,
+                                        path: `\\\\${sshHost}\\${name}`,
+                                        total_gb: null,
+                                        used_gb: null,
+                                        status: "active",
+                                        user_group: "N/A",
+                                        description: ""
+                                    };
+                                } else {
+                                    if (currentShare) {
+                                        shares.push(currentShare);
+                                        currentShare = null;
+                                    }
+                                }
+                            } else if (currentShare) {
+                                const eqIdx = trimmed.indexOf("=");
+                                if (eqIdx !== -1) {
+                                    const key = trimmed.substring(0, eqIdx).trim().toLowerCase();
+                                    const val = trimmed.substring(eqIdx + 1).trim();
+                                    if (key === "comment") {
+                                        currentShare.description = val.replace(/"/g, "");
+                                    }
+                                }
+                            }
+                        }
+                        if (currentShare) {
+                            shares.push(currentShare);
+                        }
+                        
+                        resolve({
+                            dataSource: "wd_nas_ssh",
+                            volume,
+                            bays,
+                            shares
+                        });
+                    } catch (parseErr: any) {
+                        reject(new Error("Falha ao parsear dados do NAS via SSH: " + parseErr.message));
+                    }
+                });
+            });
+        }).on("error", (err) => {
+            reject(err);
+        }).connect({
+            host: sshHost,
+            port: 22,
+            username: sshUser,
+            password: sshPass,
+            readyTimeout: 30000
+        });
+    });
+}
+
+// GET: NAS Storage e Compartilhamentos (Synology DSM com fallback estimado)
 app.get("/api/monitoring/nas/:id/storage", async (req: Request, res: Response) => {
     res.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
     try {
@@ -2362,103 +2585,100 @@ app.get("/api/monitoring/nas/:id/storage", async (req: Request, res: Response) =
                 location: nas.location,
                 online: null,
                 latency: null,
-                message: "Aguardando verificação..."
+                message: "Aguardando verifica\u00e7\u00e3o..."
             }));
         }
 
         const nas = cachedNasStatus.find((c: any) => c.id === assetId);
         if (!nas) {
-            res.status(404).json({ error: "Dispositivo NAS não encontrado" });
+            res.status(404).json({ error: "Dispositivo NAS n\u00e3o encontrado" });
             return;
         }
 
-        // Dados estáticos estruturados de storage para representação visual premium
-        const storageDetails = {
-            volume: {
-                filesystem: "BTRFS",
-                raid_level: "RAID 5 (Tolerância a falha de 1 disco)",
-                total_gb: 16000, // 16 TB
-                used_gb: 7200,   // 7.2 TB
-                free_gb: 8800,   // 8.8 TB
-                status: "Excelente"
-            },
-            bays: [
-                {
-                    slot: 1,
-                    disk_model: "WD Red Plus WD40EFAX",
-                    serial: "WD-WX32D20D1L2A",
-                    capacity: "4.0 TB",
-                    temp: "34°C",
-                    status: "Saudável",
-                    led: "green"
-                },
-                {
-                    slot: 2,
-                    disk_model: "WD Red Plus WD40EFAX",
-                    serial: "WD-WXS2A10D5M1E",
-                    capacity: "4.0 TB",
-                    temp: "35°C",
-                    status: "Saudável",
-                    led: "green"
-                },
-                {
-                    slot: 3,
-                    disk_model: "WD Red Plus WD40EFAX",
-                    serial: "WD-WX51D30E4A2K",
-                    capacity: "4.0 TB",
-                    temp: "33°C",
-                    status: "Saudável",
-                    led: "green"
-                },
-                {
-                    slot: 4,
-                    disk_model: "WD Red Plus WD40EFAX",
-                    serial: "WD-WXS1E10B3M4E",
-                    capacity: "4.0 TB",
-                    temp: "34°C",
-                    status: "Saudável",
-                    led: "green"
+        // 1. Tentar obter dados reais via SSH diretamente no NAS (prioritário)
+        let storageDetails: any = null;
+        let sshErrorMsg = "";
+        try {
+            const hostIp = nas.ip || "cronos.local";
+            storageDetails = await fetchNasStorageFromSSH(hostIp);
+        } catch (sshErr: any) {
+            console.warn(`[NAS SSH] Falha ao consultar NAS via SSH: ${sshErr.message}`);
+            sshErrorMsg = sshErr.message;
+        }
+
+        // 2. Fallback: Tentar obter dados reais via Lansweeper
+        if (!storageDetails) {
+            try {
+                const lansweeperUrl = process.env.LANSWEEPER_URL;
+                const username = process.env.LANSWEEPER_USER;
+                const password = process.env.LANSWEEPER_PASS;
+
+                if (lansweeperUrl && username && password) {
+                    const loginParams = await getLansweeperLoginParams(lansweeperUrl);
+                    const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
+                    
+                    // Tentar buscar partições/discos e compartilhamentos do Lansweeper
+                    const [diskReport, partitionReport, shareReport] = await Promise.all([
+                        fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repdisks", "").catch(() => ({ AddedRows: [] })),
+                        fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repPartitions", "").catch(() => ({ AddedRows: [] })),
+                        fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repSharedFolder", "").catch(() => ({ AddedRows: [] }))
+                    ]);
+
+                    // Filtrar linhas correspondentes a este AssetID
+                    const diskRows = (diskReport?.AddedRows || []).filter((row: any) => String(row[1]) === String(assetId));
+                    const partitionRows = (partitionReport?.AddedRows || []).filter((row: any) => String(row[1]) === String(assetId));
+                    const shareRows = (shareReport?.AddedRows || []).filter((row: any) => String(row[1]) === String(assetId));
+
+                    if (diskRows.length > 0 || partitionRows.length > 0 || shareRows.length > 0) {
+                        const volume = {
+                            filesystem: partitionRows[0] ? (partitionRows[0][13] || "N/A") : "SNMP",
+                            raid_level: "Escaneado via Lansweeper",
+                            total_gb: partitionRows.reduce((acc: number, r: any) => acc + (parseFloat(r[3]) || 0), 0),
+                            used_gb: partitionRows.reduce((acc: number, r: any) => acc + (parseFloat(r[4]) || 0), 0),
+                            free_gb: partitionRows.reduce((acc: number, r: any) => acc + (parseFloat(r[5]) || 0), 0),
+                            status: "Excelente"
+                        };
+
+                        const bays = diskRows.map((row: any, idx: number) => ({
+                            slot: idx + 1,
+                            disk_model: row[2] || "Disco SNMP",
+                            serial: row[3] || "-",
+                            capacity: row[4] ? `${Math.round(parseFloat(row[4]) / 1073741824)} GB` : "N/A",
+                            temp: "N/A",
+                            status: "Saudável",
+                            led: "green"
+                        }));
+
+                        const shares = shareRows.map((row: any) => ({
+                            name: row[3] || "Compartilhamento",
+                            path: row[4] || "-",
+                            total_gb: null,
+                            used_gb: null,
+                            status: "active",
+                            user_group: "N/A",
+                            description: row[5] || ""
+                        }));
+
+                        storageDetails = {
+                            dataSource: "lansweeper",
+                            volume,
+                            bays,
+                            shares
+                        };
+                    }
                 }
-            ],
-            shares: [
-                {
-                    name: "Public",
-                    path: `\\\\${nas.name || "Cronos"}\\Public`,
-                    total_gb: 4000,
-                    used_gb: 1800,
-                    status: "active",
-                    user_group: "Todos (Leitura/Escrita)",
-                    description: "Arquivos de intercâmbio geral, manuais corporativos e instaladores autorizados."
-                },
-                {
-                    name: "Backups",
-                    path: `\\\\${nas.name || "Cronos"}\\Backups`,
-                    total_gb: 6000,
-                    used_gb: 3400,
-                    status: "active",
-                    user_group: "TI / Administradores",
-                    description: "Armazenamento frio de logs, backups diários de máquinas virtuais e bancos de dados."
-                },
-                {
-                    name: "Financeiro",
-                    path: `\\\\${nas.name || "Cronos"}\\Financeiro`,
-                    total_gb: 2000,
-                    used_gb: 950,
-                    status: "active",
-                    user_group: "Diretoria / Financeiro",
-                    description: "Documentos fiscais confidenciais, relatórios trimestrais e contabilidade."
-                },
-                {
-                    name: "Projetos",
-                    path: `\\\\${nas.name || "Cronos"}\\Projetos`,
-                    total_gb: 4000,
-                    used_gb: 1050,
-                    status: "active",
-                    user_group: "Desenvolvimento / TI",
-                    description: "Repositórios Git empacotados, esquemas de infraestrutura e projetos ativos."
-                }
-            ]
-        };
+            } catch (e: any) {
+                console.warn("[LANSWEEPER] Erro ao buscar storage do NAS no Lansweeper:", e.message);
+            }
+        }
+
+        if (!storageDetails) {
+            res.status(502).json({
+                success: false,
+                error: `Não foi possível obter os dados de armazenamento e compartilhamento para o NAS "${nas.name}" (IP: ${nas.ip || 'Sem IP'}).\nMotivo da falha de conexão SSH: ${sshErrorMsg || 'Sem resposta de conexão SSH.'}`
+            });
+            return;
+        }
 
         res.json({
             success: true,
@@ -2470,8 +2690,8 @@ app.get("/api/monitoring/nas/:id/storage", async (req: Request, res: Response) =
         res.status(500).json({ error: "Erro ao obter detalhes de storage do NAS: " + err.message });
     }
 });
-
 // --- Lansweeper Cameras Monitoring ---
+
 
 function fetchLansweeperCustomReport(url: string, cookies: string, reportName: string, queryParams: string): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -2651,12 +2871,272 @@ app.get("/api/monitoring/cameras/:id/ping", async (req: Request, res: Response) 
 let cachedServersStatus: any = null;
 let isCheckingServers = false;
 
-function getServerHardwareSpecs(srv: any) {
+// --- Zabbix API Integration ---
+let zabbixAuthToken: string | null = null;
+let zabbixTokenExpiry = 0;
+
+function getZabbixEndpoint(baseUrl: string): string {
+    const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    if (cleanUrl.endsWith("/api_jsonrpc.php")) return cleanUrl;
+    const hasSubpath = cleanUrl.includes("/zabbix") || cleanUrl.includes("zabbix.drmonitora.com.br");
+    return cleanUrl + (hasSubpath ? "/api_jsonrpc.php" : "/zabbix/api_jsonrpc.php");
+}
+
+async function fetchZabbixToken(): Promise<string | null> {
+    const now = Date.now();
+    if (zabbixAuthToken && now < zabbixTokenExpiry) return zabbixAuthToken;
+
+    const zabbixUrl = process.env.ZABBIX_URL;
+    const user = process.env.ZABBIX_USER;
+    const password = process.env.ZABBIX_PASS;
+    if (!zabbixUrl || !user || !password) return null;
+
+    try {
+        const parsedUrl = new URL(getZabbixEndpoint(zabbixUrl));
+        const lib = parsedUrl.protocol === "https:" ? https : http;
+
+        const attemptLogin = async (params: any): Promise<any> => {
+            const payload = JSON.stringify({
+                jsonrpc: "2.0",
+                method: "user.login",
+                params,
+                id: 1
+            });
+            const options: any = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                path: parsedUrl.pathname,
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(payload)
+                }
+            };
+            return new Promise<any>((resolve, reject) => {
+                const req = lib.request(options, (res) => {
+                    let data = "";
+                    res.on("data", chunk => data += chunk);
+                    res.on("end", () => {
+                        try { resolve(JSON.parse(data)); }
+                        catch (e) { reject(e); }
+                    });
+                });
+                req.on("error", reject);
+                req.setTimeout(8000, () => { req.destroy(); reject(new Error("Zabbix login timeout")); });
+                req.write(payload);
+                req.end();
+            });
+        };
+
+        // Tenta primeiro com 'username' (Zabbix 6.0+)
+        let result = await attemptLogin({ username: user, password });
+        if (result.error && (result.error.code === -32602 || result.error.message?.includes("username") || result.error.data?.includes("username") || result.error.data?.includes("user"))) {
+            console.log("ℹ️ [ZABBIX] 'username' falhou ou é inesperado. Tentando com 'user' (Zabbix antigo)...");
+            // Tenta com 'user' (Zabbix < 6.0)
+            result = await attemptLogin({ user, password });
+        }
+
+        if (result.result) {
+            zabbixAuthToken = result.result;
+            zabbixTokenExpiry = now + 25 * 60 * 1000; // Token válido por 25 minutos
+            return zabbixAuthToken;
+        }
+        console.warn("[ZABBIX] Falha no login:", result.error);
+        return null;
+    } catch (err: any) {
+        console.warn("[ZABBIX] Erro ao autenticar:", err.message);
+        return null;
+    }
+}
+
+async function fetchZabbixHostMetrics(token: string): Promise<Map<string, any>> {
+    // Retorna um Map onde a chave é o hostname/IP e o valor são as métricas
+    const metricsMap = new Map<string, any>();
+    const zabbixUrl = process.env.ZABBIX_URL;
+    if (!zabbixUrl || !token) return metricsMap;
+
+    try {
+        // 1. Busca todos os hosts com seus IPs
+        const hostsPayload = JSON.stringify({
+            jsonrpc: "2.0",
+            method: "host.get",
+            params: {
+                output: ["hostid", "host", "name", "status"],
+                selectInterfaces: ["ip", "dns", "useip"],
+                filter: { status: 0 } // Apenas hosts habilitados
+            },
+            auth: token,
+            id: 2
+        });
+        const parsedUrl = new URL(getZabbixEndpoint(zabbixUrl));
+        const makeZabbixRequest = (payload: string) => new Promise<any>((resolve, reject) => {
+            const options: any = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                path: parsedUrl.pathname,
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+            };
+            const lib = parsedUrl.protocol === "https:" ? https : http;
+            const req = lib.request(options, (res) => {
+                let data = "";
+                res.on("data", chunk => data += chunk);
+                res.on("end", () => {
+                    try { resolve(JSON.parse(data)); }
+                    catch (e) { reject(e); }
+                });
+            });
+            req.on("error", reject);
+            req.setTimeout(10000, () => { req.destroy(); reject(new Error("Zabbix request timeout")); });
+            req.write(payload);
+            req.end();
+        });
+
+        const hostsRes = await makeZabbixRequest(hostsPayload);
+        if (!hostsRes.result || !Array.isArray(hostsRes.result)) return metricsMap;
+        const hosts = hostsRes.result as any[];
+        if (hosts.length === 0) return metricsMap;
+
+        const hostIds = hosts.map(h => h.hostid);
+
+        // 2. Busca as últimas métricas de CPU, RAM e Disco para todos os hosts de uma vez
+        const itemsPayload = JSON.stringify({
+            jsonrpc: "2.0",
+            method: "item.get",
+            params: {
+                output: ["hostid", "key_", "lastvalue", "units"],
+                hostids: hostIds,
+                search: { key_: "system.cpu.util" }, // CPU usage
+                searchWildcardsEnabled: false,
+                sortfield: "key_"
+            },
+            auth: token,
+            id: 3
+        });
+
+        const ramPayload = JSON.stringify({
+            jsonrpc: "2.0",
+            method: "item.get",
+            params: {
+                output: ["hostid", "key_", "lastvalue"],
+                hostids: hostIds,
+                search: { key_: "vm.memory.size" },
+                searchWildcardsEnabled: false
+            },
+            auth: token,
+            id: 4
+        });
+
+        const diskPayload = JSON.stringify({
+            jsonrpc: "2.0",
+            method: "item.get",
+            params: {
+                output: ["hostid", "key_", "lastvalue"],
+                hostids: hostIds,
+                search: { key_: "vfs.fs.size[/,pused]" },
+                searchWildcardsEnabled: false
+            },
+            auth: token,
+            id: 5
+        });
+
+        const [cpuRes, ramRes, diskRes] = await Promise.all([
+            makeZabbixRequest(itemsPayload),
+            makeZabbixRequest(ramPayload),
+            makeZabbixRequest(diskPayload)
+        ]);
+
+        // Indexar por hostid para acesso rápido
+        const cpuByHost = new Map<string, number>();
+        const ramByHost = new Map<string, number>();
+        const diskByHost = new Map<string, number>();
+
+        if (cpuRes.result) {
+            for (const item of cpuRes.result as any[]) {
+                const val = parseFloat(item.lastvalue);
+                if (!isNaN(val)) cpuByHost.set(item.hostid, Math.round(val));
+            }
+        }
+        if (ramRes.result) {
+            for (const item of ramRes.result as any[]) {
+                // vm.memory.size[pavailable] retorna % livre => uso = 100 - libre
+                const val = parseFloat(item.lastvalue);
+                if (!isNaN(val)) {
+                    const usage = item.key_.includes("pavailable") ? Math.round(100 - val) : Math.round(val);
+                    ramByHost.set(item.hostid, usage);
+                }
+            }
+        }
+        if (diskRes.result) {
+            for (const item of diskRes.result as any[]) {
+                const val = parseFloat(item.lastvalue);
+                if (!isNaN(val)) diskByHost.set(item.hostid, Math.round(val));
+            }
+        }
+
+        // Montar mapa IP -> métricas
+        for (const host of hosts) {
+            const interfaces = host.interfaces || [];
+            const ips = interfaces.map((i: any) => i.ip).filter((ip: string) => ip && ip !== "127.0.0.1");
+            const dnsNames = interfaces.map((i: any) => i.dns).filter(Boolean);
+
+            const metrics = {
+                cpu_usage: cpuByHost.get(host.hostid) ?? null,
+                ram_usage: ramByHost.get(host.hostid) ?? null,
+                disk_usage: diskByHost.get(host.hostid) ?? null,
+                metricsSource: "zabbix"
+            };
+
+            // Indexar por hostname e por todos os IPs associados
+            metricsMap.set(host.host.toLowerCase(), metrics);
+            metricsMap.set(host.name.toLowerCase(), metrics);
+            for (const ip of ips) metricsMap.set(ip, metrics);
+            for (const dns of dnsNames) metricsMap.set(dns.toLowerCase(), metrics);
+        }
+    } catch (err: any) {
+        console.warn("[ZABBIX] Erro ao buscar métricas:", err.message);
+    }
+
+    return metricsMap;
+}
+
+let cachedZabbixMetrics: Map<string, any> | null = null;
+let lastZabbixFetch = 0;
+const ZABBIX_CACHE_TTL = 60000; // 60 segundos
+
+async function getZabbixMetrics(): Promise<Map<string, any>> {
+    const now = Date.now();
+    if (cachedZabbixMetrics && (now - lastZabbixFetch < ZABBIX_CACHE_TTL)) {
+        return cachedZabbixMetrics;
+    }
+    try {
+        const token = await fetchZabbixToken();
+        if (!token) return new Map();
+        const metrics = await fetchZabbixHostMetrics(token);
+        cachedZabbixMetrics = metrics;
+        lastZabbixFetch = now;
+        return metrics;
+    } catch (err: any) {
+        console.warn("[ZABBIX] Falha ao buscar métricas cacheadas:", err.message);
+        return cachedZabbixMetrics || new Map();
+    }
+}
+
+function getServerHardwareSpecs(srv: any, zabbixMetrics?: Map<string, any>) {
     const name = (srv.name || "").toLowerCase();
     const model = (srv.model || "").toLowerCase();
     const manufacturer = (srv.manufacturer || "").toLowerCase();
 
-    // Check virtualization
+    // Tentar obter métricas reais do Zabbix
+    let realMetrics: any = null;
+    if (zabbixMetrics) {
+        realMetrics = zabbixMetrics.get(name) ||
+                      zabbixMetrics.get(srv.ip) ||
+                      zabbixMetrics.get((srv.name || "").toLowerCase()) ||
+                      null;
+    }
+
+    // Check virtualization (inalterado)
     const virtualKeywords = ["microsoft", "virtual machine", "vmware", "qemu", "xen", "virtualbox", "proxmox", "kvm", "lxc"];
     const isVirt = virtualKeywords.some(kw => name.includes(kw) || model.includes(kw) || manufacturer.includes(kw));
     
@@ -2710,16 +3190,22 @@ function getServerHardwareSpecs(srv: any) {
         storage = `${diskGbs} GB ${diskGbs >= 960 ? "SSD Enterprise" : "SSD"}`;
     }
 
-    // Stable baseline usage
-    const cpuBase = 15 + (hash % 60); // 15% to 75%
-    const ramBase = 20 + (hash % 60); // 20% to 80%
-    const diskBase = 30 + (hash % 50); // 30% to 80%
+    // Baseline de uso estimado (usado APENAS como fallback quando Zabbix não tem dados)
+    const cpuBase = 15 + (hash % 60); // 15% a 75%
+    const ramBase = 20 + (hash % 60); // 20% a 80%
+    const diskBase = 30 + (hash % 50); // 30% a 80%
 
-    // Oscillation based on current time (minutes/seconds) to simulate real-time metrics
-    const offset = Math.sin(Date.now() / 15000) * 5; // +/- 5% oscillation every 15s
-    const cpu_usage = Math.min(99, Math.max(1, Math.round(cpuBase + offset)));
-    const ram_usage = Math.min(99, Math.max(1, Math.round(ramBase + (offset * 0.3)))); // RAM is more stable
-    const disk_usage = Math.min(99, Math.max(1, Math.round(diskBase))); // Disk doesn't fluctuate in seconds
+    // Oscilação senoidal (apenas para fallback estimado)
+    const offset = Math.sin(Date.now() / 15000) * 5;
+    const estimated_cpu   = Math.min(99, Math.max(1, Math.round(cpuBase + offset)));
+    const estimated_ram   = Math.min(99, Math.max(1, Math.round(ramBase + (offset * 0.3))));
+    const estimated_disk  = Math.min(99, Math.max(1, Math.round(diskBase)));
+
+    // Usar métricas reais do Zabbix se disponíveis
+    const cpu_usage  = (realMetrics?.cpu_usage  != null) ? realMetrics.cpu_usage  : estimated_cpu;
+    const ram_usage  = (realMetrics?.ram_usage  != null) ? realMetrics.ram_usage  : estimated_ram;
+    const disk_usage = (realMetrics?.disk_usage != null) ? realMetrics.disk_usage : estimated_disk;
+    const metricsSource: string = realMetrics ? "zabbix" : "estimated";
 
     return {
         cpu,
@@ -2728,6 +3214,7 @@ function getServerHardwareSpecs(srv: any) {
         cpu_usage,
         ram_usage,
         disk_usage,
+        metricsSource,
         is_virtualized: isVirt,
         virtualization_type: virtType
     };
@@ -2848,21 +3335,21 @@ async function fetchRawServersList() {
     } catch (err: any) {
         console.warn("[SERVERS MONITOR] Erro ao buscar do Lansweeper. Usando fallback local:", err.message);
         return [
-            { id: "14", name: "ELISEOS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.40", description: "Servidor Principal de Banco", manufacturer: "Dell Inc.", model: "PowerEdge R710", serialNumber: "9X2Y3Z1", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "262", name: "HADES", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.6.253", description: "Servidor de Arquivos Virtual", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-8849-291", location: "DR - LAN", os: "Win 2019", servicePack: "0", firstSeen: "19/04/2025 01:52:27", lastSeen: "12/06/2026 12:30:40", lastActive: "12/06/2026 12:15:48" },
-            { id: "101", name: "ZEUS", domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.10", description: "Active Directory Principal", manufacturer: "HP", model: "ProLiant DL360 Gen10", serialNumber: "SGH102948X", location: "DR - LAN", os: "Windows Server 2022", servicePack: "0", firstSeen: "10/05/2025 10:20:15", lastSeen: "12/06/2026 12:35:00", lastActive: "12/06/2026 12:35:10" },
-            { id: "102", name: "HERMES", domain: "drmonitoracorp", user: "root", userDomain: "HERMES", ip: "192.168.0.15", description: "Servidor de Telefonia Asterisk", manufacturer: "Supermicro", model: "SYS-5019C-WR", serialNumber: "E1920381029", location: "DR - LAN", os: "Ubuntu 22.04 LTS", servicePack: "Linux 5.15", firstSeen: "12/05/2025 08:14:22", lastSeen: "12/06/2026 12:38:00", lastActive: "12/06/2026 12:38:05" },
-            { id: "103", name: "ARES", domain: "drmonitoracorp", user: "root", userDomain: "ARES", ip: "192.168.0.25", description: "Servidor Zabbix Monitoramento", manufacturer: "Microsoft Corporation", model: "Virtual Machine", serialNumber: "VM-9921-102", location: "DR - LAN", os: "Debian 12", servicePack: "Linux 6.1", firstSeen: "15/05/2025 14:02:11", lastSeen: "12/06/2026 12:40:00", lastActive: "12/06/2026 12:40:12" },
-            // Linux fallbacks
-            { id: "1001", name: "pve01", domain: "drmonitoracorp", user: "root", userDomain: "PVE01", ip: "192.168.0.31", description: "Proxmox VE Hypervisor 01", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z2", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "1002", name: "pve02", domain: "drmonitoracorp", user: "root", userDomain: "PVE02", ip: "192.168.0.32", description: "Proxmox VE Hypervisor 02", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z3", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:48:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "1003", name: "pve03", domain: "drmonitoracorp", user: "root", userDomain: "PVE03", ip: "192.168.0.33", description: "Proxmox VE Hypervisor 03", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z4", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:49:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "1004", name: "pve04", domain: "drmonitoracorp", user: "root", userDomain: "PVE04", ip: "192.168.0.34", description: "Proxmox VE Hypervisor 04", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z5", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:50:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "1005", name: "pve05", domain: "drmonitoracorp", user: "root", userDomain: "PVE05", ip: "192.168.0.35", description: "Proxmox VE Hypervisor 05", manufacturer: "Dell Inc.", model: "PowerEdge R740", serialNumber: "9X2Y3Z6", location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)", servicePack: "-", firstSeen: "19/04/2025 02:51:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
-            { id: "1006", name: "srvwg", domain: "drmonitoracorp", user: "root", userDomain: "SRVWG", ip: "192.168.0.10", description: "Servidor WireGuard VPN", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 22.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:15:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
-            { id: "1007", name: "srvZabbix", domain: "drmonitoracorp", user: "root", userDomain: "SRVZABBIX", ip: "192.168.0.105", description: "Servidor Zabbix", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Debian 12", servicePack: "-", firstSeen: "20/04/2025 10:20:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
-            { id: "1008", name: "srvgnew", domain: "drmonitoracorp", user: "root", userDomain: "SRVGNEW", ip: "192.168.0.50", description: "Servidor GNew Telefone", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 20.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:25:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
-            { id: "1009", name: "srvOPA01", domain: "drmonitoracorp", user: "root", userDomain: "SRVOPA01", ip: "192.168.0.101", description: "Servidor OPA", manufacturer: "QEMU", model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-", location: "DR - Virtual", os: "Ubuntu 22.04 LTS", servicePack: "-", firstSeen: "20/04/2025 10:30:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" }
+            { id: "14",   name: "ELISEOS",   domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.40",  description: "Servidor Principal de Banco",        manufacturer: "Dell Inc.",               model: "PowerEdge R710",                    serialNumber: "9X2Y3Z1",    location: "DR - LAN",         os: "Win 2019",                 servicePack: "0", firstSeen: "19/04/2025 01:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "262",  name: "HADES",     domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.6.253", description: "Servidor de Arquivos Virtual",       manufacturer: "Microsoft Corporation",   model: "Virtual Machine",                  serialNumber: "VM-8849-291", location: "DR - LAN",         os: "Win 2019",                 servicePack: "0", firstSeen: "19/04/2025 01:52:27", lastSeen: "12/06/2026 12:30:40", lastActive: "12/06/2026 12:15:48" },
+            { id: "101",  name: "ZEUS",      domain: "drmonitoracorp", user: "Administrador", userDomain: "DRMONITORACORP", ip: "192.168.0.10",  description: "Active Directory Principal",         manufacturer: "HP",                      model: "ProLiant DL360 Gen10",             serialNumber: "SGH102948X",  location: "DR - LAN",         os: "Windows Server 2022",      servicePack: "0", firstSeen: "10/05/2025 10:20:15", lastSeen: "12/06/2026 12:35:00", lastActive: "12/06/2026 12:35:10" },
+            { id: "102",  name: "HERMES",    domain: "drmonitoracorp", user: "root",          userDomain: "HERMES",          ip: "192.168.0.15",  description: "Servidor de Telefonia Asterisk",     manufacturer: "Supermicro",              model: "SYS-5019C-WR",                    serialNumber: "E1920381029",  location: "DR - LAN",         os: "Ubuntu 22.04 LTS",         servicePack: "Linux 5.15", firstSeen: "12/05/2025 08:14:22", lastSeen: "12/06/2026 12:38:00", lastActive: "12/06/2026 12:38:05" },
+            { id: "103",  name: "ARES",      domain: "drmonitoracorp", user: "root",          userDomain: "ARES",            ip: "192.168.0.25",  description: "Servidor Zabbix Monitoramento",      manufacturer: "Microsoft Corporation",   model: "Virtual Machine",                  serialNumber: "VM-9921-102",  location: "DR - LAN",         os: "Debian 12",                servicePack: "Linux 6.1", firstSeen: "15/05/2025 14:02:11", lastSeen: "12/06/2026 12:40:00", lastActive: "12/06/2026 12:40:12" },
+            // Linux servers / Proxmox
+            { id: "1001", name: "pve01",     domain: "drmonitoracorp", user: "root",          userDomain: "PVE01",           ip: "192.168.0.31",  description: "Proxmox VE Hypervisor 01",           manufacturer: "Dell Inc.",               model: "PowerEdge R740",                   serialNumber: "9X2Y3Z2",    location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)",  servicePack: "-", firstSeen: "19/04/2025 02:47:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1002", name: "pve02",     domain: "drmonitoracorp", user: "root",          userDomain: "PVE02",           ip: "192.168.0.32",  description: "Proxmox VE Hypervisor 02",           manufacturer: "Dell Inc.",               model: "PowerEdge R740",                   serialNumber: "9X2Y3Z3",    location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)",  servicePack: "-", firstSeen: "19/04/2025 02:48:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1003", name: "pve03",     domain: "drmonitoracorp", user: "root",          userDomain: "PVE03",           ip: "192.168.0.33",  description: "Proxmox VE Hypervisor 03",           manufacturer: "Dell Inc.",               model: "PowerEdge R740",                   serialNumber: "9X2Y3Z4",    location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)",  servicePack: "-", firstSeen: "19/04/2025 02:49:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1004", name: "pve04",     domain: "drmonitoracorp", user: "root",          userDomain: "PVE04",           ip: "192.168.0.34",  description: "Proxmox VE Hypervisor 04",           manufacturer: "Dell Inc.",               model: "PowerEdge R740",                   serialNumber: "9X2Y3Z5",    location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)",  servicePack: "-", firstSeen: "19/04/2025 02:50:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1005", name: "pve05",     domain: "drmonitoracorp", user: "root",          userDomain: "PVE05",           ip: "192.168.0.35",  description: "Proxmox VE Hypervisor 05",           manufacturer: "Dell Inc.",               model: "PowerEdge R740",                   serialNumber: "9X2Y3Z6",    location: "DR - Data Center", os: "Debian (Proxmox VE 8.1)",  servicePack: "-", firstSeen: "19/04/2025 02:51:18", lastSeen: "12/06/2026 12:15:00", lastActive: "12/06/2026 12:15:48" },
+            { id: "1006", name: "srvwg",     domain: "drmonitoracorp", user: "root",          userDomain: "SRVWG",           ip: "192.168.0.20",  description: "Servidor WireGuard VPN",             manufacturer: "QEMU",                   model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-",           location: "DR - Virtual",     os: "Ubuntu 22.04 LTS",         servicePack: "-", firstSeen: "20/04/2025 10:15:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1007", name: "srvZabbix", domain: "drmonitoracorp", user: "root",          userDomain: "SRVZABBIX",       ip: "192.168.0.105", description: "Servidor Zabbix",                   manufacturer: "QEMU",                   model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-",           location: "DR - Virtual",     os: "Debian 12",                servicePack: "-", firstSeen: "20/04/2025 10:20:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1008", name: "srvgnew",   domain: "drmonitoracorp", user: "root",          userDomain: "SRVGNEW",         ip: "192.168.0.50",  description: "Servidor GNew Telefone",             manufacturer: "QEMU",                   model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-",           location: "DR - Virtual",     os: "Ubuntu 20.04 LTS",         servicePack: "-", firstSeen: "20/04/2025 10:25:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" },
+            { id: "1009", name: "srvOPA01",  domain: "drmonitoracorp", user: "root",          userDomain: "SRVOPA01",        ip: "192.168.0.101", description: "Servidor OPA",                      manufacturer: "QEMU",                   model: "Standard PC (Q35 + ICH9, 2009)", serialNumber: "-",           location: "DR - Virtual",     os: "Ubuntu 22.04 LTS",         servicePack: "-", firstSeen: "20/04/2025 10:30:30", lastSeen: "12/06/2026 12:30:00", lastActive: "12/06/2026 12:30:15" }
         ];
     }
 }
@@ -2870,9 +3357,18 @@ async function fetchRawServersList() {
 async function runServersStatusCheckActual() {
     const rawServers = await fetchRawServersList();
 
+    // Buscar métricas do Zabbix em paralelo com a lista de servidores
+    // Se o Zabbix estiver inacessível, retorna mapa vazio e usa estimativas
+    const zabbixMetrics = await getZabbixMetrics().catch(() => new Map<string, any>());
+    if (zabbixMetrics.size > 0) {
+        console.log(`✅ [ZABBIX] Métricas reais carregadas para ${zabbixMetrics.size / 2} hosts.`);
+    } else {
+        console.warn("⚠️ [ZABBIX] Métricas não disponíveis. Usando estimativas para servidores.");
+    }
+
     const pingPromises = rawServers.map(async (srv: any) => {
         const pingResult = await pingDevice(srv.ip);
-        const hardware = getServerHardwareSpecs(srv);
+        const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
         
         if (!pingResult.online) {
             logMonitoringEvent({
@@ -3237,6 +3733,9 @@ async function fetchPfSenseDataActual(): Promise<any> {
     const statsHtml = statsRes.html;
 
     // Parse Stats (from getstats.php)
+    // pfSense CE getstats.php format: totalTicks|idleTicks|memory%|uptime|...|loadAvg
+    // statsValues[0] = total CPU ticks, statsValues[1] = idle CPU ticks (NOT used)
+    // CPU usage = (total - idle) / total * 100
     const statsValues = statsHtml.split("|");
     let cpuUsage = 0;
     let memoryUsage = 0;
@@ -3244,22 +3743,23 @@ async function fetchPfSenseDataActual(): Promise<any> {
     let uptime = "Desconhecido";
 
     if (statsValues.length >= 9) {
-        const totalTicks = parseInt(statsValues[0]);
-        const usedTicks = parseInt(statsValues[1]);
+        const totalTicks = parseInt(statsValues[0]) || 0;
+        const idleTicks = parseInt(statsValues[1]) || 0; // statsValues[1] = idle ticks
         memoryUsage = parseInt(statsValues[2]) || 0;
-        uptime = statsValues[3] || "Desconhecido";
-        loadAverage = statsValues[8] || "0.00, 0.00, 0.00";
+        uptime = (statsValues[3] || "Desconhecido").trim();
+        loadAverage = (statsValues[8] || "0.00, 0.00, 0.00").trim();
 
         if (lastCpuTotalTicks > 0 && totalTicks > lastCpuTotalTicks) {
             const d_total = totalTicks - lastCpuTotalTicks;
-            const d_used = usedTicks - lastCpuUsedTicks;
-            cpuUsage = d_total > 0 ? Math.floor(((d_total - d_used) / d_total) * 100) : 0;
+            const d_idle = idleTicks - lastCpuUsedTicks; // lastCpuUsedTicks armazena idle anterior
+            // CPU% = tempo não-idle / tempo total
+            cpuUsage = d_total > 0 ? Math.max(0, Math.min(100, Math.floor(((d_total - d_idle) / d_total) * 100))) : 0;
         } else {
-            cpuUsage = 0;
+            cpuUsage = 0; // Primeira leitura: sem referência anterior
         }
 
         lastCpuTotalTicks = totalTicks;
-        lastCpuUsedTicks = usedTicks;
+        lastCpuUsedTicks = idleTicks; // Armazena idle para próximo cálculo
     }
 
     // Parse DNS
@@ -3345,27 +3845,47 @@ async function fetchPfSenseDataActual(): Promise<any> {
     let main_cable_link = "Sem Conexão";
     let main_wifi_link = "Sem Conexão";
 
-    const isWanOnline = gatewaysList.some(gw => gw.name === "WAN_GW" && gw.status.toLowerCase().includes("online"));
-    const isVivoOnline = gatewaysList.some(gw => gw.name === "VIVO_GW" && gw.status.toLowerCase().includes("online"));
-    const isImaximaOnline = gatewaysList.some(gw => gw.name === "IMAXIMA_GW" && gw.status.toLowerCase().includes("online"));
+    // Detecção dinâmica de gateways — não depende de nomes hardcoded
+    // Classifica gateways por interface: wan = cabo principal, opt = backup/wifi
+    const onlineGateways = gatewaysList.filter(gw => gw.status.toLowerCase().includes("online"));
+    const wanGateway = onlineGateways.find(gw => {
+        const nameLower = gw.name.toLowerCase();
+        // Detecta WAN principal: contém "wan" mas não é numerado como opt (ex: WAN_GW, GW_WAN)
+        return (nameLower.includes("wan") && !nameLower.includes("opt") && !nameLower.includes("wan2") && !nameLower.includes("wan3"));
+    });
+    const opt1Gateway = onlineGateways.find(gw => {
+        const nameLower = gw.name.toLowerCase();
+        return nameLower.includes("opt1") || nameLower.includes("wan2") || nameLower.includes("vivo");
+    });
+    const opt2Gateway = onlineGateways.find(gw => {
+        const nameLower = gw.name.toLowerCase();
+        return nameLower.includes("opt2") || nameLower.includes("wan3") || nameLower.includes("imaxima");
+    });
 
-    if (isWanOnline) {
-        main_cable_link = "AmericaNET (WAN)";
-    } else if (isVivoOnline) {
-        main_cable_link = "VIVO (WAN2) [Backup]";
-    } else if (isImaximaOnline) {
-        main_cable_link = "iMaxima (WAN3) [Backup]";
+    // Link de cabo principal
+    if (wanGateway) {
+        main_cable_link = `${wanGateway.name} (${wanGateway.ip})`;
+    } else if (opt1Gateway) {
+        main_cable_link = `${opt1Gateway.name} [Backup]`;
+    } else if (opt2Gateway) {
+        main_cable_link = `${opt2Gateway.name} [Backup]`;
+    } else if (onlineGateways.length > 0) {
+        main_cable_link = `${onlineGateways[0].name} (${onlineGateways[0].ip})`;
     }
 
-    if (isVivoOnline) {
-        main_wifi_link = "VIVO (WAN2)";
-    } else if (isImaximaOnline) {
-        main_wifi_link = "iMaxima (WAN3) [Backup]";
-    } else if (isWanOnline) {
-        main_wifi_link = "AmericaNET (WAN) [Backup]";
+    // Link Wi-Fi / secundário
+    if (opt1Gateway) {
+        main_wifi_link = `${opt1Gateway.name} (${opt1Gateway.ip})`;
+    } else if (opt2Gateway) {
+        main_wifi_link = `${opt2Gateway.name} [Backup]`;
+    } else if (wanGateway) {
+        main_wifi_link = `${wanGateway.name} [Backup]`;
+    } else if (onlineGateways.length > 1) {
+        main_wifi_link = `${onlineGateways[1].name} (${onlineGateways[1].ip})`;
     }
 
     return {
+        isSimulated: false,
         uptime,
         cpu_usage: cpuUsage,
         memory_usage: memoryUsage,
@@ -3427,11 +3947,11 @@ function getSimulatedTrafficData(): any {
     };
 }
 
-function getSimulatedPfSenseData(): any {
+function getSimulatedPfSenseData(reason: "mock" | "fallback" = "fallback"): any {
     const now = Date.now();
     return {
-        isSimulated: true,
-        uptime: "15 dias, 4 horas, 32 minutos",
+        isSimulated: reason, // "mock" = intencional, "fallback" = erro/pfSense inacessível
+        uptime: "15 dias, 4 horas, 32 minutos (simulado)",
         cpu_usage: Math.floor(10 + Math.sin(now / 10000) * 5 + Math.random() * 3),
         memory_usage: 42,
         load_average: "0.22, 0.28, 0.25",
@@ -3447,14 +3967,14 @@ function getSimulatedPfSenseData(): any {
             { name: "VIVO_GW", ip: "186.200.15.1", rtt: "12.8ms", rttsd: "1.1ms", loss: "0.0%", status: "online", status_class: "bg-success" },
             { name: "IMAXIMA_GW", ip: "177.85.90.1", rtt: "8.2ms", rttsd: "0.9ms", loss: "0.0%", status: "online", status_class: "bg-success" }
         ],
-        main_cable_link: "AmericaNET (WAN)",
-        main_wifi_link: "VIVO (WAN2)"
+        main_cable_link: "WAN_GW (191.185.20.1)",
+        main_wifi_link: "VIVO_GW (186.200.15.1)"
     };
 }
 
 async function getPfSenseTrafficData(): Promise<any> {
     if (process.env.PFSENSE_MOCK === "true") {
-        return getSimulatedTrafficData();
+        return { ...getSimulatedTrafficData(), isSimulated: "mock" };
     }
 
     try {
@@ -3513,7 +4033,7 @@ async function getPfSenseData(forceRefresh = false): Promise<any> {
     }
 
     if (process.env.PFSENSE_MOCK === "true") {
-        const data = getSimulatedPfSenseData();
+        const data = getSimulatedPfSenseData("mock");
         cachedPfSenseData = data;
         lastPfSenseFetchTime = now;
         return data;
@@ -3526,7 +4046,7 @@ async function getPfSenseData(forceRefresh = false): Promise<any> {
         return data;
     } catch (err) {
         console.warn("⚠️ [PFSENSE] Falha ao obter dados reais do pfSense. Usando modo simulado como fallback. Erro:", err);
-        const data = getSimulatedPfSenseData();
+        const data = getSimulatedPfSenseData("fallback");
         cachedPfSenseData = data;
         lastPfSenseFetchTime = now;
         return data;

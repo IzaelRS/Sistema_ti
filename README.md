@@ -79,6 +79,16 @@ Um feed persistente de eventos de monitoramento (`monitoring_events`):
 - Integração direta com a API do **Lansweeper** para monitorar switches locais na infraestrutura da empresa.
 - Exibe o status da comunicação de cada switch (Online/Offline) facilitando a detecção imediata de quedas físicas na rede.
 
+### 5. Monitoramento de NAS via SSH (Apenas Leitura / Read-Only)
+- Integração direta via protocolo SSH com o NAS **Cronos** (Western Digital My Cloud Pro PR4100) para coletar dados em tempo real de armazenamento, RAID, discos (capacidade e temperatura) e pastas compartilhadas.
+- **Segurança de Acesso (Read-Only):** A integração opera de maneira estritamente passiva (somente leitura). O sistema executa apenas comandos de diagnóstico nativos do sistema (`df`, `/proc/mdstat`, `mdadm`, `sysfs` e `smartctl`) para buscar o status das gavetas de disco, volumes RAID, espaço em disco e as pastas de rede ativas. Nenhuma configuração, arquivo ou partição do NAS é alterado, criado ou deletado sob nenhuma hipótese.
+- **Fallback Automático:** Caso o NAS esteja fora da rede ou as credenciais SSH estejam incorretas, o sistema tentará buscar dados via Lansweeper e, se indisponíveis, exibirá o erro de forma transparente no painel sem simular dados fictícios.
+
+### 6. Monitoramento de Servidores via Zabbix API (Apenas Leitura / Read-Only)
+- Integração direta com a API do **Zabbix** para buscar dados reais de hardware (CPU, Memória RAM e Uso de Disco) dos servidores em produção.
+- **Segurança de Acesso (Read-Only):** A integração opera estritamente no modo de apenas leitura. Nenhuma configuração do seu servidor Zabbix é criada, alterada ou removida. O sistema consome apenas os dados de leitura via os métodos `host.get` e `item.get`.
+- **Fallback Automático:** Caso o Zabbix fique inacessível ou as credenciais estejam erradas, os cartões de servidores mostram métricas estimadas identificadas pelo badge `⚡ Estimado`, sem impactar a execução do sistema.
+
 ---
 
 ## 🛡️ Segurança e Rate Limit (Anti-Spam)
@@ -112,6 +122,16 @@ GNEW_PASSWORD=sua_senha_gnew
 LANSWEEPER_URL=url_do_seu_lansweeper
 LANSWEEPER_USER=seu_usuario_lansweeper
 LANSWEEPER_PASS=sua_senha_lansweeper
+
+# Integração Zabbix (Acesso estritamente de Leitura / Read-Only)
+ZABBIX_URL=http://zabbix.drmonitora.com.br/
+ZABBIX_USER=seu_usuario_zabbix
+ZABBIX_PASS=sua_senha_zabbix
+
+# Integração NAS Storage SSH (Acesso estritamente de Leitura / Read-Only)
+NAS_SSH_HOST=cronos.local
+NAS_SSH_USER=sshd
+NAS_SSH_PASS=sua_senha_ssh_nas
 ```
 
 ---

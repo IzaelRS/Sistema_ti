@@ -38,6 +38,15 @@ services:
       PFSENSE_USER: ${PFSENSE_USER}
       PFSENSE_PASS: ${PFSENSE_PASS}
       PFSENSE_MOCK: ${PFSENSE_MOCK}
+      ZABBIX_URL: ${ZABBIX_URL}
+      ZABBIX_USER: ${ZABBIX_USER}
+      ZABBIX_PASS: ${ZABBIX_PASS}
+      NAS_DSM_URL: ${NAS_DSM_URL}
+      NAS_DSM_USER: ${NAS_DSM_USER}
+      NAS_DSM_PASS: ${NAS_DSM_PASS}
+      NAS_SSH_HOST: ${NAS_SSH_HOST}
+      NAS_SSH_USER: ${NAS_SSH_USER}
+      NAS_SSH_PASS: ${NAS_SSH_PASS}
     depends_on:
       - db
     volumes:

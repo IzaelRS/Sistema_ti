@@ -1756,10 +1756,27 @@ export const monitoringHandler = {
             if (res && res.success && res.data) {
                 const info = res.data;
                 
-                // Toggle simulation badge
+                // Toggle simulation badge — diferencia "mock" intencional de "fallback" por erro
                 const badge = document.getElementById('network-simulation-badge');
                 if (badge) {
-                    badge.style.display = info.isSimulated ? 'inline-block' : 'none';
+                    if (!info.isSimulated) {
+                        // Dados reais do pfSense
+                        badge.style.display = 'none';
+                    } else if (info.isSimulated === 'mock') {
+                        // Mock ativado intencionalmente via PFSENSE_MOCK=true
+                        badge.style.display = 'inline-block';
+                        badge.textContent = '⚠️ Modo Simulação (PFSENSE_MOCK=true)';
+                        badge.style.background = 'rgba(245, 158, 11, 0.12)';
+                        badge.style.color = '#fde047';
+                        badge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                    } else {
+                        // Fallback por erro — pfSense inacessível
+                        badge.style.display = 'inline-block';
+                        badge.textContent = '🔴 pfSense Inacessível — Dados Estimados';
+                        badge.style.background = 'rgba(239, 68, 68, 0.10)';
+                        badge.style.color = '#fca5a5';
+                        badge.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+                    }
                 }
                 
                 // Update CPU Usage
@@ -2687,6 +2704,16 @@ export const monitoringHandler = {
                 const storage = res.storage;
                 const volume = storage.volume;
 
+                // Badge de fonte dos dados de storage
+                const storageDataSource = storage.dataSource || 'estimated';
+                const storageBadgeHtml = storageDataSource === 'lansweeper'
+                    ? `<span title="Dados reais via Lansweeper" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;">🟢 Lansweeper</span>`
+                    : storageDataSource === 'synology_dsm'
+                        ? `<span title="Dados reais via Synology DSM API" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;">🟢 Synology DSM</span>`
+                        : storageDataSource === 'wd_nas_ssh'
+                            ? `<span title="Dados reais via SSH (Apenas Leitura)" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;">🟢 WD My Cloud</span>`
+                            : `<span title="Dados estimados (não configurado)" style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.08);color:#fde047;border:1px solid rgba(245,158,11,0.2);padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;">⚡ Estimado</span>`;
+
                 const pctUsed = Math.round((volume.used_gb / volume.total_gb) * 100);
                 const totalText = (volume.total_gb / 1000).toFixed(1) + ' TB';
                 const usedText = (volume.used_gb / 1000).toFixed(1) + ' TB';
@@ -2773,7 +2800,10 @@ export const monitoringHandler = {
                             <!-- TOP: RAID and Volume Capacity Overview -->
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
                                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                                    <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Volume de Armazenamento</span>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Volume de Armazenamento</span>
+                                        ${storageBadgeHtml}
+                                    </div>
                                     <div style="display: flex; align-items: center; gap: 12px;">
                                         <span style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">${volume.raid_level}</span>
                                         <span class="monitor-badge" style="background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); padding: 2px 8px; font-size: 0.75rem;">Status: ${volume.status}</span>
@@ -2825,7 +2855,7 @@ export const monitoringHandler = {
                     </td>
                 `;
             } else {
-                throw new Error("Dados inválidos recebidos do servidor.");
+                throw new Error(res.error || res.message || "Dados inválidos recebidos do servidor.");
             }
         } catch (err) {
             console.error("Erro ao expandir NAS storage:", err);
@@ -3097,6 +3127,11 @@ export const monitoringHandler = {
 
             const hasMetrics = srv.cpu || srv.memory || srv.storage;
 
+            // Badge de fonte das métricas
+            const metricsSource = srv.metricsSource || 'estimated';
+            const sourceBadgeHtml = metricsSource === 'zabbix'
+                ? `<span title="Métricas em tempo real via Zabbix" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">📊 Zabbix</span>`
+                : `<span title="Métricas estimadas (Zabbix indisponível)" style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.08);color:#fde047;border:1px solid rgba(245,158,11,0.2);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">⚡ Estimado</span>`;
             return `
                 <div class="server-accordion-item ${activeClass}" data-item-id="${srv.id}">
                     <div class="server-accordion-header" data-server-id="${srv.id}">
@@ -3115,19 +3150,20 @@ export const monitoringHandler = {
                                     Físico
                                   </span>`)
                             : ''}
+                            ${hasMetrics ? sourceBadgeHtml : ''}
                         </div>
                         <div class="server-header-right">
                             ${hasMetrics && srv.online ? `
                             <div style="display: flex; align-items: center; gap: 10px; margin-right: 10px;">
-                                <div title="CPU: ${cpuPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="CPU: ${cpuPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${cpuBar.textColor}" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${cpuBar.textColor};">${cpuPct}%</span>
                                 </div>
-                                <div title="RAM: ${ramPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="RAM: ${ramPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${ramBar.textColor}" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${ramBar.textColor};">${ramPct}%</span>
                                 </div>
-                                <div title="Disco: ${diskPct}%" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="Disco: ${diskPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${diskBar.textColor}" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${diskBar.textColor};">${diskPct}%</span>
                                 </div>
@@ -3147,7 +3183,7 @@ export const monitoringHandler = {
 
                                 <!-- CPU -->
                                 ${srv.cpu ? `
-                                <div style="background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#a78bfa" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
@@ -3163,7 +3199,7 @@ export const monitoringHandler = {
 
                                 <!-- RAM -->
                                 ${srv.memory ? `
-                                <div style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#38bdf8" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
@@ -3179,7 +3215,7 @@ export const monitoringHandler = {
 
                                 <!-- Storage -->
                                 ${srv.storage ? `
-                                <div style="background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fb923c" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
