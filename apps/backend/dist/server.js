@@ -2671,6 +2671,7 @@ let isCheckingServers = false;
 // --- Zabbix API Integration ---
 let zabbixAuthToken = null;
 let zabbixTokenExpiry = 0;
+let activeZabbixLoginPromise = null;
 function getZabbixEndpoint(baseUrl) {
     const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
     if (cleanUrl.endsWith("/api_jsonrpc.php"))
@@ -2682,68 +2683,95 @@ async function fetchZabbixToken() {
     const now = Date.now();
     if (zabbixAuthToken && now < zabbixTokenExpiry)
         return zabbixAuthToken;
-    const zabbixUrl = process.env.ZABBIX_URL;
-    const user = process.env.ZABBIX_USER;
-    const password = process.env.ZABBIX_PASS;
-    if (!zabbixUrl || !user || !password)
-        return null;
-    try {
-        const parsedUrl = new URL(getZabbixEndpoint(zabbixUrl));
-        const lib = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
-        const attemptLogin = async (params) => {
-            const payload = JSON.stringify({
-                jsonrpc: "2.0",
-                method: "user.login",
-                params,
-                id: 1
-            });
-            const options = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
-                path: parsedUrl.pathname,
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Content-Length": Buffer.byteLength(payload)
-                }
-            };
-            return new Promise((resolve, reject) => {
-                const req = lib.request(options, (res) => {
-                    let data = "";
-                    res.on("data", chunk => data += chunk);
-                    res.on("end", () => {
-                        try {
-                            resolve(JSON.parse(data));
-                        }
-                        catch (e) {
-                            reject(e);
-                        }
-                    });
-                });
-                req.on("error", reject);
-                req.setTimeout(8000, () => { req.destroy(); reject(new Error("Zabbix login timeout")); });
-                req.write(payload);
-                req.end();
-            });
-        };
-        // Tenta primeiro com 'username' (Zabbix 6.0+)
-        let result = await attemptLogin({ username: user, password });
-        if (result.error && (result.error.code === -32602 || result.error.message?.includes("username") || result.error.data?.includes("username") || result.error.data?.includes("user"))) {
-            console.log("ℹ️ [ZABBIX] 'username' falhou ou é inesperado. Tentando com 'user' (Zabbix antigo)...");
-            // Tenta com 'user' (Zabbix < 6.0)
-            result = await attemptLogin({ user, password });
-        }
-        if (result.result) {
-            zabbixAuthToken = result.result;
-            zabbixTokenExpiry = now + 25 * 60 * 1000; // Token válido por 25 minutos
-            return zabbixAuthToken;
-        }
-        console.warn("[ZABBIX] Falha no login:", result.error);
-        return null;
+    if (activeZabbixLoginPromise) {
+        console.log("[ZABBIX DEBUG] Login já em andamento. Aguardando a mesma Promise...");
+        return activeZabbixLoginPromise;
     }
-    catch (err) {
-        console.warn("[ZABBIX] Erro ao autenticar:", err.message);
-        return null;
+    activeZabbixLoginPromise = (async () => {
+        const zabbixUrl = process.env.ZABBIX_URL;
+        const user = process.env.ZABBIX_USER;
+        const password = process.env.ZABBIX_PASS;
+        if (!zabbixUrl || !user || !password) {
+            console.warn("[ZABBIX DEBUG] Credenciais incompletas no .env. URL:", zabbixUrl, "User:", user);
+            return null;
+        }
+        try {
+            const endpoint = getZabbixEndpoint(zabbixUrl);
+            console.log(`[ZABBIX DEBUG] Endpoint resolvido: ${endpoint}`);
+            const parsedUrl = new URL(endpoint);
+            const lib = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
+            const attemptLogin = async (params) => {
+                console.log(`[ZABBIX DEBUG] Tentando login via ${parsedUrl.protocol} em ${parsedUrl.hostname}:${parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80)} com user: ${params.username || params.user}`);
+                const payload = JSON.stringify({
+                    jsonrpc: "2.0",
+                    method: "user.login",
+                    params,
+                    id: 1
+                });
+                const options = {
+                    hostname: parsedUrl.hostname,
+                    port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                    path: parsedUrl.pathname,
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Content-Length": Buffer.byteLength(payload)
+                    }
+                };
+                const start = Date.now();
+                return new Promise((resolve, reject) => {
+                    const req = lib.request(options, (res) => {
+                        console.log(`[ZABBIX DEBUG] HTTP Status recebido: ${res.statusCode} em ${Date.now() - start}ms`);
+                        let data = "";
+                        res.on("data", chunk => data += chunk);
+                        res.on("end", () => {
+                            console.log(`[ZABBIX DEBUG] Resposta recebida com sucesso em ${Date.now() - start}ms. Tamanho: ${data.length} bytes`);
+                            try {
+                                resolve(JSON.parse(data));
+                            }
+                            catch (e) {
+                                reject(e);
+                            }
+                        });
+                    });
+                    req.on("error", (err) => {
+                        console.error(`[ZABBIX DEBUG] Erro na requisição após ${Date.now() - start}ms:`, err.message);
+                        reject(err);
+                    });
+                    req.setTimeout(8000, () => {
+                        console.warn(`[ZABBIX DEBUG] Timeout de 8s atingido após ${Date.now() - start}ms!`);
+                        req.destroy();
+                        reject(new Error("Zabbix login timeout"));
+                    });
+                    req.write(payload);
+                    req.end();
+                });
+            };
+            // Tenta primeiro com 'username' (Zabbix 6.0+)
+            let result = await attemptLogin({ username: user, password });
+            if (result.error && (result.error.code === -32602 || result.error.message?.includes("username") || result.error.data?.includes("username") || result.error.data?.includes("user"))) {
+                console.log("ℹ️ [ZABBIX] 'username' falhou ou é inesperado. Tentando com 'user' (Zabbix antigo)...");
+                // Tenta com 'user' (Zabbix < 6.0)
+                result = await attemptLogin({ user, password });
+            }
+            if (result.result) {
+                zabbixAuthToken = result.result;
+                zabbixTokenExpiry = Date.now() + 25 * 60 * 1000; // Token válido por 25 minutos
+                return zabbixAuthToken;
+            }
+            console.warn("[ZABBIX] Falha no login:", result.error);
+            return null;
+        }
+        catch (err) {
+            console.warn("[ZABBIX] Erro ao autenticar:", err.message);
+            return null;
+        }
+    })();
+    try {
+        return await activeZabbixLoginPromise;
+    }
+    finally {
+        activeZabbixLoginPromise = null;
     }
 }
 async function fetchZabbixHostMetrics(token) {
@@ -2791,7 +2819,7 @@ async function fetchZabbixHostMetrics(token) {
                 });
             });
             req.on("error", reject);
-            req.setTimeout(10000, () => { req.destroy(); reject(new Error("Zabbix request timeout")); });
+            req.setTimeout(15000, () => { req.destroy(); reject(new Error("Zabbix request timeout")); });
             req.write(payload);
             req.end();
         });
@@ -2907,6 +2935,7 @@ async function fetchZabbixHostMetrics(token) {
     }
     catch (err) {
         console.warn("[ZABBIX] Erro ao buscar métricas:", err.message);
+        throw err;
     }
     return metricsMap;
 }
@@ -3217,10 +3246,11 @@ app.get("/api/monitoring/servers", async (req, res) => {
                 servers = cachedServersStatus;
             }
             else {
+                const zabbixMetrics = await getZabbixMetrics();
                 const list = await fetchRawServersList();
                 servers = list.map((srv) => {
                     const cached = cachedServersStatus ? cachedServersStatus.find((s) => s.id === srv.id) : null;
-                    const hardware = getServerHardwareSpecs(srv);
+                    const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
                     return {
                         ...srv,
                         ...hardware,
@@ -3257,9 +3287,10 @@ app.get("/api/monitoring/servers/:id/ping", async (req, res) => {
         const start = Date.now();
         const assetId = req.params.id;
         if (!cachedServersStatus) {
+            const zabbixMetrics = await getZabbixMetrics();
             const list = await fetchRawServersList();
             cachedServersStatus = list.map((srv) => {
-                const hardware = getServerHardwareSpecs(srv);
+                const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
                 return {
                     ...srv,
                     ...hardware,
@@ -3275,8 +3306,9 @@ app.get("/api/monitoring/servers/:id/ping", async (req, res) => {
             return;
         }
         const pingResult = await pingDevice(srv.ip);
+        const zabbixMetrics = await getZabbixMetrics();
         // Recalculate hardware specs to get updated/oscillated metrics
-        const hardware = getServerHardwareSpecs(srv);
+        const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
         Object.assign(srv, hardware);
         srv.online = pingResult.online;
         srv.latency = pingResult.latency;
@@ -3582,6 +3614,8 @@ async function fetchPfSenseDataActual() {
                     const status = statusTdHtml.replace(/<[^>]*>/g, "").trim();
                     const classMatch = statusTdHtml.match(/class="([^"]*)"/i);
                     const statusClass = classMatch ? classMatch[1].trim() : "";
+                    // Identifica se este gateway é o gateway padrão de saída da internet
+                    const isDefault = rowHtml.includes("fa-globe") || rowHtml.includes("Default gateway");
                     gatewaysList.push({
                         name,
                         ip,
@@ -3589,7 +3623,8 @@ async function fetchPfSenseDataActual() {
                         rttsd,
                         loss,
                         status,
-                        status_class: statusClass
+                        status_class: statusClass,
+                        is_default: isDefault
                     });
                 }
             }
@@ -3597,47 +3632,46 @@ async function fetchPfSenseDataActual() {
     }
     let main_cable_link = "Sem Conexão";
     let main_wifi_link = "Sem Conexão";
-    // Detecção dinâmica de gateways — não depende de nomes hardcoded
-    // Classifica gateways por interface: wan = cabo principal, opt = backup/wifi
+    // Classificação dinâmica e verídica baseada no status dos gateways no pfSense físico
     const onlineGateways = gatewaysList.filter(gw => gw.status.toLowerCase().includes("online"));
-    const wanGateway = onlineGateways.find(gw => {
+    // 1. Identifica a WAN/Cabo principal (Prioriza o gateway Default ou AmericaNET)
+    const wanGateway = onlineGateways.find(gw => gw.is_default) ||
+        onlineGateways.find(gw => {
+            const nameLower = gw.name.toLowerCase();
+            return nameLower.includes("americanet") || (nameLower.includes("wan") && !nameLower.includes("opt"));
+        });
+    // 2. Identifica o Wi-Fi / Link Secundário (VIVO)
+    const wifiGateway = onlineGateways.find(gw => {
         const nameLower = gw.name.toLowerCase();
-        // Detecta WAN principal: contém "wan" mas não é numerado como opt (ex: WAN_GW, GW_WAN)
-        return (nameLower.includes("wan") && !nameLower.includes("opt") && !nameLower.includes("wan2") && !nameLower.includes("wan3"));
-    });
-    const opt1Gateway = onlineGateways.find(gw => {
+        return nameLower.includes("vivo") || nameLower.includes("wifi");
+    }) || onlineGateways.find(gw => {
         const nameLower = gw.name.toLowerCase();
-        return nameLower.includes("opt1") || nameLower.includes("wan2") || nameLower.includes("vivo");
+        return nameLower.includes("opt1") || nameLower.includes("wan2");
     });
-    const opt2Gateway = onlineGateways.find(gw => {
+    // 3. Identifica outros links (iMaxima)
+    const optTerceiroGateway = onlineGateways.find(gw => {
         const nameLower = gw.name.toLowerCase();
-        return nameLower.includes("opt2") || nameLower.includes("wan3") || nameLower.includes("imaxima");
+        return nameLower.includes("imaxima") || nameLower.includes("opt2") || nameLower.includes("wan3");
     });
-    // Link de cabo principal
+    // Atribuição do link de cabo principal
     if (wanGateway) {
         main_cable_link = `${wanGateway.name} (${wanGateway.ip})`;
-    }
-    else if (opt1Gateway) {
-        main_cable_link = `${opt1Gateway.name} [Backup]`;
-    }
-    else if (opt2Gateway) {
-        main_cable_link = `${opt2Gateway.name} [Backup]`;
     }
     else if (onlineGateways.length > 0) {
         main_cable_link = `${onlineGateways[0].name} (${onlineGateways[0].ip})`;
     }
-    // Link Wi-Fi / secundário
-    if (opt1Gateway) {
-        main_wifi_link = `${opt1Gateway.name} (${opt1Gateway.ip})`;
+    // Atribuição do link de Wi-Fi
+    if (wifiGateway) {
+        main_wifi_link = `${wifiGateway.name} (${wifiGateway.ip})`;
     }
-    else if (opt2Gateway) {
-        main_wifi_link = `${opt2Gateway.name} [Backup]`;
+    else if (optTerceiroGateway) {
+        main_wifi_link = `${optTerceiroGateway.name} (${optTerceiroGateway.ip})`;
     }
-    else if (wanGateway) {
-        main_wifi_link = `${wanGateway.name} [Backup]`;
-    }
-    else if (onlineGateways.length > 1) {
-        main_wifi_link = `${onlineGateways[1].name} (${onlineGateways[1].ip})`;
+    else if (wanGateway && onlineGateways.length > 1) {
+        const other = onlineGateways.find(gw => gw.name !== wanGateway.name);
+        if (other) {
+            main_wifi_link = `${other.name} (${other.ip})`;
+        }
     }
     return {
         isSimulated: false,

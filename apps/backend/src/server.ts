@@ -2874,6 +2874,7 @@ let isCheckingServers = false;
 // --- Zabbix API Integration ---
 let zabbixAuthToken: string | null = null;
 let zabbixTokenExpiry = 0;
+let activeZabbixLoginPromise: Promise<string | null> | null = null;
 
 function getZabbixEndpoint(baseUrl: string): string {
     const cleanUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
@@ -2886,66 +2887,95 @@ async function fetchZabbixToken(): Promise<string | null> {
     const now = Date.now();
     if (zabbixAuthToken && now < zabbixTokenExpiry) return zabbixAuthToken;
 
-    const zabbixUrl = process.env.ZABBIX_URL;
-    const user = process.env.ZABBIX_USER;
-    const password = process.env.ZABBIX_PASS;
-    if (!zabbixUrl || !user || !password) return null;
+    if (activeZabbixLoginPromise) {
+        console.log("[ZABBIX DEBUG] Login já em andamento. Aguardando a mesma Promise...");
+        return activeZabbixLoginPromise;
+    }
+
+    activeZabbixLoginPromise = (async () => {
+        const zabbixUrl = process.env.ZABBIX_URL;
+        const user = process.env.ZABBIX_USER;
+        const password = process.env.ZABBIX_PASS;
+        if (!zabbixUrl || !user || !password) {
+            console.warn("[ZABBIX DEBUG] Credenciais incompletas no .env. URL:", zabbixUrl, "User:", user);
+            return null;
+        }
+
+        try {
+            const endpoint = getZabbixEndpoint(zabbixUrl);
+            console.log(`[ZABBIX DEBUG] Endpoint resolvido: ${endpoint}`);
+            const parsedUrl = new URL(endpoint);
+            const lib = parsedUrl.protocol === "https:" ? https : http;
+
+            const attemptLogin = async (params: any): Promise<any> => {
+                console.log(`[ZABBIX DEBUG] Tentando login via ${parsedUrl.protocol} em ${parsedUrl.hostname}:${parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80)} com user: ${params.username || params.user}`);
+                const payload = JSON.stringify({
+                    jsonrpc: "2.0",
+                    method: "user.login",
+                    params,
+                    id: 1
+                });
+                const options: any = {
+                    hostname: parsedUrl.hostname,
+                    port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+                    path: parsedUrl.pathname,
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Content-Length": Buffer.byteLength(payload)
+                    }
+                };
+                const start = Date.now();
+                return new Promise<any>((resolve, reject) => {
+                    const req = lib.request(options, (res) => {
+                        console.log(`[ZABBIX DEBUG] HTTP Status recebido: ${res.statusCode} em ${Date.now() - start}ms`);
+                        let data = "";
+                        res.on("data", chunk => data += chunk);
+                        res.on("end", () => {
+                            console.log(`[ZABBIX DEBUG] Resposta recebida com sucesso em ${Date.now() - start}ms. Tamanho: ${data.length} bytes`);
+                            try { resolve(JSON.parse(data)); }
+                            catch (e) { reject(e); }
+                        });
+                    });
+                    req.on("error", (err) => {
+                        console.error(`[ZABBIX DEBUG] Erro na requisição após ${Date.now() - start}ms:`, err.message);
+                        reject(err);
+                    });
+                    req.setTimeout(8000, () => {
+                        console.warn(`[ZABBIX DEBUG] Timeout de 8s atingido após ${Date.now() - start}ms!`);
+                        req.destroy();
+                        reject(new Error("Zabbix login timeout"));
+                    });
+                    req.write(payload);
+                    req.end();
+                });
+            };
+
+            // Tenta primeiro com 'username' (Zabbix 6.0+)
+            let result = await attemptLogin({ username: user, password });
+            if (result.error && (result.error.code === -32602 || result.error.message?.includes("username") || result.error.data?.includes("username") || result.error.data?.includes("user"))) {
+                console.log("ℹ️ [ZABBIX] 'username' falhou ou é inesperado. Tentando com 'user' (Zabbix antigo)...");
+                // Tenta com 'user' (Zabbix < 6.0)
+                result = await attemptLogin({ user, password });
+            }
+
+            if (result.result) {
+                zabbixAuthToken = result.result;
+                zabbixTokenExpiry = Date.now() + 25 * 60 * 1000; // Token válido por 25 minutos
+                return zabbixAuthToken;
+            }
+            console.warn("[ZABBIX] Falha no login:", result.error);
+            return null;
+        } catch (err: any) {
+            console.warn("[ZABBIX] Erro ao autenticar:", err.message);
+            return null;
+        }
+    })();
 
     try {
-        const parsedUrl = new URL(getZabbixEndpoint(zabbixUrl));
-        const lib = parsedUrl.protocol === "https:" ? https : http;
-
-        const attemptLogin = async (params: any): Promise<any> => {
-            const payload = JSON.stringify({
-                jsonrpc: "2.0",
-                method: "user.login",
-                params,
-                id: 1
-            });
-            const options: any = {
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
-                path: parsedUrl.pathname,
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Content-Length": Buffer.byteLength(payload)
-                }
-            };
-            return new Promise<any>((resolve, reject) => {
-                const req = lib.request(options, (res) => {
-                    let data = "";
-                    res.on("data", chunk => data += chunk);
-                    res.on("end", () => {
-                        try { resolve(JSON.parse(data)); }
-                        catch (e) { reject(e); }
-                    });
-                });
-                req.on("error", reject);
-                req.setTimeout(8000, () => { req.destroy(); reject(new Error("Zabbix login timeout")); });
-                req.write(payload);
-                req.end();
-            });
-        };
-
-        // Tenta primeiro com 'username' (Zabbix 6.0+)
-        let result = await attemptLogin({ username: user, password });
-        if (result.error && (result.error.code === -32602 || result.error.message?.includes("username") || result.error.data?.includes("username") || result.error.data?.includes("user"))) {
-            console.log("ℹ️ [ZABBIX] 'username' falhou ou é inesperado. Tentando com 'user' (Zabbix antigo)...");
-            // Tenta com 'user' (Zabbix < 6.0)
-            result = await attemptLogin({ user, password });
-        }
-
-        if (result.result) {
-            zabbixAuthToken = result.result;
-            zabbixTokenExpiry = now + 25 * 60 * 1000; // Token válido por 25 minutos
-            return zabbixAuthToken;
-        }
-        console.warn("[ZABBIX] Falha no login:", result.error);
-        return null;
-    } catch (err: any) {
-        console.warn("[ZABBIX] Erro ao autenticar:", err.message);
-        return null;
+        return await activeZabbixLoginPromise;
+    } finally {
+        activeZabbixLoginPromise = null;
     }
 }
 
@@ -2990,7 +3020,7 @@ async function fetchZabbixHostMetrics(token: string): Promise<Map<string, any>> 
                 });
             });
             req.on("error", reject);
-            req.setTimeout(10000, () => { req.destroy(); reject(new Error("Zabbix request timeout")); });
+            req.setTimeout(15000, () => { req.destroy(); reject(new Error("Zabbix request timeout")); });
             req.write(payload);
             req.end();
         });
@@ -3111,6 +3141,7 @@ async function fetchZabbixHostMetrics(token: string): Promise<Map<string, any>> 
         }
     } catch (err: any) {
         console.warn("[ZABBIX] Erro ao buscar métricas:", err.message);
+        throw err;
     }
 
     return metricsMap;
@@ -3438,10 +3469,11 @@ app.get("/api/monitoring/servers", async (req: Request, res: Response) => {
             if (cachedServersStatus && !forceRefresh) {
                 servers = cachedServersStatus;
             } else {
+                const zabbixMetrics = await getZabbixMetrics();
                 const list = await fetchRawServersList();
                 servers = list.map((srv: any) => {
                     const cached = cachedServersStatus ? cachedServersStatus.find((s: any) => s.id === srv.id) : null;
-                    const hardware = getServerHardwareSpecs(srv);
+                    const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
                     return {
                         ...srv,
                         ...hardware,
@@ -3480,9 +3512,10 @@ app.get("/api/monitoring/servers/:id/ping", async (req: Request, res: Response) 
         const assetId = req.params.id;
 
         if (!cachedServersStatus) {
+            const zabbixMetrics = await getZabbixMetrics();
             const list = await fetchRawServersList();
             cachedServersStatus = list.map((srv: any) => {
-                const hardware = getServerHardwareSpecs(srv);
+                const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
                 return {
                     ...srv,
                     ...hardware,
@@ -3500,8 +3533,9 @@ app.get("/api/monitoring/servers/:id/ping", async (req: Request, res: Response) 
         }
 
         const pingResult = await pingDevice(srv.ip);
+        const zabbixMetrics = await getZabbixMetrics();
         // Recalculate hardware specs to get updated/oscillated metrics
-        const hardware = getServerHardwareSpecs(srv);
+        const hardware = getServerHardwareSpecs(srv, zabbixMetrics);
         Object.assign(srv, hardware);
         srv.online = pingResult.online;
         srv.latency = pingResult.latency;
