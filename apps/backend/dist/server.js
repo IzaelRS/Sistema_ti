@@ -3370,12 +3370,18 @@ setTimeout(runBackgroundMonitoringChecks, 5000);
 let cachedPfSenseData = null;
 let lastPfSenseFetchTime = 0;
 const PFSENSE_CACHE_TTL = 15000; // 15 seconds cache
+let pfsenseInterfaceMap = {
+    wan: "vtnet0",
+    opt1: "vtnet1",
+    opt2: "vtnet2",
+    lan: "vtnet3"
+};
 let lastCpuTotalTicks = 0;
 let lastCpuUsedTicks = 0;
 let pfsenseSessionCookie = "";
 let pfsenseLastLoginTime = 0;
 const PFSENSE_SESSION_MAX_AGE = 30 * 60 * 1000; // 30 minutes session validity
-const makePfSenseGet = (urlStr, cookie = "") => {
+const makePfSenseGet = (urlStr, cookie = "", extraHeaders = {}) => {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(urlStr);
         const options = {
@@ -3386,7 +3392,8 @@ const makePfSenseGet = (urlStr, cookie = "") => {
             agent: lansweeperAgent,
             headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
-                "Cookie": cookie
+                "Cookie": cookie,
+                ...extraHeaders
             }
         };
         const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
@@ -3400,7 +3407,7 @@ const makePfSenseGet = (urlStr, cookie = "") => {
         req.on("error", reject);
     });
 };
-const makePfSensePost = (urlStr, body, cookie = "") => {
+const makePfSensePost = (urlStr, body, cookie = "", extraHeaders = {}) => {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(urlStr);
         const options = {
@@ -3413,7 +3420,8 @@ const makePfSensePost = (urlStr, body, cookie = "") => {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Content-Length": Buffer.byteLength(body),
-                "Cookie": cookie
+                "Cookie": cookie,
+                ...extraHeaders
             }
         };
         const transport = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
@@ -3531,6 +3539,11 @@ async function fetchPfSenseDataActual() {
                 const ifId = nameMatch[1].trim();
                 const ifName = nameMatch[2].replace(/<[^>]*>/g, "").trim();
                 const status = rowHtml.includes('title="up"') ? "up" : "down";
+                // Extrai a interface física do atributo title do TD (ex: title="vtnet0 (bc:24:11:be:74:87)")
+                const titleMatch = rowHtml.match(/<td[^>]*title="([^"\s\()]+).*?"/i);
+                const physIf = titleMatch ? titleMatch[1].trim() : ifId;
+                // Atualiza o mapa global para que o coletor de tráfego use o nome físico correto
+                pfsenseInterfaceMap[ifId] = physIf;
                 const tdMatches = rowHtml.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
                 let speed = "Desconhecido";
                 let ip = "Desconhecido";
@@ -3541,6 +3554,7 @@ async function fetchPfSenseDataActual() {
                 interfacesList.push({
                     name: ifName,
                     interface: ifId,
+                    physIf,
                     status,
                     speed,
                     ip
@@ -3715,21 +3729,40 @@ async function getPfSenseTrafficData() {
     try {
         const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
         let authCookie = await getPfsenseSession();
-        const fetchInterfaceStats = async (ifName) => {
-            let statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+        const fetchInterfaceStats = async (ifLogicalName) => {
+            const physIf = pfsenseInterfaceMap[ifLogicalName] || ifLogicalName;
+            // pfSense exige POST com ajax=ajax e if=<interface_fisica> para retornar tráfego
+            const postBody = `ajax=ajax&if=${physIf}`;
+            const extraHeaders = {
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": url + "/index.php"
+            };
+            let statsRes = await makePfSensePost(url + `/ifstats.php`, postBody, authCookie, extraHeaders);
             // Se retornar página de login, faz login forçado e tenta de novo
             if (statsRes.html.includes("usernamefld")) {
-                console.log(`⚠️ [PFSENSE] Sessão expirada ao buscar tráfego de ${ifName}. Forçando relogin...`);
+                console.log(`⚠️ [PFSENSE] Sessão expirada ao buscar tráfego de ${ifLogicalName} (${physIf}). Forçando relogin...`);
                 authCookie = await getPfsenseSession(true);
-                statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+                statsRes = await makePfSensePost(url + `/ifstats.php`, postBody, authCookie, extraHeaders);
             }
-            const parts = statsRes.html.split("|");
-            if (parts.length >= 3) {
-                return {
-                    timestamp: parseFloat(parts[0]) || Date.now() / 1000,
-                    inBytes: parseInt(parts[1]) || 0,
-                    outBytes: parseInt(parts[2]) || 0
-                };
+            try {
+                // O pfSense 2.8.1 retorna tráfego no formato JSON mapeado por interface física
+                const responseData = JSON.parse(statsRes.html);
+                const arrayData = responseData[physIf];
+                if (arrayData && arrayData.length >= 2) {
+                    const inData = arrayData[0]?.values; // [timestamp, inBytes]
+                    const outData = arrayData[1]?.values; // [timestamp, outBytes]
+                    if (inData && outData && inData[1] !== null && outData[1] !== null) {
+                        return {
+                            timestamp: parseFloat(inData[0]) || Date.now() / 1000,
+                            inBytes: parseInt(inData[1]) || 0,
+                            outBytes: parseInt(outData[1]) || 0
+                        };
+                    }
+                }
+            }
+            catch (jsonErr) {
+                // Caso não retorne JSON (ex: erro, gateway offline ou null), registramos e retornamos 0
+                console.warn(`⚠️ [PFSENSE] Falha ao obter dados reais de tráfego para ${ifLogicalName} (${physIf}):`, jsonErr.message);
             }
             return {
                 timestamp: Date.now() / 1000,

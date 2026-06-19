@@ -4,7 +4,7 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --watch src -e ts --exec ts-node src/server.ts",
+    "dev": "nodemon -L --watch src -e ts --exec ts-node src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/database.ts",

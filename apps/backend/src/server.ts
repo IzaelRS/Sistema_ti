@@ -3606,6 +3606,13 @@ let cachedPfSenseData: any = null;
 let lastPfSenseFetchTime = 0;
 const PFSENSE_CACHE_TTL = 15000; // 15 seconds cache
 
+let pfsenseInterfaceMap: Record<string, string> = {
+    wan: "vtnet0",
+    opt1: "vtnet1",
+    opt2: "vtnet2",
+    lan: "vtnet3"
+};
+
 let lastCpuTotalTicks = 0;
 let lastCpuUsedTicks = 0;
 
@@ -3613,7 +3620,7 @@ let pfsenseSessionCookie = "";
 let pfsenseLastLoginTime = 0;
 const PFSENSE_SESSION_MAX_AGE = 30 * 60 * 1000; // 30 minutes session validity
 
-const makePfSenseGet = (urlStr: string, cookie = ""): Promise<{ html: string; headers: http.IncomingHttpHeaders }> => {
+const makePfSenseGet = (urlStr: string, cookie = "", extraHeaders: Record<string, string> = {}): Promise<{ html: string; headers: http.IncomingHttpHeaders }> => {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(urlStr);
         const options: https.RequestOptions = {
@@ -3624,7 +3631,8 @@ const makePfSenseGet = (urlStr: string, cookie = ""): Promise<{ html: string; he
             agent: lansweeperAgent,
             headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
-                "Cookie": cookie
+                "Cookie": cookie,
+                ...extraHeaders
             }
         };
 
@@ -3640,7 +3648,7 @@ const makePfSenseGet = (urlStr: string, cookie = ""): Promise<{ html: string; he
     });
 };
 
-const makePfSensePost = (urlStr: string, body: string, cookie = ""): Promise<{ html: string; headers: http.IncomingHttpHeaders; statusCode?: number }> => {
+const makePfSensePost = (urlStr: string, body: string, cookie = "", extraHeaders: Record<string, string> = {}): Promise<{ html: string; headers: http.IncomingHttpHeaders; statusCode?: number }> => {
     return new Promise((resolve, reject) => {
         const parsedUrl = new URL(urlStr);
         const options: https.RequestOptions = {
@@ -3653,7 +3661,8 @@ const makePfSensePost = (urlStr: string, body: string, cookie = ""): Promise<{ h
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Intranet Monitor",
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Content-Length": Buffer.byteLength(body),
-                "Cookie": cookie
+                "Cookie": cookie,
+                ...extraHeaders
             }
         };
 
@@ -3790,6 +3799,13 @@ async function fetchPfSenseDataActual(): Promise<any> {
                 const ifName = nameMatch[2].replace(/<[^>]*>/g, "").trim();
                 const status = rowHtml.includes('title="up"') ? "up" : "down";
 
+                // Extrai a interface física do atributo title do TD (ex: title="vtnet0 (bc:24:11:be:74:87)")
+                const titleMatch = rowHtml.match(/<td[^>]*title="([^"\s\()]+).*?"/i);
+                const physIf = titleMatch ? titleMatch[1].trim() : ifId;
+                
+                // Atualiza o mapa global para que o coletor de tráfego use o nome físico correto
+                pfsenseInterfaceMap[ifId] = physIf;
+
                 const tdMatches = rowHtml.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
                 let speed = "Desconhecido";
                 let ip = "Desconhecido";
@@ -3801,6 +3817,7 @@ async function fetchPfSenseDataActual(): Promise<any> {
                 interfacesList.push({
                     name: ifName,
                     interface: ifId,
+                    physIf,
                     status,
                     speed,
                     ip
@@ -3833,6 +3850,9 @@ async function fetchPfSenseDataActual(): Promise<any> {
                     const classMatch = statusTdHtml.match(/class="([^"]*)"/i);
                     const statusClass = classMatch ? classMatch[1].trim() : "";
                     
+                    // Identifica se este gateway é o gateway padrão de saída da internet
+                    const isDefault = rowHtml.includes("fa-globe") || rowHtml.includes("Default gateway");
+                    
                     gatewaysList.push({
                         name,
                         ip,
@@ -3840,7 +3860,8 @@ async function fetchPfSenseDataActual(): Promise<any> {
                         rttsd,
                         loss,
                         status,
-                        status_class: statusClass
+                        status_class: statusClass,
+                        is_default: isDefault
                     });
                 }
             }
@@ -3850,43 +3871,48 @@ async function fetchPfSenseDataActual(): Promise<any> {
     let main_cable_link = "Sem Conexão";
     let main_wifi_link = "Sem Conexão";
 
-    // Detecção dinâmica de gateways — não depende de nomes hardcoded
-    // Classifica gateways por interface: wan = cabo principal, opt = backup/wifi
+    // Classificação dinâmica e verídica baseada no status dos gateways no pfSense físico
     const onlineGateways = gatewaysList.filter(gw => gw.status.toLowerCase().includes("online"));
-    const wanGateway = onlineGateways.find(gw => {
+    
+    // 1. Identifica a WAN/Cabo principal (Prioriza o gateway Default ou AmericaNET)
+    const wanGateway = onlineGateways.find(gw => gw.is_default) || 
+                       onlineGateways.find(gw => {
+                           const nameLower = gw.name.toLowerCase();
+                           return nameLower.includes("americanet") || (nameLower.includes("wan") && !nameLower.includes("opt"));
+                       });
+
+    // 2. Identifica o Wi-Fi / Link Secundário (VIVO)
+    const wifiGateway = onlineGateways.find(gw => {
         const nameLower = gw.name.toLowerCase();
-        // Detecta WAN principal: contém "wan" mas não é numerado como opt (ex: WAN_GW, GW_WAN)
-        return (nameLower.includes("wan") && !nameLower.includes("opt") && !nameLower.includes("wan2") && !nameLower.includes("wan3"));
-    });
-    const opt1Gateway = onlineGateways.find(gw => {
+        return nameLower.includes("vivo") || nameLower.includes("wifi");
+    }) || onlineGateways.find(gw => {
         const nameLower = gw.name.toLowerCase();
-        return nameLower.includes("opt1") || nameLower.includes("wan2") || nameLower.includes("vivo");
-    });
-    const opt2Gateway = onlineGateways.find(gw => {
-        const nameLower = gw.name.toLowerCase();
-        return nameLower.includes("opt2") || nameLower.includes("wan3") || nameLower.includes("imaxima");
+        return nameLower.includes("opt1") || nameLower.includes("wan2");
     });
 
-    // Link de cabo principal
+    // 3. Identifica outros links (iMaxima)
+    const optTerceiroGateway = onlineGateways.find(gw => {
+        const nameLower = gw.name.toLowerCase();
+        return nameLower.includes("imaxima") || nameLower.includes("opt2") || nameLower.includes("wan3");
+    });
+
+    // Atribuição do link de cabo principal
     if (wanGateway) {
         main_cable_link = `${wanGateway.name} (${wanGateway.ip})`;
-    } else if (opt1Gateway) {
-        main_cable_link = `${opt1Gateway.name} [Backup]`;
-    } else if (opt2Gateway) {
-        main_cable_link = `${opt2Gateway.name} [Backup]`;
     } else if (onlineGateways.length > 0) {
         main_cable_link = `${onlineGateways[0].name} (${onlineGateways[0].ip})`;
     }
 
-    // Link Wi-Fi / secundário
-    if (opt1Gateway) {
-        main_wifi_link = `${opt1Gateway.name} (${opt1Gateway.ip})`;
-    } else if (opt2Gateway) {
-        main_wifi_link = `${opt2Gateway.name} [Backup]`;
-    } else if (wanGateway) {
-        main_wifi_link = `${wanGateway.name} [Backup]`;
-    } else if (onlineGateways.length > 1) {
-        main_wifi_link = `${onlineGateways[1].name} (${onlineGateways[1].ip})`;
+    // Atribuição do link de Wi-Fi
+    if (wifiGateway) {
+        main_wifi_link = `${wifiGateway.name} (${wifiGateway.ip})`;
+    } else if (optTerceiroGateway) {
+        main_wifi_link = `${optTerceiroGateway.name} (${optTerceiroGateway.ip})`;
+    } else if (wanGateway && onlineGateways.length > 1) {
+        const other = onlineGateways.find(gw => gw.name !== wanGateway.name);
+        if (other) {
+            main_wifi_link = `${other.name} (${other.ip})`;
+        }
     }
 
     return {
@@ -3986,24 +4012,45 @@ async function getPfSenseTrafficData(): Promise<any> {
         const url = process.env.PFSENSE_URL || "https://192.168.0.2:90";
         let authCookie = await getPfsenseSession();
 
-        const fetchInterfaceStats = async (ifName: string) => {
-            let statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+        const fetchInterfaceStats = async (ifLogicalName: string) => {
+            const physIf = pfsenseInterfaceMap[ifLogicalName] || ifLogicalName;
+            
+            // pfSense exige POST com ajax=ajax e if=<interface_fisica> para retornar tráfego
+            const postBody = `ajax=ajax&if=${physIf}`;
+            const extraHeaders = {
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer": url + "/index.php"
+            };
+
+            let statsRes = await makePfSensePost(url + `/ifstats.php`, postBody, authCookie, extraHeaders);
             
             // Se retornar página de login, faz login forçado e tenta de novo
             if (statsRes.html.includes("usernamefld")) {
-                console.log(`⚠️ [PFSENSE] Sessão expirada ao buscar tráfego de ${ifName}. Forçando relogin...`);
+                console.log(`⚠️ [PFSENSE] Sessão expirada ao buscar tráfego de ${ifLogicalName} (${physIf}). Forçando relogin...`);
                 authCookie = await getPfsenseSession(true);
-                statsRes = await makePfSenseGet(url + `/ifstats.php?if=${ifName}`, authCookie);
+                statsRes = await makePfSensePost(url + `/ifstats.php`, postBody, authCookie, extraHeaders);
+            }
+            try {
+                // O pfSense 2.8.1 retorna tráfego no formato JSON mapeado por interface física
+                const responseData = JSON.parse(statsRes.html);
+                const arrayData = responseData[physIf];
+                if (arrayData && arrayData.length >= 2) {
+                    const inData = arrayData[0]?.values; // [timestamp, inBytes]
+                    const outData = arrayData[1]?.values; // [timestamp, outBytes]
+                    
+                    if (inData && outData && inData[1] !== null && outData[1] !== null) {
+                        return {
+                            timestamp: parseFloat(inData[0]) || Date.now() / 1000,
+                            inBytes: parseInt(inData[1]) || 0,
+                            outBytes: parseInt(outData[1]) || 0
+                        };
+                    }
+                }
+            } catch (jsonErr: any) {
+                // Caso não retorne JSON (ex: erro, gateway offline ou null), registramos e retornamos 0
+                console.warn(`⚠️ [PFSENSE] Falha ao obter dados reais de tráfego para ${ifLogicalName} (${physIf}):`, jsonErr.message);
             }
 
-            const parts = statsRes.html.split("|");
-            if (parts.length >= 3) {
-                return {
-                    timestamp: parseFloat(parts[0]) || Date.now() / 1000,
-                    inBytes: parseInt(parts[1]) || 0,
-                    outBytes: parseInt(parts[2]) || 0
-                };
-            }
             return {
                 timestamp: Date.now() / 1000,
                 inBytes: 0,
