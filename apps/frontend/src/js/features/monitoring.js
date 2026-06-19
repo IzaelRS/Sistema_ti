@@ -1816,6 +1816,33 @@ export const monitoringHandler = {
             }
         } catch (err) {
             console.error('Erro ao buscar status da rede pfSense:', err);
+            
+            // Toggle simulation badge to show Offline
+            const badge = document.getElementById('network-simulation-badge');
+            if (badge) {
+                badge.style.display = 'inline-block';
+                badge.textContent = '🔴 pfSense Inacessível — Sem Conexão';
+                badge.style.background = 'rgba(239, 68, 68, 0.10)';
+                badge.style.color = '#fca5a5';
+                badge.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+            }
+
+            // Set KPI texts to error/unavailable
+            const cpuText = document.getElementById('network-kpi-cpu-text');
+            const cpuBar = document.getElementById('network-kpi-cpu-bar');
+            const loadAvgText = document.getElementById('network-kpi-load-average');
+            if (cpuText) cpuText.textContent = 'Erro';
+            if (cpuBar) cpuBar.style.width = '0%';
+            if (loadAvgText) loadAvgText.textContent = 'Falha na conexão';
+
+            const memText = document.getElementById('network-kpi-mem-text');
+            const memBar = document.getElementById('network-kpi-mem-bar');
+            if (memText) memText.textContent = 'Erro';
+            if (memBar) memBar.style.width = '0%';
+
+            const uptimeText = document.getElementById('network-kpi-uptime-text');
+            if (uptimeText) uptimeText.textContent = 'Indisponível (Sem conexão)';
+
             const gatewaysContainer = document.getElementById('network-gateways-container');
             if (gatewaysContainer) {
                 gatewaysContainer.innerHTML = `
@@ -3118,20 +3145,23 @@ export const monitoringHandler = {
                 return { color, textColor };
             };
 
-            const cpuPct   = srv.cpu_usage  != null ? srv.cpu_usage  : 0;
-            const ramPct   = srv.ram_usage  != null ? srv.ram_usage  : 0;
-            const diskPct  = srv.disk_usage != null ? srv.disk_usage : 0;
-            const cpuBar   = metricBar(cpuPct);
-            const ramBar   = metricBar(ramPct);
-            const diskBar  = metricBar(diskPct);
+            const cpuPct   = srv.cpu_usage  != null ? srv.cpu_usage  : null;
+            const ramPct   = srv.ram_usage  != null ? srv.ram_usage  : null;
+            const diskPct  = srv.disk_usage != null ? srv.disk_usage : null;
+            const cpuBar   = cpuPct != null ? metricBar(cpuPct) : { color: 'rgba(255,255,255,0.1)', textColor: 'var(--text-muted)' };
+            const ramBar   = ramPct != null ? metricBar(ramPct) : { color: 'rgba(255,255,255,0.1)', textColor: 'var(--text-muted)' };
+            const diskBar  = diskPct != null ? metricBar(diskPct) : { color: 'rgba(255,255,255,0.1)', textColor: 'var(--text-muted)' };
 
             const hasMetrics = srv.cpu || srv.memory || srv.storage;
 
             // Badge de fonte das métricas
-            const metricsSource = srv.metricsSource || 'estimated';
+            const metricsSource = srv.metricsSource || 'none';
             const sourceBadgeHtml = metricsSource === 'zabbix'
                 ? `<span title="Métricas em tempo real via Zabbix" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">📊 Zabbix</span>`
-                : `<span title="Métricas estimadas (Zabbix indisponível)" style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.08);color:#fde047;border:1px solid rgba(245,158,11,0.2);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">⚡ Estimado</span>`;
+                : `<span title="Dispositivo sem monitoramento Zabbix ativo" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">⚪ Sem dados</span>`;
+            
+            const hasRealMetrics = hasMetrics && metricsSource === 'zabbix' && srv.online;
+
             return `
                 <div class="server-accordion-item ${activeClass}" data-item-id="${srv.id}">
                     <div class="server-accordion-header" data-server-id="${srv.id}">
@@ -3153,17 +3183,17 @@ export const monitoringHandler = {
                             ${hasMetrics ? sourceBadgeHtml : ''}
                         </div>
                         <div class="server-header-right">
-                            ${hasMetrics && srv.online ? `
+                            ${hasRealMetrics ? `
                             <div style="display: flex; align-items: center; gap: 10px; margin-right: 10px;">
-                                <div title="CPU: ${cpuPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="CPU: ${cpuPct}% (via Zabbix)" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${cpuBar.textColor}" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${cpuBar.textColor};">${cpuPct}%</span>
                                 </div>
-                                <div title="RAM: ${ramPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="RAM: ${ramPct}% (via Zabbix)" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${ramBar.textColor}" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${ramBar.textColor};">${ramPct}%</span>
                                 </div>
-                                <div title="Disco: ${diskPct}% (${metricsSource === 'zabbix' ? 'via Zabbix' : 'estimado'})" style="display: flex; align-items: center; gap: 5px;">
+                                <div title="Disco: ${diskPct}% (via Zabbix)" style="display: flex; align-items: center; gap: 5px;">
                                     <svg viewBox="0 0 24 24" width="11" height="11" stroke="${diskBar.textColor}" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
                                     <span style="font-size: 0.72rem; font-weight: 600; color: ${diskBar.textColor};">${diskPct}%</span>
                                 </div>
@@ -3183,48 +3213,48 @@ export const monitoringHandler = {
 
                                 <!-- CPU -->
                                 ${srv.cpu ? `
-                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Sem Monitoramento'}" style="background: rgba(168,85,247,0.06); border: 1px solid rgba(168,85,247,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#a78bfa" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
                                             <span style="font-size: 0.75rem; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.05em;">CPU</span>
                                         </div>
-                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${cpuBar.textColor};">${cpuPct}%</span>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${cpuBar.textColor};">${cpuPct != null ? `${cpuPct}%` : '-'}</span>
                                     </div>
                                     <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
-                                        <div style="width: ${cpuPct}%; height: 100%; background: ${cpuBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                        <div style="width: ${cpuPct != null ? cpuPct : 0}%; height: 100%; background: ${cpuBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
                                     </div>
                                     <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${srv.cpu}">${srv.cpu}</span>
                                 </div>` : ''}
 
                                 <!-- RAM -->
                                 ${srv.memory ? `
-                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Sem Monitoramento'}" style="background: rgba(56,189,248,0.06); border: 1px solid rgba(56,189,248,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#38bdf8" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line><line x1="6" y1="4" x2="6" y2="7"></line><line x1="10" y1="4" x2="10" y2="7"></line><line x1="14" y1="4" x2="14" y2="7"></line><line x1="18" y1="4" x2="18" y2="7"></line></svg>
                                             <span style="font-size: 0.75rem; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Memória</span>
                                         </div>
-                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${ramBar.textColor};">${ramPct}%</span>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${ramBar.textColor};">${ramPct != null ? `${ramPct}%` : '-'}</span>
                                     </div>
                                     <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
-                                        <div style="width: ${ramPct}%; height: 100%; background: ${ramBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                        <div style="width: ${ramPct != null ? ramPct : 0}%; height: 100%; background: ${ramBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
                                     </div>
                                     <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace;">${srv.memory}</span>
                                 </div>` : ''}
 
                                 <!-- Storage -->
                                 ${srv.storage ? `
-                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Estimada (Zabbix offline)'}" style="background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                <div title="Fonte: ${metricsSource === 'zabbix' ? 'Zabbix' : 'Sem Monitoramento'}" style="background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.15); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; align-items: center; justify-content: space-between;">
                                         <div style="display: flex; align-items: center; gap: 7px;">
                                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fb923c" stroke-width="2" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
                                             <span style="font-size: 0.75rem; font-weight: 600; color: #fb923c; text-transform: uppercase; letter-spacing: 0.05em;">Armazenamento</span>
                                         </div>
-                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${diskBar.textColor};">${diskPct}%</span>
+                                        <span style="font-size: 0.88rem; font-weight: 700; color: ${diskBar.textColor};">${diskPct != null ? `${diskPct}%` : '-'}</span>
                                     </div>
                                     <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
-                                        <div style="width: ${diskPct}%; height: 100%; background: ${diskBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
+                                        <div style="width: ${diskPct != null ? diskPct : 0}%; height: 100%; background: ${diskBar.color}; border-radius: 3px; transition: width 0.6s ease;"></div>
                                     </div>
                                     <span style="font-size: 0.72rem; color: var(--text-muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${srv.storage}">${srv.storage}</span>
                                 </div>` : ''}

@@ -2762,7 +2762,6 @@ async function fetchZabbixHostMetrics(token) {
                 selectInterfaces: ["ip", "dns", "useip"],
                 filter: { status: 0 } // Apenas hosts habilitados
             },
-            auth: token,
             id: 2
         });
         const parsedUrl = new URL(getZabbixEndpoint(zabbixUrl));
@@ -2772,7 +2771,11 @@ async function fetchZabbixHostMetrics(token) {
                 port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
                 path: parsedUrl.pathname,
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+                headers: {
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(payload),
+                    "Authorization": `Bearer ${token}`
+                }
             };
             const lib = parsedUrl.protocol === "https:" ? https_1.default : http_1.default;
             const req = lib.request(options, (res) => {
@@ -2810,7 +2813,6 @@ async function fetchZabbixHostMetrics(token) {
                 searchWildcardsEnabled: false,
                 sortfield: "key_"
             },
-            auth: token,
             id: 3
         });
         const ramPayload = JSON.stringify({
@@ -2819,10 +2821,9 @@ async function fetchZabbixHostMetrics(token) {
             params: {
                 output: ["hostid", "key_", "lastvalue"],
                 hostids: hostIds,
-                search: { key_: "vm.memory.size" },
+                search: { key_: "vm.memory" },
                 searchWildcardsEnabled: false
             },
-            auth: token,
             id: 4
         });
         const diskPayload = JSON.stringify({
@@ -2831,10 +2832,9 @@ async function fetchZabbixHostMetrics(token) {
             params: {
                 output: ["hostid", "key_", "lastvalue"],
                 hostids: hostIds,
-                search: { key_: "vfs.fs.size[/,pused]" },
+                search: { key_: "vfs.fs" },
                 searchWildcardsEnabled: false
             },
-            auth: token,
             id: 5
         });
         const [cpuRes, ramRes, diskRes] = await Promise.all([
@@ -2855,19 +2855,34 @@ async function fetchZabbixHostMetrics(token) {
         }
         if (ramRes.result) {
             for (const item of ramRes.result) {
-                // vm.memory.size[pavailable] retorna % livre => uso = 100 - libre
                 const val = parseFloat(item.lastvalue);
-                if (!isNaN(val)) {
-                    const usage = item.key_.includes("pavailable") ? Math.round(100 - val) : Math.round(val);
-                    ramByHost.set(item.hostid, usage);
+                if (isNaN(val))
+                    continue;
+                // Se for a métrica direta de utilização (porcentagem de uso)
+                if (item.key_ === "vm.memory.utilization" || item.key_ === "vm.memory.size[pused]") {
+                    ramByHost.set(item.hostid, Math.round(val));
+                }
+                // Se for métrica de espaço disponível em porcentagem: uso = 100 - livre
+                else if (item.key_.includes("pavailable")) {
+                    if (!ramByHost.has(item.hostid)) {
+                        ramByHost.set(item.hostid, Math.round(100 - val));
+                    }
                 }
             }
         }
         if (diskRes.result) {
             for (const item of diskRes.result) {
                 const val = parseFloat(item.lastvalue);
-                if (!isNaN(val))
-                    diskByHost.set(item.hostid, Math.round(val));
+                if (isNaN(val))
+                    continue;
+                // Filtra apenas chaves que representam percentual de uso (pused)
+                if (item.key_.includes("pused")) {
+                    const isRoot = item.key_.includes("[/,") || item.key_.includes("[C:,");
+                    // Se for a partição raiz (Linux / ou Windows C:), ou se ainda não temos nenhuma definida
+                    if (isRoot || !diskByHost.has(item.hostid)) {
+                        diskByHost.set(item.hostid, Math.round(val));
+                    }
+                }
             }
         }
         // Montar mapa IP -> métricas
@@ -2987,20 +3002,11 @@ function getServerHardwareSpecs(srv, zabbixMetrics) {
         const diskGbs = [120, 240, 480, 960, 2000][hash % 5];
         storage = `${diskGbs} GB ${diskGbs >= 960 ? "SSD Enterprise" : "SSD"}`;
     }
-    // Baseline de uso estimado (usado APENAS como fallback quando Zabbix não tem dados)
-    const cpuBase = 15 + (hash % 60); // 15% a 75%
-    const ramBase = 20 + (hash % 60); // 20% a 80%
-    const diskBase = 30 + (hash % 50); // 30% a 80%
-    // Oscilação senoidal (apenas para fallback estimado)
-    const offset = Math.sin(Date.now() / 15000) * 5;
-    const estimated_cpu = Math.min(99, Math.max(1, Math.round(cpuBase + offset)));
-    const estimated_ram = Math.min(99, Math.max(1, Math.round(ramBase + (offset * 0.3))));
-    const estimated_disk = Math.min(99, Math.max(1, Math.round(diskBase)));
-    // Usar métricas reais do Zabbix se disponíveis
-    const cpu_usage = (realMetrics?.cpu_usage != null) ? realMetrics.cpu_usage : estimated_cpu;
-    const ram_usage = (realMetrics?.ram_usage != null) ? realMetrics.ram_usage : estimated_ram;
-    const disk_usage = (realMetrics?.disk_usage != null) ? realMetrics.disk_usage : estimated_disk;
-    const metricsSource = realMetrics ? "zabbix" : "estimated";
+    // Usar métricas reais do Zabbix se disponíveis (senão usar null)
+    const cpu_usage = (realMetrics?.cpu_usage != null) ? realMetrics.cpu_usage : null;
+    const ram_usage = (realMetrics?.ram_usage != null) ? realMetrics.ram_usage : null;
+    const disk_usage = (realMetrics?.disk_usage != null) ? realMetrics.disk_usage : null;
+    const metricsSource = realMetrics ? "zabbix" : "none";
     return {
         cpu,
         memory,
@@ -3746,8 +3752,8 @@ async function getPfSenseTrafficData() {
         };
     }
     catch (err) {
-        console.warn("⚠️ [PFSENSE] Falha ao obter tráfego real do pfSense. Usando modo simulado como fallback. Erro:", err);
-        return getSimulatedTrafficData();
+        console.error("❌ [PFSENSE] Erro ao obter tráfego real do pfSense:", err.message);
+        throw err;
     }
 }
 async function getPfSenseData(forceRefresh = false) {
@@ -3768,11 +3774,8 @@ async function getPfSenseData(forceRefresh = false) {
         return data;
     }
     catch (err) {
-        console.warn("⚠️ [PFSENSE] Falha ao obter dados reais do pfSense. Usando modo simulado como fallback. Erro:", err);
-        const data = getSimulatedPfSenseData("fallback");
-        cachedPfSenseData = data;
-        lastPfSenseFetchTime = now;
-        return data;
+        console.error("❌ [PFSENSE] Erro ao obter dados reais do pfSense:", err.message);
+        throw err;
     }
 }
 app.get("/api/monitoring/pfsense", async (req, res) => {
