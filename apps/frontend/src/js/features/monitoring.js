@@ -1757,25 +1757,36 @@ export const monitoringHandler = {
                 const info = res.data;
                 
                 // Toggle simulation badge — diferencia "mock" intencional de "fallback" por erro
+                const sourceBadge = document.getElementById('network-source-badge');
                 const badge = document.getElementById('network-simulation-badge');
                 if (badge) {
                     if (!info.isSimulated) {
                         // Dados reais do pfSense
                         badge.style.display = 'none';
-                    } else if (info.isSimulated === 'mock') {
-                        // Mock ativado intencionalmente via PFSENSE_MOCK=true
-                        badge.style.display = 'inline-block';
-                        badge.textContent = '⚠️ Modo Simulação (PFSENSE_MOCK=true)';
-                        badge.style.background = 'rgba(245, 158, 11, 0.12)';
-                        badge.style.color = '#fde047';
-                        badge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                        if (sourceBadge) {
+                            sourceBadge.style.display = 'inline-block';
+                            sourceBadge.textContent = '🛡️ pfSense API';
+                            sourceBadge.style.background = 'rgba(16, 185, 129, 0.1)';
+                            sourceBadge.style.color = '#6ee7b7';
+                            sourceBadge.style.border = '1px solid rgba(16, 185, 129, 0.25)';
+                        }
                     } else {
-                        // Fallback por erro — pfSense inacessível
-                        badge.style.display = 'inline-block';
-                        badge.textContent = '🔴 pfSense Inacessível — Dados Estimados';
-                        badge.style.background = 'rgba(239, 68, 68, 0.10)';
-                        badge.style.color = '#fca5a5';
-                        badge.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+                        if (sourceBadge) sourceBadge.style.display = 'none';
+                        if (info.isSimulated === 'mock') {
+                            // Mock ativado intencionalmente via PFSENSE_MOCK=true
+                            badge.style.display = 'inline-block';
+                            badge.textContent = '⚠️ Modo Simulação (PFSENSE_MOCK=true)';
+                            badge.style.background = 'rgba(245, 158, 11, 0.12)';
+                            badge.style.color = '#fde047';
+                            badge.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+                        } else {
+                            // Fallback por erro — pfSense inacessível
+                            badge.style.display = 'inline-block';
+                            badge.textContent = '🔴 pfSense Inacessível — Dados Estimados';
+                            badge.style.background = 'rgba(239, 68, 68, 0.10)';
+                            badge.style.color = '#fca5a5';
+                            badge.style.border = '1px solid rgba(239, 68, 68, 0.25)';
+                        }
                     }
                 }
                 
@@ -1818,6 +1829,8 @@ export const monitoringHandler = {
             console.error('Erro ao buscar status da rede pfSense:', err);
             
             // Toggle simulation badge to show Offline
+            const sourceBadge = document.getElementById('network-source-badge');
+            if (sourceBadge) sourceBadge.style.display = 'none';
             const badge = document.getElementById('network-simulation-badge');
             if (badge) {
                 badge.style.display = 'inline-block';
@@ -2210,12 +2223,16 @@ export const monitoringHandler = {
             return `
                 <tr id="switch-row-${sw.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
                     <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${sw.name}</td>
-                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${sw.ip}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">
+                        ${sw.ip}
+                        <span title="Dados cadastrais importados do Lansweeper" style="background: rgba(59, 130, 246, 0.08); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; margin-left: 6px; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📦 Lansweeper</span>
+                    </td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${sw.model || '-'}</td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${sw.location || '-'}</td>
                     <td style="padding: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span title="Status verificado via Ping ICMP Real" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📡 Ping ICMP</span>
                             <span class="switch-sync-indicator" style="display: inline-flex; align-items: center;"></span>
                         </div>
                     </td>
@@ -2434,12 +2451,16 @@ export const monitoringHandler = {
             return `
                 <tr id="router-row-${rt.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s;">
                     <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${rt.name}</td>
-                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${rt.ip}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">
+                        ${rt.ip}
+                        <span title="Dados cadastrais importados do Lansweeper" style="background: rgba(59, 130, 246, 0.08); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; margin-left: 6px; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📦 Lansweeper</span>
+                    </td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${rt.model || '-'}</td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${rt.location || '-'}</td>
                     <td style="padding: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span title="Status verificado via Ping ICMP Real" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📡 Ping ICMP</span>
                             <span class="router-sync-indicator" style="display: inline-flex; align-items: center;"></span>
                         </div>
                     </td>
@@ -2658,7 +2679,10 @@ export const monitoringHandler = {
             return `
                 <tr id="nas-row-${n.id}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background 0.2s; cursor: pointer;">
                     <td style="padding: 12px; font-weight: 600; color: var(--text-main);">${n.name}</td>
-                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">${n.ip}</td>
+                    <td style="padding: 12px; font-family: monospace; color: var(--text-muted);">
+                        ${n.ip}
+                        <span title="Dados cadastrais importados do Lansweeper" style="background: rgba(59, 130, 246, 0.08); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.2); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; margin-left: 6px; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📦 Lansweeper</span>
+                    </td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${n.manufacturer || '-'}</td>
                     <td style="padding: 12px; color: var(--text-muted); font-size: 0.85rem;">${n.model || '-'}</td>
                     <td style="padding: 12px; font-family: monospace; color: var(--text-muted); font-size: 0.8rem;">${n.mac || '-'}</td>
@@ -2666,6 +2690,7 @@ export const monitoringHandler = {
                     <td style="padding: 12px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="monitor-badge" style="background:${badgeBg}; color:${badgeColor}; border-color:${badgeBorder};">${statusLabel}</span>
+                            <span title="Status verificado via Ping ICMP Real" style="background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid rgba(255, 255, 255, 0.1); padding: 1px 5px; border-radius: 4px; font-size: 0.6rem; font-weight: 500; font-family: sans-serif; vertical-align: middle; display: inline-block; white-space: nowrap;">📡 Ping ICMP</span>
                             <span class="nas-sync-indicator" style="display: inline-flex; align-items: center;"></span>
                         </div>
                     </td>
@@ -3160,6 +3185,10 @@ export const monitoringHandler = {
                 ? `<span title="Métricas em tempo real via Zabbix" style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.10);color:#6ee7b7;border:1px solid rgba(16,185,129,0.25);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">📊 Zabbix</span>`
                 : `<span title="Dispositivo sem monitoramento Zabbix ativo" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">⚪ Sem dados</span>`;
             
+            const pingSourceBadge = srv.online
+                ? `<span title="Conectividade verificada via Ping ICMP Real" style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.08);color:#93c5fd;border:1px solid rgba(59,130,246,0.2);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">📡 Ping ICMP</span>`
+                : `<span title="Sem resposta de Ping ICMP" style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.08);color:#fca5a5;border:1px solid rgba(239,68,68,0.2);padding:2px 7px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;flex-shrink:0;">📡 ICMP Offline</span>`;
+
             const hasRealMetrics = hasMetrics && metricsSource === 'zabbix' && srv.online;
 
             return `
@@ -3181,6 +3210,7 @@ export const monitoringHandler = {
                                   </span>`)
                             : ''}
                             ${hasMetrics ? sourceBadgeHtml : ''}
+                            ${pingSourceBadge}
                         </div>
                         <div class="server-header-right">
                             ${hasRealMetrics ? `
@@ -3277,6 +3307,11 @@ export const monitoringHandler = {
                                 }
                             </div>
                             ` : ''}
+
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 6px;">
+                                <span style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Especificações do Equipamento</span>
+                                <span title="Dados cadastrais importados do Lansweeper" style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.08);color:#93c5fd;border:1px solid rgba(59,130,246,0.2);padding:2px 8px;border-radius:20px;font-size:0.65rem;font-weight:600;white-space:nowrap;">📦 Lansweeper</span>
+                            </div>
 
                             <div class="server-details-grid">
                                 <div class="server-detail-item">
