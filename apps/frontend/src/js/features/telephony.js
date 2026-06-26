@@ -138,7 +138,7 @@ export const telephonyHandler = {
         const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage);
 
         if (paginatedItems.length === 0) {
-            const colspan = activeTab === 'extensions' ? 8 : activeTab === 'queues' ? 6 : activeTab === 'blf' ? 4 : 5;
+            const colspan = activeTab === 'extensions' ? 9 : activeTab === 'queues' ? 6 : activeTab === 'blf' ? 4 : 5;
             tbody.innerHTML = `
                 <tr>
                     <td colspan="${colspan}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
@@ -168,6 +168,7 @@ export const telephonyHandler = {
             const exten = sip.exten || '-';
             const nome = sip.nome || '-';
             const localUsername = sip.local_username || '';
+            const localDepartment = sip.local_department || '';
             const ddr = sip.ddr || '-';
             const username = sip.Username || '-';
             const secret = sip.Secret || '';
@@ -206,6 +207,13 @@ export const telephonyHandler = {
                                 </svg>
                             </button>
                         </div>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control glass" 
+                               style="width: 120px; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-main);" 
+                               value="${localDepartment}" 
+                               placeholder="Depto..." 
+                               onchange="window.TelephonyHandler.updateDepartment('${exten}', this.value)">
                     </td>
                     <td>${ddr}</td>
                     <td><strong style="color: var(--accent);">${username}</strong></td>
@@ -432,6 +440,7 @@ export const telephonyHandler = {
                 return (item.exten || '').toLowerCase().includes(term) ||
                     (item.nome || '').toLowerCase().includes(term) ||
                     (item.local_username || '').toLowerCase().includes(term) ||
+                    (item.local_department || '').toLowerCase().includes(term) ||
                     (item.Username || '').toLowerCase().includes(term) ||
                     (item.ddr || '').toLowerCase().includes(term) ||
                     (item.observacao || '').toLowerCase().includes(term);
@@ -486,6 +495,30 @@ export const telephonyHandler = {
         } catch (e) {
             console.error("Erro ao atualizar nome de usuário local:", e);
             alert("Erro de rede ao salvar nome de usuário: " + e.message);
+        }
+    },
+
+    async updateDepartment(exten, newDepartment) {
+        try {
+            console.log(`[TELEFONIA] Atualizando departamento do ramal ${exten} para: ${newDepartment}`);
+            const response = await apiClient.post('/telephony/extensions/department', {
+                exten: exten,
+                department: newDepartment
+            });
+            
+            if (response.success) {
+                // Atualizar o array local em memória para manter até o próximo fetch
+                const ext = allExtensions.find(e => e.exten === exten);
+                if (ext) {
+                    ext.local_department = newDepartment;
+                }
+                console.log(`[TELEFONIA] Departamento local atualizado para ${exten}`);
+            } else {
+                alert("Erro ao salvar departamento: " + (response.error || "Erro desconhecido"));
+            }
+        } catch (e) {
+            console.error("Erro ao atualizar departamento local:", e);
+            alert("Erro de rede ao salvar departamento: " + e.message);
         }
     },
 
