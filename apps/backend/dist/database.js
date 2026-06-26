@@ -48,6 +48,8 @@ const Event_1 = require("./entities/Event");
 const TimelineTopic_1 = require("./entities/TimelineTopic");
 const TimelineSubtopic_1 = require("./entities/TimelineSubtopic");
 const MonitoringEvent_1 = require("./entities/MonitoringEvent");
+const ExtensionUsername_1 = require("./entities/ExtensionUsername");
+const ExtensionUsernameHistory_1 = require("./entities/ExtensionUsernameHistory");
 const bcrypt = __importStar(require("bcrypt"));
 const path_1 = __importDefault(require("path"));
 exports.AppDataSource = new typeorm_1.DataSource({
@@ -59,7 +61,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     database: process.env.DB_NAME || "intranet_ti",
     synchronize: false,
     logging: false,
-    entities: [User_1.User, Procedure_1.Procedure, Document_1.Document, Account_1.Account, Event_1.Event, TimelineTopic_1.TimelineTopic, TimelineSubtopic_1.TimelineSubtopic, MonitoringEvent_1.MonitoringEvent],
+    entities: [User_1.User, Procedure_1.Procedure, Document_1.Document, Account_1.Account, Event_1.Event, TimelineTopic_1.TimelineTopic, TimelineSubtopic_1.TimelineSubtopic, MonitoringEvent_1.MonitoringEvent, ExtensionUsername_1.ExtensionUsername, ExtensionUsernameHistory_1.ExtensionUsernameHistory],
     subscribers: [],
     migrations: [
         path_1.default.join(__dirname, "migrations/**/*.{ts,js}")

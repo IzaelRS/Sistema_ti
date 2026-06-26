@@ -21,6 +21,8 @@ import { Procedure } from "./entities/Procedure";
 import { Document } from "./entities/Document";
 import { Account } from "./entities/Account";
 import { MonitoringEvent } from "./entities/MonitoringEvent";
+import { ExtensionUsername } from "./entities/ExtensionUsername";
+import { ExtensionUsernameHistory } from "./entities/ExtensionUsernameHistory";
 import timelineRoutes from "./routes/timeline_routes";
 
 // Carregar variáveis do arquivo .env local, se existir
@@ -772,18 +774,111 @@ async function fetchPaginatedGnew(initialUrl: string) {
 }
 
 app.get("/api/telephony/extensions", async (req: Request, res: Response) => {
-    if (req.query.mock === "true") {
-        res.json(getMockExtensions());
-        return;
-    }
-
     try {
+        const extensionUsernameRepository = AppDataSource.getRepository(ExtensionUsername);
+        const localUsernames = await extensionUsernameRepository.find();
+        const localUsernameMap = new Map(localUsernames.map(u => [u.exten, u.username]));
+
+        if (req.query.mock === "true") {
+            const mockExts = getMockExtensions();
+            const merged = mockExts.map((sip: any) => ({
+                ...sip,
+                local_username: localUsernameMap.get(sip.exten) || ""
+            }));
+            res.json(merged);
+            return;
+        }
+
         const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/sip/?page_size=100`);
         console.log(`[TELEFONIA] Total de ramais consolidados: ${results.length}`);
-        res.json(results);
+        
+        const merged = results.map((sip: any) => ({
+            ...sip,
+            local_username: localUsernameMap.get(sip.exten) || ""
+        }));
+
+        res.json(merged);
     } catch (err: any) {
         console.error("[TELEFONIA] Erro na rota de ramais SIP:", err.message);
         res.status(500).json({ error: `Erro no proxy de telefonia: ${err.message}` });
+    }
+});
+
+app.post("/api/telephony/extensions/username", async (req: Request, res: Response) => {
+    try {
+        const { exten, username, changed_by } = req.body;
+        if (!exten) {
+            res.status(400).json({ error: "O número do ramal (exten) é obrigatório." });
+            return;
+        }
+
+        const extensionUsernameRepository = AppDataSource.getRepository(ExtensionUsername);
+        const historyRepository = AppDataSource.getRepository(ExtensionUsernameHistory);
+        
+        let record = await extensionUsernameRepository.findOneBy({ exten });
+        const oldUsername = record ? record.username : null;
+        const newUsername = username || "";
+
+        if (record) {
+            record.username = newUsername;
+            await extensionUsernameRepository.save(record);
+        } else {
+            record = extensionUsernameRepository.create({
+                exten,
+                username: newUsername
+            });
+            await extensionUsernameRepository.save(record);
+        }
+
+        // Registrar no histórico caso tenha mudado
+        if (oldUsername !== newUsername) {
+            const historyRecord = historyRepository.create({
+                exten,
+                old_username: oldUsername,
+                new_username: newUsername,
+                changed_by: changed_by || "Sistema"
+            });
+            await historyRepository.save(historyRecord);
+            console.log(`[TELEFONIA] Histórico registrado para o ramal ${exten}: de "${oldUsername || ''}" para "${newUsername}" por "${changed_by || 'Sistema'}"`);
+        }
+
+        res.json({ success: true, exten, username: record.username });
+    } catch (err: any) {
+        console.error("Erro ao salvar nome de usuário local:", err);
+        res.status(500).json({ error: "Erro interno ao salvar nome de usuário: " + err.message });
+    }
+});
+
+app.get("/api/telephony/extensions/history", async (req: Request, res: Response) => {
+    try {
+        const { startDate, endDate, exten, username } = req.query;
+        const historyRepository = AppDataSource.getRepository(ExtensionUsernameHistory);
+
+        const query = historyRepository.createQueryBuilder("history");
+
+        if (startDate && startDate !== "") {
+            query.andWhere("history.changed_at >= :startDate", { startDate: `${startDate} 00:00:00` });
+        }
+        if (endDate && endDate !== "") {
+            query.andWhere("history.changed_at <= :endDate", { endDate: `${endDate} 23:59:59` });
+        }
+        if (exten && exten !== "") {
+            query.andWhere("history.exten LIKE :exten", { exten: `%${exten}%` });
+        }
+        if (username && username !== "") {
+            query.andWhere(
+                "(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username)",
+                { username: `%${String(username).toLowerCase()}%` }
+            );
+        }
+
+        query.orderBy("history.changed_at", "DESC");
+
+        const historyList = await query.getMany();
+        res.json(historyList);
+    } catch (err: any) {
+        console.error("Erro ao buscar histórico de ramais:", err);
+        res.status(500).json({ error: "Erro interno no servidor: " + err.message });
     }
 });
 

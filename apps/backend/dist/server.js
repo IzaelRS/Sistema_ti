@@ -25,6 +25,8 @@ const Procedure_1 = require("./entities/Procedure");
 const Document_1 = require("./entities/Document");
 const Account_1 = require("./entities/Account");
 const MonitoringEvent_1 = require("./entities/MonitoringEvent");
+const ExtensionUsername_1 = require("./entities/ExtensionUsername");
+const ExtensionUsernameHistory_1 = require("./entities/ExtensionUsernameHistory");
 const timeline_routes_1 = __importDefault(require("./routes/timeline_routes"));
 // Carregar variáveis do arquivo .env local, se existir
 const envPath = path_1.default.join(__dirname, "../../../.env");
@@ -711,18 +713,97 @@ async function fetchPaginatedGnew(initialUrl) {
     return allResults;
 }
 app.get("/api/telephony/extensions", async (req, res) => {
-    if (req.query.mock === "true") {
-        res.json(getMockExtensions());
-        return;
-    }
     try {
+        const extensionUsernameRepository = database_1.AppDataSource.getRepository(ExtensionUsername_1.ExtensionUsername);
+        const localUsernames = await extensionUsernameRepository.find();
+        const localUsernameMap = new Map(localUsernames.map(u => [u.exten, u.username]));
+        if (req.query.mock === "true") {
+            const mockExts = getMockExtensions();
+            const merged = mockExts.map((sip) => ({
+                ...sip,
+                local_username: localUsernameMap.get(sip.exten) || ""
+            }));
+            res.json(merged);
+            return;
+        }
         const results = await fetchPaginatedGnew(`${GNEW_API_URL}/api/v2/sip/?page_size=100`);
         console.log(`[TELEFONIA] Total de ramais consolidados: ${results.length}`);
-        res.json(results);
+        const merged = results.map((sip) => ({
+            ...sip,
+            local_username: localUsernameMap.get(sip.exten) || ""
+        }));
+        res.json(merged);
     }
     catch (err) {
         console.error("[TELEFONIA] Erro na rota de ramais SIP:", err.message);
         res.status(500).json({ error: `Erro no proxy de telefonia: ${err.message}` });
+    }
+});
+app.post("/api/telephony/extensions/username", async (req, res) => {
+    try {
+        const { exten, username, changed_by } = req.body;
+        if (!exten) {
+            res.status(400).json({ error: "O número do ramal (exten) é obrigatório." });
+            return;
+        }
+        const extensionUsernameRepository = database_1.AppDataSource.getRepository(ExtensionUsername_1.ExtensionUsername);
+        const historyRepository = database_1.AppDataSource.getRepository(ExtensionUsernameHistory_1.ExtensionUsernameHistory);
+        let record = await extensionUsernameRepository.findOneBy({ exten });
+        const oldUsername = record ? record.username : null;
+        const newUsername = username || "";
+        if (record) {
+            record.username = newUsername;
+            await extensionUsernameRepository.save(record);
+        }
+        else {
+            record = extensionUsernameRepository.create({
+                exten,
+                username: newUsername
+            });
+            await extensionUsernameRepository.save(record);
+        }
+        // Registrar no histórico caso tenha mudado
+        if (oldUsername !== newUsername) {
+            const historyRecord = historyRepository.create({
+                exten,
+                old_username: oldUsername,
+                new_username: newUsername,
+                changed_by: changed_by || "Sistema"
+            });
+            await historyRepository.save(historyRecord);
+            console.log(`[TELEFONIA] Histórico registrado para o ramal ${exten}: de "${oldUsername || ''}" para "${newUsername}" por "${changed_by || 'Sistema'}"`);
+        }
+        res.json({ success: true, exten, username: record.username });
+    }
+    catch (err) {
+        console.error("Erro ao salvar nome de usuário local:", err);
+        res.status(500).json({ error: "Erro interno ao salvar nome de usuário: " + err.message });
+    }
+});
+app.get("/api/telephony/extensions/history", async (req, res) => {
+    try {
+        const { startDate, endDate, exten, username } = req.query;
+        const historyRepository = database_1.AppDataSource.getRepository(ExtensionUsernameHistory_1.ExtensionUsernameHistory);
+        const query = historyRepository.createQueryBuilder("history");
+        if (startDate && startDate !== "") {
+            query.andWhere("history.changed_at >= :startDate", { startDate: `${startDate} 00:00:00` });
+        }
+        if (endDate && endDate !== "") {
+            query.andWhere("history.changed_at <= :endDate", { endDate: `${endDate} 23:59:59` });
+        }
+        if (exten && exten !== "") {
+            query.andWhere("history.exten LIKE :exten", { exten: `%${exten}%` });
+        }
+        if (username && username !== "") {
+            query.andWhere("(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username)", { username: `%${String(username).toLowerCase()}%` });
+        }
+        query.orderBy("history.changed_at", "DESC");
+        const historyList = await query.getMany();
+        res.json(historyList);
+    }
+    catch (err) {
+        console.error("Erro ao buscar histórico de ramais:", err);
+        res.status(500).json({ error: "Erro interno no servidor: " + err.message });
     }
 });
 app.get("/api/telephony/queues", async (req, res) => {

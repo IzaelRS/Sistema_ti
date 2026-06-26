@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     timelineHandler.init();
     monitoringHandler.init();
+    telephonyHandler.init();
 
     if (auth.init()) {
         console.log('Sessão restaurada:', auth.getUser().email);
@@ -286,7 +287,7 @@ function setupEventListeners() {
     window.monitoringHandler = monitoringHandler;
 
     // Telephony tabs binding
-    ['extensions', 'queues', 'blf', 'users'].forEach(tab => {
+    ['extensions', 'queues', 'blf', 'users', 'history'].forEach(tab => {
         dom.on(`tab-telephony-${tab}`, 'click', () => telephonyHandler.setActiveTab(tab));
     });
 

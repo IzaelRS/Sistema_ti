@@ -44,16 +44,26 @@ export const telephonyHandler = {
         // Show/Hide relevant view divs
         const tabContents = document.querySelectorAll('.telephony-tab-content');
         tabContents.forEach(content => {
-            if (content.id === `telephony-view-${tab === 'users' ? 'users' : tab === 'queues' ? 'queues' : tab}`) {
+            if (content.id === `telephony-view-${tab}`) {
                 content.classList.remove('hidden');
             } else {
                 content.classList.add('hidden');
             }
         });
 
-        // Render appropriate data
-        const currentData = this.getActiveDataList();
-        this.render(currentData);
+        // Hide main search bar and pagination in history tab
+        const searchBar = document.querySelector('#telephony-section .search-bar');
+        const pagination = document.getElementById('telephony-pagination');
+        if (searchBar) searchBar.style.display = tab === 'history' ? 'none' : 'flex';
+        if (pagination) pagination.style.display = tab === 'history' ? 'none' : 'block';
+
+        if (tab === 'history') {
+            this.fetchAndRenderHistory();
+        } else {
+            // Render appropriate data
+            const currentData = this.getActiveDataList();
+            this.render(currentData);
+        }
     },
 
     getActiveDataList() {
@@ -93,6 +103,8 @@ export const telephonyHandler = {
             } else if (activeTab === 'users') {
                 allUsers = await apiClient.get('/telephony/users');
                 this.render(allUsers);
+            } else if (activeTab === 'history') {
+                await this.fetchAndRenderHistory();
             }
         } catch (err) {
             console.error(`Error fetching telephony ${activeTab}:`, err);
@@ -126,7 +138,7 @@ export const telephonyHandler = {
         const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage);
 
         if (paginatedItems.length === 0) {
-            const colspan = activeTab === 'extensions' ? 7 : activeTab === 'queues' ? 6 : activeTab === 'blf' ? 4 : 5;
+            const colspan = activeTab === 'extensions' ? 8 : activeTab === 'queues' ? 6 : activeTab === 'blf' ? 4 : 5;
             tbody.innerHTML = `
                 <tr>
                     <td colspan="${colspan}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
@@ -155,6 +167,7 @@ export const telephonyHandler = {
         tbody.innerHTML = items.map(sip => {
             const exten = sip.exten || '-';
             const nome = sip.nome || '-';
+            const localUsername = sip.local_username || '';
             const ddr = sip.ddr || '-';
             const username = sip.Username || '-';
             const secret = sip.Secret || '';
@@ -176,6 +189,24 @@ export const telephonyHandler = {
                         </span>
                     </td>
                     <td>${nome}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="text" class="form-control glass" 
+                                   style="width: 130px; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-main);" 
+                                   value="${localUsername}" 
+                                   placeholder="Usuário..." 
+                                   onchange="window.TelephonyHandler.updateLocalUsername('${exten}', this.value)">
+                            <button class="btn-icon" 
+                                    style="padding: 4px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 6px; color: var(--text-muted); cursor: pointer;"
+                                    onclick="window.TelephonyHandler.showExtensionHistory('${exten}')"
+                                    title="Ver histórico de alterações do ramal ${exten}">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
                     <td>${ddr}</td>
                     <td><strong style="color: var(--accent);">${username}</strong></td>
                     <td>
@@ -400,6 +431,7 @@ export const telephonyHandler = {
             if (activeTab === 'extensions') {
                 return (item.exten || '').toLowerCase().includes(term) ||
                     (item.nome || '').toLowerCase().includes(term) ||
+                    (item.local_username || '').toLowerCase().includes(term) ||
                     (item.Username || '').toLowerCase().includes(term) ||
                     (item.ddr || '').toLowerCase().includes(term) ||
                     (item.observacao || '').toLowerCase().includes(term);
@@ -429,6 +461,51 @@ export const telephonyHandler = {
         itemsPerPage = parseInt(size, 10);
         currentPage = 1;
         this.render(currentFilteredItems);
+    },
+
+    async updateLocalUsername(exten, newUsername) {
+        try {
+            console.log(`[TELEFONIA] Atualizando nome de usuário local do ramal ${exten} para: ${newUsername}`);
+            const changedBy = window.auth && window.auth.getUser() ? window.auth.getUser().name : "Sistema";
+            const response = await apiClient.post('/telephony/extensions/username', {
+                exten: exten,
+                username: newUsername,
+                changed_by: changedBy
+            });
+            
+            if (response.success) {
+                // Atualizar o array local em memória para manter até o próximo fetch
+                const ext = allExtensions.find(e => e.exten === exten);
+                if (ext) {
+                    ext.local_username = newUsername;
+                }
+                console.log(`[TELEFONIA] Nome de usuário local atualizado para ${exten}`);
+            } else {
+                alert("Erro ao salvar nome de usuário: " + (response.error || "Erro desconhecido"));
+            }
+        } catch (e) {
+            console.error("Erro ao atualizar nome de usuário local:", e);
+            alert("Erro de rede ao salvar nome de usuário: " + e.message);
+        }
+    },
+
+    showExtensionHistory(exten) {
+        // Limpar inputs de data para exibir todo o histórico
+        const startInput = document.getElementById('telephony-history-start');
+        const endInput = document.getElementById('telephony-history-end');
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+
+        // Definir o filtro de ramal
+        const extenInput = document.getElementById('telephony-history-exten');
+        if (extenInput) extenInput.value = exten;
+
+        // Limpar filtro de usuário
+        const usernameInput = document.getElementById('telephony-history-username');
+        if (usernameInput) usernameInput.value = '';
+
+        // Mudar para a aba de histórico e buscar dados
+        this.setActiveTab('history');
     },
 
     toggleSecret(id, secret) {
@@ -509,5 +586,121 @@ export const telephonyHandler = {
         `;
 
         container.innerHTML = html;
+    },
+
+    init() {
+        console.log('📞 [TELEFONIA] Inicializando telephonyHandler...');
+        
+        // Deixar os inputs de data vazios por padrão para carregar todo o histórico
+        const startInput = document.getElementById('telephony-history-start');
+        const endInput = document.getElementById('telephony-history-end');
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+
+        // Adiciona listeners para os filtros
+        ['telephony-history-start', 'telephony-history-end'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.fetchAndRenderHistory());
+        });
+
+        ['telephony-history-exten', 'telephony-history-username'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('input', () => this.fetchAndRenderHistory());
+        });
+
+        const clearFiltersBtn = document.getElementById('btn-clear-telephony-history-filters');
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', () => {
+                if (startInput) startInput.value = '';
+                if (endInput) endInput.value = '';
+                const extenInput = document.getElementById('telephony-history-exten');
+                const usernameInput = document.getElementById('telephony-history-username');
+                if (extenInput) extenInput.value = '';
+                if (usernameInput) usernameInput.value = '';
+                this.fetchAndRenderHistory();
+            });
+        }
+    },
+
+    async fetchAndRenderHistory() {
+        const container = document.getElementById('telephony-history-timeline-container');
+        if (container) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted); width: 100%;">
+                    Carregando histórico...
+                </div>
+            `;
+        }
+
+        try {
+            const startDate = document.getElementById('telephony-history-start')?.value || '';
+            const endDate = document.getElementById('telephony-history-end')?.value || '';
+            const exten = document.getElementById('telephony-history-exten')?.value || '';
+            const username = document.getElementById('telephony-history-username')?.value || '';
+
+            const params = new URLSearchParams({ startDate, endDate, exten, username });
+            const history = await apiClient.get('/telephony/extensions/history?' + params.toString());
+
+            this.renderHistoryTimeline(history);
+        } catch (e) {
+            console.error("Error fetching extension history:", e);
+            if (container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #ef4444; width: 100%;">
+                        Erro ao carregar histórico: ${e.message || 'Erro desconhecido'}
+                    </div>
+                `;
+            }
+        }
+    },
+
+    renderHistoryTimeline(items) {
+        const container = document.getElementById('telephony-history-timeline-container');
+        if (!container) return;
+
+        if (!items || items.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted); width: 100%;">
+                    Nenhum registro de histórico encontrado para os filtros selecionados.
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = items.map(item => {
+            const date = new Date(item.changed_at).toLocaleString('pt-BR');
+            const exten = item.exten || '-';
+            const oldUser = item.old_username || '<i>(Vazio)</i>';
+            const newUser = item.new_username || '<i>(Removido)</i>';
+            const changedBy = item.changed_by || 'Sistema';
+
+            return `
+                <div class="timeline-item" style="position: relative; padding-bottom: 10px;">
+                    <!-- Bullet point indicating event -->
+                    <span style="position: absolute; left: -26px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent, #4F46E5); border: 2px solid var(--text-main, #ffffff); box-shadow: 0 0 8px var(--accent);"></span>
+                    
+                    <div class="glass" style="padding: 15px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.02);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+                            <span style="font-weight: bold; color: var(--accent); font-size: 0.95rem;">
+                                Ramal ${exten}
+                            </span>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">
+                                ${date}
+                            </span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 8px;">
+                             Nome de usuário alterado:
+                             <span style="text-decoration: line-through; color: var(--text-muted); margin: 0 6px;">${oldUser}</span>
+                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: middle; margin-right: 6px; color: var(--success, #10b981);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                             <strong style="color: var(--success, #10b981);">${newUser}</strong>
+                         </div>
+                         <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
+                             <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                             <span>Alterado por: <strong>${changedBy}</strong></span>
+                         </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 };

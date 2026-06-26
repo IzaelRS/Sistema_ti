@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-B3_V3OQ-.js"></script>
+  <script type="module" crossorigin src="/assets/index-CksyE2rS.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-BCc0sOuE.css">
 </head>
 
@@ -1541,6 +1541,7 @@
                         <button id="tab-telephony-queues" class="acc-tab-btn">QUEUE (Filas)</button>
                         <button id="tab-telephony-blf" class="acc-tab-btn">BLF</button>
                         <button id="tab-telephony-users" class="acc-tab-btn">Usuários</button>
+                        <button id="tab-telephony-history" class="acc-tab-btn">Histórico de Ramais</button>
                     </div>
 
                     <div class="search-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; max-width: none;">
@@ -1575,6 +1576,7 @@
                                     <tr>
                                         <th>Ramal</th>
                                         <th>Nome</th>
+                                        <th>Nome de Usuário</th>
                                         <th>DDR</th>
                                         <th>Usuário SIP</th>
                                         <th>Senha</th>
@@ -1584,7 +1586,7 @@
                                 </thead>
                                 <tbody id="telephony-table-body">
                                     <tr>
-                                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                                             Clique no botão "Atualizar" para sincronizar os ramais do servidor.
                                         </td>
                                     </tr>
@@ -1662,6 +1664,42 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+
+                    <!-- ABA 5: HISTÓRICO DE RAMAIS -->
+                    <div id="telephony-view-history" class="telephony-tab-content hidden">
+                        <!-- Filters for History -->
+                        <div class="glass" style="padding: 20px; border-radius: var(--border-radius, 12px); margin-top: 10px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; border: 1px solid var(--glass-border);">
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Data Início</label>
+                                <input type="date" id="telephony-history-start" class="form-control glass" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); color: var(--text-main); background: rgba(0,0,0,0.2);">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Data Fim</label>
+                                <input type="date" id="telephony-history-end" class="form-control glass" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); color: var(--text-main); background: rgba(0,0,0,0.2);">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Ramal</label>
+                                <input type="text" id="telephony-history-exten" class="form-control glass" placeholder="Filtrar ramal..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); color: var(--text-main); background: rgba(0,0,0,0.2);">
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Nome de Usuário</label>
+                                <input type="text" id="telephony-history-username" class="form-control glass" placeholder="Filtrar usuário..." style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); color: var(--text-main); background: rgba(0,0,0,0.2);">
+                            </div>
+                            <div style="display: flex; align-items: flex-end;">
+                                <button id="btn-clear-telephony-history-filters" class="btn-secondary" style="padding: 10px 16px; border-radius: 8px; width: 100%; font-weight: 600; height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    Limpar Filtros
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Layout -->
+                        <div class="glass" style="padding: 25px; border-radius: var(--border-radius, 12px); border: 1px solid var(--glass-border); max-height: 600px; overflow-y: auto;">
+                            <div id="telephony-history-timeline-container" style="position: relative; padding-left: 20px; border-left: 2px solid var(--glass-border); display: flex; flex-direction: column; gap: 20px;">
+                                <!-- Timeline items will be rendered here dynamically -->
+                            </div>
                         </div>
                     </div>
 
