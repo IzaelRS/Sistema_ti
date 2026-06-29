@@ -501,9 +501,11 @@ export const telephonyHandler = {
     async updateDepartment(exten, newDepartment) {
         try {
             console.log(`[TELEFONIA] Atualizando departamento do ramal ${exten} para: ${newDepartment}`);
+            const changedBy = window.auth && window.auth.getUser() ? window.auth.getUser().name : "Sistema";
             const response = await apiClient.post('/telephony/extensions/department', {
                 exten: exten,
-                department: newDepartment
+                department: newDepartment,
+                changed_by: changedBy
             });
             
             if (response.success) {
@@ -703,9 +705,30 @@ export const telephonyHandler = {
         container.innerHTML = items.map(item => {
             const date = new Date(item.changed_at).toLocaleString('pt-BR');
             const exten = item.exten || '-';
-            const oldUser = item.old_username || '<i>(Vazio)</i>';
-            const newUser = item.new_username || '<i>(Removido)</i>';
             const changedBy = item.changed_by || 'Sistema';
+
+            let changeHtml = '';
+            if (item.new_username !== undefined && item.new_username !== null && item.old_username !== item.new_username) {
+                const oldUser = item.old_username || '<i>(Vazio)</i>';
+                const newUser = item.new_username || '<i>(Removido)</i>';
+                changeHtml = `
+                     Nome de usuário alterado:
+                     <span style="text-decoration: line-through; color: var(--text-muted); margin: 0 6px;">${oldUser}</span>
+                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: middle; margin-right: 6px; color: var(--success, #10b981);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                     <strong style="color: var(--success, #10b981);">${newUser}</strong>
+                `;
+            } else if (item.new_department !== undefined && item.new_department !== null && item.old_department !== item.new_department) {
+                const oldDept = item.old_department || '<i>(Vazio)</i>';
+                const newDept = item.new_department || '<i>(Removido)</i>';
+                changeHtml = `
+                     Departamento alterado:
+                     <span style="text-decoration: line-through; color: var(--text-muted); margin: 0 6px;">${oldDept}</span>
+                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: middle; margin-right: 6px; color: var(--success, #10b981);"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                     <strong style="color: var(--success, #10b981);">${newDept}</strong>
+                `;
+            } else {
+                changeHtml = `Alteração registrada no ramal.`;
+            }
 
             return `
                 <div class="timeline-item" style="position: relative; padding-bottom: 10px;">
@@ -722,10 +745,7 @@ export const telephonyHandler = {
                             </span>
                         </div>
                         <div style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 8px;">
-                             Nome de usuário alterado:
-                             <span style="text-decoration: line-through; color: var(--text-muted); margin: 0 6px;">${oldUser}</span>
-                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none" style="vertical-align: middle; margin-right: 6px; color: var(--success, #10b981);"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                             <strong style="color: var(--success, #10b981);">${newUser}</strong>
+                             ${changeHtml}
                          </div>
                          <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px;">
                              <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>

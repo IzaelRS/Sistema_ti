@@ -785,13 +785,15 @@ app.post("/api/telephony/extensions/username", async (req, res) => {
 });
 app.post("/api/telephony/extensions/department", async (req, res) => {
     try {
-        const { exten, department } = req.body;
+        const { exten, department, changed_by } = req.body;
         if (!exten) {
             res.status(400).json({ error: "O número do ramal (exten) é obrigatório." });
             return;
         }
         const extensionUsernameRepository = database_1.AppDataSource.getRepository(ExtensionUsername_1.ExtensionUsername);
+        const historyRepository = database_1.AppDataSource.getRepository(ExtensionUsernameHistory_1.ExtensionUsernameHistory);
         let record = await extensionUsernameRepository.findOneBy({ exten });
+        const oldDepartment = record ? record.department : null;
         const newDepartment = department || "";
         if (record) {
             record.department = newDepartment;
@@ -804,6 +806,17 @@ app.post("/api/telephony/extensions/department", async (req, res) => {
                 department: newDepartment
             });
             await extensionUsernameRepository.save(record);
+        }
+        // Registrar no histórico caso tenha mudado
+        if (oldDepartment !== newDepartment) {
+            const historyRecord = historyRepository.create({
+                exten,
+                old_department: oldDepartment,
+                new_department: newDepartment,
+                changed_by: changed_by || "Sistema"
+            });
+            await historyRepository.save(historyRecord);
+            console.log(`[TELEFONIA] Histórico registrado para o ramal ${exten} (Departamento): de "${oldDepartment || ''}" para "${newDepartment}" por "${changed_by || 'Sistema'}"`);
         }
         res.json({ success: true, exten, department: record.department });
     }
@@ -827,7 +840,7 @@ app.get("/api/telephony/extensions/history", async (req, res) => {
             query.andWhere("history.exten LIKE :exten", { exten: `%${exten}%` });
         }
         if (username && username !== "") {
-            query.andWhere("(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username)", { username: `%${String(username).toLowerCase()}%` });
+            query.andWhere("(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username OR LOWER(history.old_department) LIKE :username OR LOWER(history.new_department) LIKE :username)", { username: `%${String(username).toLowerCase()}%` });
         }
         query.orderBy("history.changed_at", "DESC");
         const historyList = await query.getMany();

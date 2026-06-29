@@ -33,6 +33,14 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
     __metadata("design:type", Object)
+], ExtensionUsernameHistory.prototype, "old_department", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
+    __metadata("design:type", Object)
+], ExtensionUsernameHistory.prototype, "new_department", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
+    __metadata("design:type", Object)
 ], ExtensionUsernameHistory.prototype, "changed_by", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" }),

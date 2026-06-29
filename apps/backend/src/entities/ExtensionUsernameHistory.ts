@@ -15,6 +15,12 @@ export class ExtensionUsernameHistory {
     new_username: string | null;
 
     @Column({ type: "varchar", length: 255, nullable: true })
+    old_department: string | null;
+
+    @Column({ type: "varchar", length: 255, nullable: true })
+    new_department: string | null;
+
+    @Column({ type: "varchar", length: 255, nullable: true })
     changed_by: string | null;
 
     @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })

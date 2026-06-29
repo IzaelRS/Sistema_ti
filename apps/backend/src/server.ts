@@ -854,15 +854,17 @@ app.post("/api/telephony/extensions/username", async (req: Request, res: Respons
 
 app.post("/api/telephony/extensions/department", async (req: Request, res: Response) => {
     try {
-        const { exten, department } = req.body;
+        const { exten, department, changed_by } = req.body;
         if (!exten) {
             res.status(400).json({ error: "O número do ramal (exten) é obrigatório." });
             return;
         }
 
         const extensionUsernameRepository = AppDataSource.getRepository(ExtensionUsername);
+        const historyRepository = AppDataSource.getRepository(ExtensionUsernameHistory);
         
         let record = await extensionUsernameRepository.findOneBy({ exten });
+        const oldDepartment = record ? record.department : null;
         const newDepartment = department || "";
 
         if (record) {
@@ -875,6 +877,18 @@ app.post("/api/telephony/extensions/department", async (req: Request, res: Respo
                 department: newDepartment
             });
             await extensionUsernameRepository.save(record);
+        }
+
+        // Registrar no histórico caso tenha mudado
+        if (oldDepartment !== newDepartment) {
+            const historyRecord = historyRepository.create({
+                exten,
+                old_department: oldDepartment,
+                new_department: newDepartment,
+                changed_by: changed_by || "Sistema"
+            });
+            await historyRepository.save(historyRecord);
+            console.log(`[TELEFONIA] Histórico registrado para o ramal ${exten} (Departamento): de "${oldDepartment || ''}" para "${newDepartment}" por "${changed_by || 'Sistema'}"`);
         }
 
         res.json({ success: true, exten, department: record.department });
@@ -902,7 +916,7 @@ app.get("/api/telephony/extensions/history", async (req: Request, res: Response)
         }
         if (username && username !== "") {
             query.andWhere(
-                "(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username)",
+                "(LOWER(history.old_username) LIKE :username OR LOWER(history.new_username) LIKE :username OR LOWER(history.old_department) LIKE :username OR LOWER(history.new_department) LIKE :username)",
                 { username: `%${String(username).toLowerCase()}%` }
             );
         }
