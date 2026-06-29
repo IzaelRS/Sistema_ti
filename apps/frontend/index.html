@@ -1569,8 +1569,8 @@
                     
                     <!-- ABA 1: RAMAIS -->
                     <div id="telephony-view-extensions" class="telephony-tab-content">
-                        <div class="table-container glass" style="margin-top: 10px;">
-                            <table class="table-minimal">
+                        <div class="table-container glass" style="margin-top: 10px; max-height: 480px; overflow: auto;">
+                            <table class="table-minimal" style="min-width: 1200px;">
                                 <thead>
                                     <tr>
                                         <th>Ramal</th>
@@ -1597,8 +1597,8 @@
 
                     <!-- ABA 2: QUEUE (FILAS) -->
                     <div id="telephony-view-queues" class="telephony-tab-content hidden">
-                        <div class="table-container glass" style="margin-top: 10px;">
-                            <table class="table-minimal">
+                        <div class="table-container glass" style="margin-top: 10px; max-height: 480px; overflow: auto;">
+                            <table class="table-minimal" style="min-width: 1000px;">
                                 <thead>
                                     <tr>
                                         <th>Número</th>
@@ -1622,7 +1622,7 @@
 
                     <!-- ABA 3: BLF -->
                     <div id="telephony-view-blf" class="telephony-tab-content hidden">
-                        <div class="table-container glass" style="margin-top: 10px;">
+                        <div class="table-container glass" style="margin-top: 10px; max-height: 480px; overflow: auto;">
                             <table class="table-minimal">
                                 <thead>
                                     <tr>
@@ -1645,7 +1645,7 @@
 
                     <!-- ABA 4: USUARIOS -->
                     <div id="telephony-view-users" class="telephony-tab-content hidden">
-                        <div class="table-container glass" style="margin-top: 10px;">
+                        <div class="table-container glass" style="margin-top: 10px; max-height: 480px; overflow: auto;">
                             <table class="table-minimal">
                                 <thead>
                                     <tr>
@@ -1696,7 +1696,7 @@
                         </div>
 
                         <!-- Timeline Layout -->
-                        <div class="glass" style="padding: 25px; border-radius: var(--border-radius, 12px); border: 1px solid var(--glass-border); max-height: 600px; overflow-y: auto;">
+                        <div class="glass" style="padding: 25px; border-radius: var(--border-radius, 12px); border: 1px solid var(--glass-border); max-height: 450px; overflow-y: auto;">
                             <div id="telephony-history-timeline-container" style="position: relative; padding-left: 20px; border-left: 2px solid var(--glass-border); display: flex; flex-direction: column; gap: 20px;">
                                 <!-- Timeline items will be rendered here dynamically -->
                             </div>
