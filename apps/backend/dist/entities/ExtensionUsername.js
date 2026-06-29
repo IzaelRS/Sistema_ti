@@ -22,6 +22,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: "varchar", length: 255 }),
     __metadata("design:type", String)
 ], ExtensionUsername.prototype, "username", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
+    __metadata("design:type", Object)
+], ExtensionUsername.prototype, "department", void 0);
 exports.ExtensionUsername = ExtensionUsername = __decorate([
     (0, typeorm_1.Entity)("extension_usernames")
 ], ExtensionUsername);

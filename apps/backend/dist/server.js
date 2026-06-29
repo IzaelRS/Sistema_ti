@@ -717,11 +717,13 @@ app.get("/api/telephony/extensions", async (req, res) => {
         const extensionUsernameRepository = database_1.AppDataSource.getRepository(ExtensionUsername_1.ExtensionUsername);
         const localUsernames = await extensionUsernameRepository.find();
         const localUsernameMap = new Map(localUsernames.map(u => [u.exten, u.username]));
+        const localDepartmentMap = new Map(localUsernames.map(u => [u.exten, u.department || ""]));
         if (req.query.mock === "true") {
             const mockExts = getMockExtensions();
             const merged = mockExts.map((sip) => ({
                 ...sip,
-                local_username: localUsernameMap.get(sip.exten) || ""
+                local_username: localUsernameMap.get(sip.exten) || "",
+                local_department: localDepartmentMap.get(sip.exten) || ""
             }));
             res.json(merged);
             return;
@@ -730,7 +732,8 @@ app.get("/api/telephony/extensions", async (req, res) => {
         console.log(`[TELEFONIA] Total de ramais consolidados: ${results.length}`);
         const merged = results.map((sip) => ({
             ...sip,
-            local_username: localUsernameMap.get(sip.exten) || ""
+            local_username: localUsernameMap.get(sip.exten) || "",
+            local_department: localDepartmentMap.get(sip.exten) || ""
         }));
         res.json(merged);
     }
@@ -778,6 +781,35 @@ app.post("/api/telephony/extensions/username", async (req, res) => {
     catch (err) {
         console.error("Erro ao salvar nome de usuário local:", err);
         res.status(500).json({ error: "Erro interno ao salvar nome de usuário: " + err.message });
+    }
+});
+app.post("/api/telephony/extensions/department", async (req, res) => {
+    try {
+        const { exten, department } = req.body;
+        if (!exten) {
+            res.status(400).json({ error: "O número do ramal (exten) é obrigatório." });
+            return;
+        }
+        const extensionUsernameRepository = database_1.AppDataSource.getRepository(ExtensionUsername_1.ExtensionUsername);
+        let record = await extensionUsernameRepository.findOneBy({ exten });
+        const newDepartment = department || "";
+        if (record) {
+            record.department = newDepartment;
+            await extensionUsernameRepository.save(record);
+        }
+        else {
+            record = extensionUsernameRepository.create({
+                exten,
+                username: "",
+                department: newDepartment
+            });
+            await extensionUsernameRepository.save(record);
+        }
+        res.json({ success: true, exten, department: record.department });
+    }
+    catch (err) {
+        console.error("Erro ao salvar departamento local:", err);
+        res.status(500).json({ error: "Erro interno ao salvar departamento: " + err.message });
     }
 });
 app.get("/api/telephony/extensions/history", async (req, res) => {
