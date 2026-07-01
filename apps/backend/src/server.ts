@@ -3413,14 +3413,18 @@ async function fetchRawServersList() {
         const loginParams = await getLansweeperLoginParams(lansweeperUrl);
         const cookies = await loginLansweeper(lansweeperUrl, username, password, loginParams.cookies, loginParams.viewstate, loginParams.eventval);
         
-        // Fetch both reports in parallel
-        const [reportData, linuxReportData] = await Promise.all([
+        // Fetch all reports in parallel (including group 19 VMs/Containers)
+        const [reportData, linuxReportData, vmReportData] = await Promise.all([
             fetchLansweeperCustomReport(lansweeperUrl, cookies, "web40repallservers", "").catch(err => {
                 console.warn("[SERVERS MONITOR] Falha ao carregar Windows/Geral report:", err.message);
                 return { AddedRows: [] };
             }),
             fetchLansweeperCustomReport(lansweeperUrl, cookies, "Web50getdevicebytype", "@devicetype=11").catch(err => {
                 console.warn("[SERVERS MONITOR] Falha ao carregar Linux report:", err.message);
+                return { AddedRows: [] };
+            }),
+            fetchLansweeperCustomReport(lansweeperUrl, cookies, "dynamicGroup", "@assetgroupid=19").catch(err => {
+                console.warn("[SERVERS MONITOR] Falha ao carregar VM Group 19 report:", err.message);
                 return { AddedRows: [] };
             })
         ]);
@@ -3503,6 +3507,43 @@ async function fetchRawServersList() {
                         location,
                         os,
                         servicePack,
+                        firstSeen,
+                        lastSeen,
+                        lastActive
+                    });
+                }
+            });
+        }
+
+        // 3. Process VM Group 19 servers (evitando duplicar se já existirem no serverMap)
+        if (vmReportData && Array.isArray(vmReportData.AddedRows)) {
+            vmReportData.AddedRows.forEach((row: any) => {
+                const assetId = String(row[2]);
+                const name = stripHtml(row[1]);
+                const ip = row[3] ? stripHtml(row[3]) : "";
+                const os = row[4] ? stripHtml(row[4]) : "VM";
+                const manufacturer = row[5] ? stripHtml(row[5]) : "-";
+                const model = row[6] ? stripHtml(row[6]) : "Virtual Machine";
+                const location = row[8] ? stripHtml(row[8]) : "-";
+                const firstSeen = row[9] ? stripHtml(row[9]) : "-";
+                const lastSeen = row[10] ? stripHtml(row[10]) : "-";
+                const lastActive = row[11] ? stripHtml(row[11]) : "-";
+
+                if (ip && ip.trim() !== "" && !serverMap.has(assetId)) {
+                    serverMap.set(assetId, {
+                        id: assetId,
+                        name,
+                        domain: "-",
+                        user: "-",
+                        userDomain: "-",
+                        ip,
+                        description: "Virtual Machine / Container (Grupo 19)",
+                        manufacturer,
+                        model,
+                        serialNumber: "-",
+                        location,
+                        os,
+                        servicePack: "-",
                         firstSeen,
                         lastSeen,
                         lastActive
