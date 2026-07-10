@@ -2771,6 +2771,102 @@ export const monitoringHandler = {
                 const usedText = (volume.used_gb / 1000).toFixed(1) + ' TB';
                 const freeText = (volume.free_gb / 1000).toFixed(1) + ' TB';
 
+                // Real-time specs (RAM, CPU, Network)
+                const cpuUsage = storage.cpu_usage;
+                const ramTotal = storage.ram_total_gb;
+                const ramUsed = storage.ram_used_gb;
+                const ramPct = storage.ram_usage_pct;
+                const rxKbs = storage.network_rx_kbs;
+                const txKbs = storage.network_tx_kbs;
+
+                const hasRealtime = (cpuUsage !== null && cpuUsage !== undefined) || (ramPct !== null && ramPct !== undefined);
+                
+                let performanceHtml = '';
+                if (hasRealtime) {
+                    const cpuColor = cpuUsage < 60 ? '#10b981' : cpuUsage < 85 ? '#f59e0b' : '#ef4444';
+                    const cpuTextColor = cpuUsage < 60 ? '#6ee7b7' : cpuUsage < 85 ? '#fde047' : '#fca5a5';
+                    
+                    const ramColor = ramPct < 60 ? '#10b981' : ramPct < 85 ? '#f59e0b' : '#ef4444';
+                    const ramTextColor = ramPct < 60 ? '#6ee7b7' : ramPct < 85 ? '#fde047' : '#fca5a5';
+                    
+                    const formatSpeed = (kbs) => {
+                        if (kbs == null) return '0 KB/s';
+                        if (kbs >= 1024) return `${(kbs / 1024).toFixed(1)} MB/s`;
+                        return `${kbs} KB/s`;
+                    };
+
+                    performanceHtml = `
+                        <!-- PERFORMANCE SECTION: CPU, RAM and Network Activity -->
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Desempenho em Tempo Real</span>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                                
+                                <!-- CPU Card -->
+                                <div style="background: rgba(168, 85, 247, 0.04); border: 1px solid rgba(168, 85, 247, 0.12); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 7px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#a78bfa" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                                            <span style="font-size: 0.75rem; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.05em;">CPU</span>
+                                        </div>
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: ${cpuTextColor};">${cpuUsage}%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 5px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${cpuUsage}%; height: 100%; background: ${cpuColor}; border-radius: 3px;"></div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted);">Uso do Processador</span>
+                                </div>
+
+                                <!-- RAM Card -->
+                                <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.12); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 7px;">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#6ee7b7" stroke-width="2" fill="none"><rect x="2" y="7" width="20" height="10" rx="1"></rect><line x1="6" y1="7" x2="6" y2="17"></line><line x1="10" y1="7" x2="10" y2="17"></line><line x1="14" y1="7" x2="14" y2="17"></line><line x1="18" y1="7" x2="18" y2="17"></line></svg>
+                                            <span style="font-size: 0.75rem; font-weight: 600; color: #6ee7b7; text-transform: uppercase; letter-spacing: 0.05em;">Memória RAM</span>
+                                        </div>
+                                        <span style="font-size: 0.85rem; font-weight: 700; color: ${ramTextColor};">${ramPct}%</span>
+                                    </div>
+                                    <div style="width: 100%; height: 5px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${ramPct}%; height: 100%; background: ${ramColor}; border-radius: 3px;"></div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted);">${ramUsed ? `${ramUsed} GB` : '-'} de ${ramTotal ? `${ramTotal} GB` : '-'} em uso</span>
+                                </div>
+
+                                <!-- Network Card -->
+                                <div style="background: rgba(59, 130, 246, 0.04); border: 1px solid rgba(59, 130, 246, 0.12); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 7px;">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#93c5fd" stroke-width="2" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                        <span style="font-size: 0.75rem; font-weight: 600; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.05em;">Atividade de Rede</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px; height: 16px;">
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="#6ee7b7" stroke-width="2.5" fill="none" style="transform: rotate(45deg);"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                            <span style="font-size: 0.72rem; color: var(--text-muted);">Down:</span>
+                                            <span style="font-size: 0.8rem; font-weight: 700; color: #6ee7b7; font-family: monospace;">${formatSpeed(rxKbs)}</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <svg viewBox="0 0 24 24" width="12" height="12" stroke="#fca5a5" stroke-width="2.5" fill="none" style="transform: rotate(225deg);"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+                                            <span style="font-size: 0.72rem; color: var(--text-muted);">Up:</span>
+                                            <span style="font-size: 0.8rem; font-weight: 700; color: #fca5a5; font-family: monospace;">${formatSpeed(txKbs)}</span>
+                                        </div>
+                                    </div>
+                                    <span style="font-size: 0.72rem; color: var(--text-muted);">Tráfego ativo de rede</span>
+                                </div>
+
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    performanceHtml = `
+                        <!-- PERFORMANCE SECTION: Indisponível -->
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Desempenho em Tempo Real</span>
+                            <div style="background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+                                ⚠️ Métricas de CPU, RAM e Rede em tempo real não estão disponíveis para esta origem de dados.
+                            </div>
+                        </div>
+                    `;
+                }
+
                 // Render HDD Bays
                 const baysHtml = storage.bays.map(bay => {
                     const ledColor = bay.led === 'green' ? '#10b981' : '#ef4444';
@@ -2877,6 +2973,9 @@ export const monitoringHandler = {
                                 </div>
                             </div>
 
+                            <!-- REAL-TIME PERFORMANCE STATS -->
+                            ${performanceHtml}
+
                             <!-- MIDDLE: Physical Hard Drive Bays (WD Style) -->
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Gavetas de Discos Físicos (Bays)</span>
@@ -2885,7 +2984,7 @@ export const monitoringHandler = {
                                 </div>
                             </div>
 
-                            <!-- BOTTOM: Dropbox-style Shared Folders / Compartilhamentos -->
+                            <!-- BOTTOM: Shared Folders -->
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Pastas Compartilhadas (Pastas de Rede)</span>
                                 <div style="display: flex; flex-direction: column; border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; overflow: hidden; background: rgba(0, 0, 0, 0.15);">

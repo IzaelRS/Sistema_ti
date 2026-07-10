@@ -2333,7 +2333,32 @@ for d in sda sdb sdc sdd; do
     fi
 done
 echo "###SEPARATOR###"
-cat /etc/samba/smb.conf 2>/dev/null`;
+cat /etc/samba/smb.conf 2>/dev/null
+echo "###SEPARATOR###"
+free 2>/dev/null || cat /proc/meminfo 2>/dev/null
+echo "###SEPARATOR###"
+read -r _ usr nic sys idl io irq sirq stl g1 g2 < /proc/stat
+rx1=\$(awk '{if (NR>2) sum+=\$2} END {print sum}' /proc/net/dev 2>/dev/null || cat /proc/net/dev | awk '{if (NR>2) sum+=\$2} END {print sum}')
+tx1=\$(awk '{if (NR>2) sum+=\$10} END {print sum}' /proc/net/dev 2>/dev/null || cat /proc/net/dev | awk '{if (NR>2) sum+=\$10} END {print sum}')
+prev_idle=\$((idl + io))
+prev_total=\$((usr + nic + sys + idl + io + irq + sirq + stl))
+sleep 0.5
+read -r _ usr nic sys idl io irq sirq stl g1 g2 < /proc/stat
+rx2=\$(awk '{if (NR>2) sum+=\$2} END {print sum}' /proc/net/dev 2>/dev/null || cat /proc/net/dev | awk '{if (NR>2) sum+=\$2} END {print sum}')
+tx2=\$(awk '{if (NR>2) sum+=\$10} END {print sum}' /proc/net/dev 2>/dev/null || cat /proc/net/dev | awk '{if (NR>2) sum+=\$10} END {print sum}')
+curr_idle=\$((idl + io))
+curr_total=\$((usr + nic + sys + idl + io + irq + sirq + stl))
+total_diff=\$((curr_total - prev_total))
+if [ "\$total_diff" -gt 0 ]; then
+    cpu_pct=\$(( (total_diff - (curr_idle - prev_idle)) * 100 / total_diff ))
+else
+    cpu_pct=0
+fi
+rx_kbs=\$(( (rx2 - rx1) * 2 / 1024 ))
+tx_kbs=\$(( (tx2 - tx1) * 2 / 1024 ))
+echo "CPU_PCT: \$cpu_pct"
+echo "RX_KBS: \$rx_kbs"
+echo "TX_KBS: \$tx_kbs"`;
             conn.exec(cmd, (err, stream) => {
                 if (err) {
                     conn.end();
@@ -2347,7 +2372,7 @@ cat /etc/samba/smb.conf 2>/dev/null`;
                     conn.end();
                     try {
                         const parts = stdout.split("###SEPARATOR###");
-                        if (parts.length < 5) {
+                        if (parts.length < 7) {
                             return reject(new Error("Resposta do SSH com formato incorreto."));
                         }
                         const dfOutput = parts[0];
@@ -2355,6 +2380,8 @@ cat /etc/samba/smb.conf 2>/dev/null`;
                         const mdadmOutput = parts[2];
                         const diskOutput = parts[3];
                         const smbOutput = parts[4];
+                        const memOutput = parts[5];
+                        const cpuNetOutput = parts[6];
                         // Parse df
                         const dfLines = dfOutput.trim().split("\n");
                         let totalGb = 35840; // ~35.8 TB fallback
@@ -2494,11 +2521,52 @@ cat /etc/samba/smb.conf 2>/dev/null`;
                         if (currentShare) {
                             shares.push(currentShare);
                         }
+                        // Parse Memory
+                        let ramTotalGb = null;
+                        let ramUsedGb = null;
+                        let ramUsagePct = null;
+                        if (memOutput) {
+                            const memLines = memOutput.trim().split("\n");
+                            const memLine = memLines.find(l => l.trim().startsWith("Mem:"));
+                            if (memLine) {
+                                const memParts = memLine.trim().split(/\s+/);
+                                if (memParts.length >= 3) {
+                                    const totalKib = parseFloat(memParts[1]) || 0;
+                                    const usedKib = parseFloat(memParts[2]) || 0;
+                                    if (totalKib > 0) {
+                                        ramTotalGb = parseFloat((totalKib / 1024 / 1024).toFixed(1));
+                                        ramUsedGb = parseFloat((usedKib / 1024 / 1024).toFixed(1));
+                                        ramUsagePct = Math.round((usedKib / totalKib) * 100);
+                                    }
+                                }
+                            }
+                        }
+                        // Parse CPU & Network
+                        let cpuPct = null;
+                        let rxKbs = null;
+                        let txKbs = null;
+                        if (cpuNetOutput) {
+                            const cpuMatch = cpuNetOutput.match(/CPU_PCT:\s*(\d+)/);
+                            const rxMatch = cpuNetOutput.match(/RX_KBS:\s*(\d+)/);
+                            const txMatch = cpuNetOutput.match(/TX_KBS:\s*(\d+)/);
+                            if (cpuMatch)
+                                cpuPct = parseInt(cpuMatch[1]);
+                            if (rxMatch)
+                                rxKbs = parseInt(rxMatch[1]);
+                            if (txMatch)
+                                txKbs = parseInt(txMatch[1]);
+                        }
                         resolve({
                             dataSource: "wd_nas_ssh",
                             volume,
                             bays,
-                            shares
+                            shares,
+                            cpu_usage: cpuPct,
+                            ram_total_gb: ramTotalGb,
+                            ram_used_gb: ramUsedGb,
+                            ram_usage_pct: ramUsagePct,
+                            network_rx_kbs: rxKbs,
+                            network_tx_kbs: txKbs
                         });
                     }
                     catch (parseErr) {
@@ -2611,6 +2679,30 @@ app.get("/api/monitoring/nas/:id/storage", async (req, res) => {
             }
             catch (e) {
                 console.warn("[LANSWEEPER] Erro ao buscar storage do NAS no Lansweeper:", e.message);
+            }
+        }
+        // 3. Cruzamento com Zabbix (caso os dados reais de CPU/RAM estejam ausentes)
+        if (storageDetails) {
+            try {
+                const zabbixMetrics = await getZabbixMetrics().catch(() => null);
+                if (zabbixMetrics) {
+                    const realMetrics = zabbixMetrics.get(nas.name.toLowerCase()) ||
+                        zabbixMetrics.get(nas.ip) ||
+                        null;
+                    if (realMetrics) {
+                        if (storageDetails.cpu_usage == null) {
+                            storageDetails.cpu_usage = realMetrics.cpu_usage;
+                        }
+                        if (storageDetails.ram_usage_pct == null) {
+                            storageDetails.ram_usage_pct = realMetrics.ram_usage;
+                            storageDetails.ram_total_gb = 4; // Estimativa padrão
+                            storageDetails.ram_used_gb = realMetrics.ram_usage ? parseFloat(((realMetrics.ram_usage / 100) * 4).toFixed(1)) : null;
+                        }
+                    }
+                }
+            }
+            catch (zabbixErr) {
+                console.warn("[NAS ZABBIX MERGE] Erro ao buscar métricas do Zabbix para o NAS:", zabbixErr.message);
             }
         }
         if (!storageDetails) {
