@@ -90,12 +90,19 @@ export const telephonyHandler = {
                 allQueues = await apiClient.get('/telephony/queues');
                 this.render(allQueues);
             } else if (activeTab === 'blf') {
-                // If extensions are not loaded, fetch them in background so we can resolve names
+                // If extensions or queues are not loaded, fetch them in background so we can resolve names
+                const promises = [];
                 if (allExtensions.length === 0) {
+                    promises.push(apiClient.get('/telephony/extensions').then(res => { allExtensions = res; }).catch(e => console.warn("Could not pre-fetch extensions:", e)));
+                }
+                if (allQueues.length === 0) {
+                    promises.push(apiClient.get('/telephony/queues').then(res => { allQueues = res; }).catch(e => console.warn("Could not pre-fetch queues:", e)));
+                }
+                if (promises.length > 0) {
                     try {
-                        allExtensions = await apiClient.get('/telephony/extensions');
+                        await Promise.all(promises);
                     } catch (e) {
-                        console.warn("Could not pre-fetch extensions for BLF mapping:", e);
+                        console.warn("Could not pre-fetch extensions/queues for BLF mapping:", e);
                     }
                 }
                 allBlfs = await apiClient.get('/telephony/blfs');
@@ -307,19 +314,58 @@ export const telephonyHandler = {
 
             const extensionsHtml = blf.extensoes_ids && blf.extensoes_ids.length > 0
                 ? blf.extensoes_ids.map(extId => {
-                    const extObj = allExtensions.find(e => e.id === extId || e.extensao_id === extId);
-                    const extNum = extObj ? extObj.exten : `ID ${extId}`;
-                    const extNome = extObj ? extObj.nome : 'Não encontrado';
-                    return `
-                        <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px;">
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                            </svg>
-                            <span style="font-size: 0.85rem; font-weight: 500;">${extNum} - ${extNome}</span>
-                        </div>
-                    `;
+                    // 1. Procurar por extensao_id nos ramais
+                    let extObj = allExtensions.find(e => e.extensao_id === extId);
+                    // 2. Procurar por extensao_id nas filas
+                    let queueObj = allQueues.find(q => q.extensao_id === extId);
+                    
+                    // 3. Fallback de correspondência por id
+                    if (!extObj && !queueObj) {
+                        extObj = allExtensions.find(e => e.id === extId);
+                        if (!extObj) {
+                            queueObj = allQueues.find(q => q.id === extId);
+                        }
+                    }
+
+                    if (extObj) {
+                        const extNum = extObj.exten || `ID ${extId}`;
+                        const extNome = extObj.nome || 'Sem nome';
+                        return `
+                            <div style="background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--accent);">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                </svg>
+                                <span style="font-size: 0.85rem; font-weight: 500;">${extNum} - ${extNome} <small style="color: var(--text-muted); font-size: 0.75rem;">(Ramal)</small></span>
+                            </div>
+                        `;
+                    } else if (queueObj) {
+                        const queueNum = queueObj.exten || `Fila ${extId}`;
+                        const queueNome = queueObj.nome || 'Sem nome';
+                        return `
+                            <div style="background: rgba(16,185,129,0.03); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.15); display: flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: #10b981;">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span style="font-size: 0.85rem; font-weight: 500; color: #6ee7b7;">${queueNum} - ${queueNome} <small style="color: #a7f3d0; font-size: 0.75rem; opacity: 0.8;">(Fila)</small></span>
+                            </div>
+                        `;
+                    } else {
+                        return `
+                            <div style="background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--glass-border); display: flex; align-items: center; gap: 8px; opacity: 0.6;">
+                                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="color: var(--text-muted);">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted);">ID ${extId} - Não encontrado</span>
+                            </div>
+                        `;
+                    }
                   }).join('')
-                : '<div style="color: var(--text-muted); font-size: 0.85rem;">Nenhum ramal vinculado neste BLF.</div>';
+                : '<div style="color: var(--text-muted); font-size: 0.85rem;">Nenhum ramal/fila vinculado neste BLF.</div>';
 
             return `
                 <tr onclick="window.TelephonyHandler.toggleBlfRow(${id})" style="cursor: pointer;" title="Clique para ver os ramais vinculados">
