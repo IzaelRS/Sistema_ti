@@ -6,7 +6,7 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
-import { MoreThan } from "typeorm";
+import { MoreThan, LessThan } from "typeorm";
 import dns from "dns";
 import https from "https";
 import http from "http";
@@ -1641,19 +1641,56 @@ app.get("/api/monitoring/apis-status", async (req: Request, res: Response) => {
 // GET: Lista histórico de eventos de monitoramento
 app.get("/api/monitoring/events", async (req: Request, res: Response) => {
     try {
-        const limit = parseInt(req.query.limit as string) || 200;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 30;
+        const search = (req.query.search as string || "").trim().toLowerCase();
+        const severity = req.query.severity as string || "all";
+        const startDate = req.query.startDate as string || "";
+        const endDate = req.query.endDate as string || "";
+
         const monitoringEventRepository = AppDataSource.getRepository(MonitoringEvent);
-        const rows = await monitoringEventRepository.find({
-            order: { created_at: "DESC" },
-            take: limit
-        });
+        const query = monitoringEventRepository.createQueryBuilder("event");
+
+        if (severity && severity !== "all") {
+            query.andWhere("event.severity = :severity", { severity });
+        }
+
+        if (search) {
+            query.andWhere(
+                "(LOWER(event.title) LIKE :search OR LOWER(event.description) LIKE :search OR LOWER(event.source) LIKE :search)",
+                { search: `%${search}%` }
+            );
+        }
+
+        if (startDate && startDate !== "") {
+            query.andWhere("event.created_at >= :startDate", { startDate: `${startDate} 00:00:00` });
+        }
+
+        if (endDate && endDate !== "") {
+            query.andWhere("event.created_at <= :endDate", { endDate: `${endDate} 23:59:59` });
+        }
+
+        query.orderBy("event.created_at", "DESC");
+
+        const offset = (page - 1) * limit;
+        query.skip(offset).take(limit);
+
+        const [rows, total] = await query.getManyAndCount();
 
         const formattedRows = rows.map(r => ({
             ...r,
             created_at: r.created_at ? r.created_at.toISOString().replace(/\.\d{3}Z$/, "Z") : null
         }));
-        res.json(formattedRows);
+
+        res.json({
+            events: formattedRows,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        });
     } catch (err: any) {
+        console.error("Erro ao buscar histórico de eventos:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1682,9 +1719,10 @@ app.post("/api/monitoring/events", async (req: Request, res: Response) => {
 app.delete("/api/monitoring/events", async (req: Request, res: Response) => {
     try {
         const monitoringEventRepository = AppDataSource.getRepository(MonitoringEvent);
-        const result = await monitoringEventRepository.delete({});
-        res.json({ success: true, deleted: result.affected || 0 });
+        await monitoringEventRepository.clear();
+        res.json({ success: true });
     } catch (err: any) {
+        console.error("Erro ao limpar todo o histórico de eventos:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -3899,6 +3937,20 @@ async function runBackgroundMonitoringChecks() {
                 source: "Gnew Monitor",
                 value_pct: null
             });
+        }
+        // Clean up events older than 365 days
+        try {
+            const monitoringEventRepository = AppDataSource.getRepository(MonitoringEvent);
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - 365);
+            const deleteResult = await monitoringEventRepository.delete({
+                created_at: LessThan(cutoffDate)
+            });
+            if (deleteResult.affected && deleteResult.affected > 0) {
+                console.log(`[BACKGROUND MONITOR] Limpeza automática: Removidos ${deleteResult.affected} eventos antigos (>365 dias).`);
+            }
+        } catch (cleanupErr: any) {
+            console.error("[BACKGROUND MONITOR] Erro na limpeza automática de eventos antigos:", cleanupErr.message);
         }
     } catch (err) {
         console.error("[BACKGROUND MONITOR] Error in periodic check:", err);

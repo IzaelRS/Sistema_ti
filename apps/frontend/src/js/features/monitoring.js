@@ -203,10 +203,16 @@ export const monitoringHandler = {
             });
         }
 
-        // Clear history button
+        // Clear history by period button ("Limpar Histórico")
         const clearBtn = document.getElementById('btn-clear-event-history');
         if (clearBtn) {
-            clearBtn.addEventListener('click', () => this.clearEventHistory());
+            clearBtn.addEventListener('click', () => this.clearEventHistoryByPeriod());
+        }
+
+        // Delete all event history button ("Apagar Tudo")
+        const deleteAllBtn = document.getElementById('btn-delete-all-event-history');
+        if (deleteAllBtn) {
+            deleteAllBtn.addEventListener('click', () => this.clearEventHistory());
         }
 
         // Refresh button (global) - triggers Gnew fetch
@@ -1001,45 +1007,22 @@ export const monitoringHandler = {
             </div>`;
 
         try {
-            // Busca todos (até 1000) para filtrar/paginar no cliente
-            let events = await apiClient.get('/monitoring/events?limit=1000');
+            // Busca filtrada e paginada diretamente no backend
+            const queryParams = new URLSearchParams({
+                page: eventsCurrentPage,
+                limit: PAGE_SIZE,
+                search: eventsSearchQuery || '',
+                severity: eventsFilterSeverity || 'all',
+                startDate: eventsFilterDateStart || '',
+                endDate: eventsFilterDateEnd || ''
+            });
 
-            // --- Filtro: texto livre ---
-            if (eventsSearchQuery) {
-                events = events.filter(ev =>
-                    (ev.title || '').toLowerCase().includes(eventsSearchQuery) ||
-                    (ev.description || '').toLowerCase().includes(eventsSearchQuery) ||
-                    (ev.source || '').toLowerCase().includes(eventsSearchQuery)
-                );
-            }
+            const response = await apiClient.get(`/monitoring/events?${queryParams.toString()}`);
+            
+            const events = response.events || [];
+            eventsTotalFiltered = response.total || 0;
+            const totalPages = response.totalPages || 1;
 
-            // --- Filtro: severidade ---
-            if (eventsFilterSeverity !== 'all') {
-                events = events.filter(ev => ev.severity === eventsFilterSeverity);
-            }
-
-            // --- Filtro: data início ---
-            if (eventsFilterDateStart) {
-                const startMs = new Date(eventsFilterDateStart + 'T00:00:00').getTime();
-                events = events.filter(ev => {
-                    if (!ev.created_at) return false;
-                    return new Date(ev.created_at).getTime() >= startMs;
-                });
-            }
-
-            // --- Filtro: data fim ---
-            if (eventsFilterDateEnd) {
-                const endMs = new Date(eventsFilterDateEnd + 'T23:59:59').getTime();
-                events = events.filter(ev => {
-                    if (!ev.created_at) return false;
-                    return new Date(ev.created_at).getTime() <= endMs;
-                });
-            }
-
-            eventsTotalFiltered = events.length;
-
-            // Garante que a página atual não ultrapasse o total de páginas
-            const totalPages = Math.max(1, Math.ceil(eventsTotalFiltered / PAGE_SIZE));
             if (eventsCurrentPage > totalPages) eventsCurrentPage = totalPages;
 
             // --- Badge de contagem ---
@@ -1049,12 +1032,8 @@ export const monitoringHandler = {
                 countEl.style.display = eventsTotalFiltered > 0 ? 'inline-flex' : 'none';
             }
 
-            // --- Fatia da página corrente (os 30 mais recentes por padrão = página 1) ---
-            const offset = (eventsCurrentPage - 1) * PAGE_SIZE;
-            const pageSlice = events.slice(offset, offset + PAGE_SIZE);
-
             // Renderiza a lista e a paginação
-            this.renderEvents(pageSlice);
+            this.renderEvents(events);
             this.renderPagination(eventsTotalFiltered, totalPages);
 
         } catch (err) {
@@ -1591,14 +1570,51 @@ export const monitoringHandler = {
         }
     },
 
+    async clearEventHistoryByPeriod() {
+        const btn = document.getElementById('btn-clear-event-history');
+        const input = prompt(
+            "Limpar histórico de eventos por período:\n\n" +
+            "Digite a quantidade de dias que deseja MANTER no histórico (ex: 7, 30, 90, 365).\n" +
+            "Todos os eventos mais antigos que esse período serão apagados permanentemente do banco.\n\n" +
+            "Quantidade de dias a MANTER:", 
+            "30"
+        );
+
+        if (input === null) return; // Cancelado pelo usuário
+
+        const days = parseInt(input.trim(), 10);
+        if (isNaN(days) || days < 0) {
+            alert("Por favor, digite um número inteiro de dias válido (ex: 30).");
+            return;
+        }
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Limpando...';
+            }
+            await fetch(`/api/monitoring/events?days=${days}`, { method: 'DELETE' });
+            await this.fetchAndRenderEventHistory();
+            alert(`Limpeza realizada! Eventos com mais de ${days} dias foram excluídos.`);
+        } catch (err) {
+            console.error('Erro ao limpar histórico por período:', err);
+            alert('Erro ao limpar o histórico. Tente novamente.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Limpar Histórico';
+            }
+        }
+    },
+
     async clearEventHistory() {
-        const clearBtn = document.getElementById('btn-clear-event-history');
-        if (!confirm('Tem certeza que deseja limpar todo o histórico de eventos? Esta ação não pode ser desfeita.')) return;
+        const clearBtn = document.getElementById('btn-delete-all-event-history');
+        if (!confirm('Tem certeza que deseja apagar permanentemente todo o histórico de eventos? Esta ação não pode ser desfeita.')) return;
 
         try {
             if (clearBtn) {
                 clearBtn.disabled = true;
-                clearBtn.textContent = 'Limpando...';
+                clearBtn.textContent = 'Apagando...';
             }
             await fetch('/api/monitoring/events', { method: 'DELETE' });
             await this.fetchAndRenderEventHistory();
@@ -1606,12 +1622,12 @@ export const monitoringHandler = {
             const countEl = document.getElementById('event-history-count');
             if (countEl) countEl.style.display = 'none';
         } catch (err) {
-            console.error('Erro ao limpar histórico:', err);
-            alert('Erro ao limpar o histórico. Tente novamente.');
+            console.error('Erro ao apagar histórico:', err);
+            alert('Erro ao apagar o histórico. Tente novamente.');
         } finally {
             if (clearBtn) {
                 clearBtn.disabled = false;
-                clearBtn.textContent = 'Limpar Histórico';
+                clearBtn.textContent = 'Apagar Tudo';
             }
         }
     },
