@@ -50,6 +50,8 @@ const TimelineSubtopic_1 = require("./entities/TimelineSubtopic");
 const MonitoringEvent_1 = require("./entities/MonitoringEvent");
 const ExtensionUsername_1 = require("./entities/ExtensionUsername");
 const ExtensionUsernameHistory_1 = require("./entities/ExtensionUsernameHistory");
+const AccountCategory_1 = require("./entities/AccountCategory");
+const KeepNote_1 = require("./entities/KeepNote");
 const bcrypt = __importStar(require("bcrypt"));
 const path_1 = __importDefault(require("path"));
 exports.AppDataSource = new typeorm_1.DataSource({
@@ -61,7 +63,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     database: process.env.DB_NAME || "intranet_ti",
     synchronize: false,
     logging: false,
-    entities: [User_1.User, Procedure_1.Procedure, Document_1.Document, Account_1.Account, Event_1.Event, TimelineTopic_1.TimelineTopic, TimelineSubtopic_1.TimelineSubtopic, MonitoringEvent_1.MonitoringEvent, ExtensionUsername_1.ExtensionUsername, ExtensionUsernameHistory_1.ExtensionUsernameHistory],
+    entities: [User_1.User, Procedure_1.Procedure, Document_1.Document, Account_1.Account, AccountCategory_1.AccountCategory, KeepNote_1.KeepNote, Event_1.Event, TimelineTopic_1.TimelineTopic, TimelineSubtopic_1.TimelineSubtopic, MonitoringEvent_1.MonitoringEvent, ExtensionUsername_1.ExtensionUsername, ExtensionUsernameHistory_1.ExtensionUsernameHistory],
     subscribers: [],
     migrations: [
         path_1.default.join(__dirname, "migrations/**/*.{ts,js}")
@@ -146,6 +148,26 @@ async function runSeeds() {
         }
         catch (e) {
             console.error("Erro ao criar sub-tópicos padrões da timeline:", e.message);
+        }
+    }
+    // 4. Seed Account Categories
+    const categoryRepository = exports.AppDataSource.getRepository(AccountCategory_1.AccountCategory);
+    const categoryCount = await categoryRepository.count();
+    if (categoryCount === 0) {
+        try {
+            const defaultCategories = [
+                { name: "Infraestrutura", is_system: true },
+                { name: "Licenças de Software", is_system: true },
+                { name: "Serviços Web", is_system: true },
+                { name: "Telefonia / Internet", is_system: true },
+                { name: "Equipamentos", is_system: true },
+                { name: "Outros", is_system: true }
+            ];
+            await categoryRepository.save(defaultCategories);
+            console.log("✅ Categorias de contas inicializadas.");
+        }
+        catch (e) {
+            console.error("Erro ao criar categorias padrões de contas:", e.message);
         }
     }
 }

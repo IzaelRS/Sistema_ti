@@ -8,8 +8,9 @@ import { accountsHandler } from './features/accounts.js';
 import { timelineHandler } from './features/timeline.js';
 import { telephonyHandler } from './features/telephony.js';
 import { monitoringHandler } from './features/monitoring.js';
+import { keepsHandler } from './features/keeps.js';
 
-let currentSection = 'list';
+let currentSection = 'docs';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('%c 🚀 SISTEMA TI: INICIALIZANDO (MODULAR)... ', 'background: #4f46e5; color: white; font-weight: bold;');
@@ -66,7 +67,7 @@ function showApp() {
     if (loginSection) loginSection.classList.add('hidden');
     if (appContainer) appContainer.classList.remove('hidden');
     document.body.style.overflow = '';
-    currentSection = 'list';
+    currentSection = 'docs';
     updateUI();
 
     // Load data
@@ -285,6 +286,7 @@ function setupEventListeners() {
     window.AccountsHandler = accountsHandler;
     window.TelephonyHandler = telephonyHandler;
     window.monitoringHandler = monitoringHandler;
+    window.keepsHandler = keepsHandler;
 
     // Telephony tabs binding
     ['extensions', 'queues', 'blf', 'users', 'history'].forEach(tab => {
@@ -342,6 +344,10 @@ function setupEventListeners() {
     dom.on('user-form', 'submit', (e) => usersHandler.save(e));
     dom.on('doc-form', 'submit', (e) => docsHandler.handleUpload(e));
     dom.on('account-form', 'submit', (e) => accountsHandler.save(e));
+    dom.on('form-new-account-category', 'submit', (e) => accountsHandler.saveCategory(e));
+    dom.on('btn-confirm-delete-category', 'click', () => accountsHandler.confirmDeleteCategory());
+    dom.on('form-quick-keep', 'submit', (e) => keepsHandler.saveQuickNote(e));
+    dom.on('form-edit-keep', 'submit', (e) => keepsHandler.saveEditModal(e));
     dom.on('faq-form', 'submit', (e) => proceduresHandler.saveMeta(e));
 
     // Color palette selection for procedure modal
@@ -421,13 +427,15 @@ function setupEventListeners() {
         dom.show('modal-upload');
     });
 
-    ['geral', 'contratos', 'termo-de-uso', 'dashboard'].forEach(tab => {
+    ['geral', 'contratos', 'termo-de-uso', 'keeps', 'dashboard'].forEach(tab => {
         dom.on(`tab-doc-${tab}`, 'click', () => {
             let categoryValue;
             if (tab === 'termo-de-uso') {
                 categoryValue = 'Termo de Uso';
             } else if (tab === 'dashboard') {
                 categoryValue = 'dashboard';
+            } else if (tab === 'keeps') {
+                categoryValue = 'keeps';
             } else {
                 categoryValue = tab;
             }
@@ -501,7 +509,7 @@ function setupEventListeners() {
     });
 
     // Accounts Tabs
-    ['lista', 'calendario', 'dashboard', 'notificacoes'].forEach(tab => {
+    ['lista', 'calendario', 'dashboard', 'notificacoes', 'configuracoes'].forEach(tab => {
         dom.on(`tab-acc-${tab}`, 'click', (e) => {
             document.querySelectorAll('.acc-tab-btn').forEach(b => b.classList.remove('active'));
             e.currentTarget.classList.add('active');
@@ -536,7 +544,10 @@ function setupEventListeners() {
                 }
             }
 
-            accountsHandler.setAccountsViewMode(tab === 'calendario' ? 'calendar' : tab === 'dashboard' ? 'dashboard' : tab === 'notificacoes' ? 'notificacoes' : 'list');
+            accountsHandler.setAccountsViewMode(tab === 'calendario' ? 'calendar' : tab === 'dashboard' ? 'dashboard' : tab === 'notificacoes' ? 'notificacoes' : tab === 'configuracoes' ? 'configuracoes' : 'list');
+            if (tab === 'configuracoes') {
+                accountsHandler.fetchCategories();
+            }
         });
     });
     // Account Calendar Views
@@ -568,7 +579,7 @@ function setupEventListeners() {
         if (wrap && !wrap.classList.contains('hidden')) {
             proceduresHandler.toggleEditMode(false);
         } else {
-            currentSection = 'list';
+            currentSection = 'docs';
             updateUI();
         }
     });

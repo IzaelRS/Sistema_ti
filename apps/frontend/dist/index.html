@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-BqzOzh12.js"></script>
+  <script type="module" crossorigin src="/assets/index-DDkkYPIl.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-BjY_6nNG.css">
 </head>
 
@@ -55,17 +55,6 @@
                 </div>
             </div>
             <nav>
-                <button class="nav-btn active" data-section="list" title="Listagem Geral">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    <span>Listagem Geral</span>
-                </button>
                 <button class="nav-btn" data-section="account" title="Minha Conta">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
                         stroke-linecap="round" stroke-linejoin="round">
@@ -74,7 +63,7 @@
                     </svg>
                     <span>Minha Conta</span>
                 </button>
-                <button class="nav-btn" data-section="docs" title="Documentos">
+                <button class="nav-btn active" data-section="docs" title="Documentos">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1442,10 +1431,11 @@
 
                     <!-- Sub-menu Tabs for Documents -->
                     <div class="docs-tabs-nav" style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 10px;">
-                        <button id="tab-doc-geral" class="acc-tab-btn active">Geral</button>
-                        <button id="tab-doc-contratos" class="acc-tab-btn">Contratos</button>
-                        <button id="tab-doc-termo-de-uso" class="acc-tab-btn">Termo de Uso</button>
-                        <button id="tab-doc-dashboard" class="acc-tab-btn">Dashboard</button>
+                        <button id="tab-doc-geral" class="acc-tab-btn active" onclick="window.DocsHandler.setActiveTab('Geral')">Geral</button>
+                        <button id="tab-doc-contratos" class="acc-tab-btn" onclick="window.DocsHandler.setActiveTab('Contratos')">Contratos</button>
+                        <button id="tab-doc-termo-de-uso" class="acc-tab-btn" onclick="window.DocsHandler.setActiveTab('Termo de Uso')">Termo de Uso</button>
+                        <button id="tab-doc-keeps" class="acc-tab-btn" onclick="window.DocsHandler.setActiveTab('keeps')">Keeps</button>
+                        <button id="tab-doc-dashboard" class="acc-tab-btn" onclick="window.DocsHandler.setActiveTab('dashboard')">Dashboard</button>
                     </div>
 
                     <div id="doc-list-container" class="table-container glass">
@@ -1536,6 +1526,98 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- KEEPS SUBMENU CONTAINER -->
+                    <div id="doc-keeps-container" class="hidden" style="margin-top: 10px;">
+                        <!-- Quick Note Creation Box (Google Keep style) -->
+                        <div class="glass" style="max-width: 600px; margin: 0 auto 30px auto; padding: 18px; border-radius: 14px; border: 1px solid var(--glass-border); box-shadow: 0 8px 25px rgba(0,0,0,0.25);">
+                            <form id="form-quick-keep">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                    <input type="text" id="keep-quick-title" class="form-control glass" placeholder="Título..." style="border: none; background: transparent; font-size: 1.1rem; font-weight: 600; padding: 4px 0; color: #fff;">
+                                    <label title="Fixar Nota" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted);">
+                                        <input type="checkbox" id="keep-quick-pin" style="display: none;" onchange="this.parentElement.style.color = this.checked ? '#f59e0b' : 'var(--text-muted)';">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
+                                            <line x1="12" y1="17" x2="12" y2="22"></line>
+                                            <path d="M5 17h14l-1.5-6H6.5L5 17z"></path>
+                                            <path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"></path>
+                                        </svg>
+                                    </label>
+                                </div>
+                                <textarea id="keep-quick-content" class="form-control glass" placeholder="Criar uma nota..." required style="border: none; background: transparent; width: 100%; min-height: 80px; font-size: 0.95rem; resize: vertical; color: #fff; line-height: 1.5; padding: 4px 0;" rows="3"></textarea>
+                                
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; flex-wrap: wrap; gap: 10px;">
+                                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                        <!-- Color Select -->
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Cor:</span>
+                                            <select id="keep-quick-color" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
+                                                <option value="#1e293b">Padrão</option>
+                                                <option value="#78350f">Âmbar</option>
+                                                <option value="#064e3b">Esmeralda</option>
+                                                <option value="#164e63">Ciano</option>
+                                                <option value="#1e3a8a">Azul</option>
+                                                <option value="#4c1d95">Roxo</option>
+                                                <option value="#831843">Rosa</option>
+                                                <option value="#7f1d1d">Vermelho</option>
+                                                <option value="#374151">Grafite</option>
+                                            </select>
+                                        </div>
+                                        <!-- Font Select -->
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Fonte:</span>
+                                            <select id="keep-quick-font" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
+                                                <option value="Poppins">Poppins</option>
+                                                <option value="Space Mono">Space Mono</option>
+                                                <option value="Georgia">Georgia</option>
+                                                <option value="Roboto">Roboto</option>
+                                                <option value="Caveat">Caveat</option>
+                                            </select>
+                                        </div>
+                                        <!-- Font Size Select -->
+                                        <div style="display: flex; align-items: center; gap: 4px;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Tamanho:</span>
+                                            <select id="keep-quick-size" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
+                                                <option value="small">Pequeno</option>
+                                                <option value="medium" selected>Médio</option>
+                                                <option value="large">Grande</option>
+                                                <option value="xlarge">Extra Grande</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn-primary" style="padding: 6px 16px; font-size: 0.85rem;">+ Salvar Nota</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Live Search Input -->
+                        <div class="search-bar" style="margin-bottom: 25px; max-width: 400px;">
+                            <input type="text" id="keep-search-input" class="form-control glass" placeholder="Pesquisar nas notas Keep..." oninput="window.keepsHandler.search(this.value)">
+                        </div>
+
+                        <!-- Pinned Section -->
+                        <div id="keep-pinned-section" style="margin-bottom: 30px; display: none;">
+                            <h4 style="margin-bottom: 12px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #f59e0b; display: flex; align-items: center; gap: 6px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="#f59e0b"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14l-1.5-6H6.5L5 17z"></path><path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"></path></svg>
+                                FIXADAS
+                            </h4>
+                            <div id="keep-pinned-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;"></div>
+                        </div>
+
+                        <!-- Other Section -->
+                        <div id="keep-other-section">
+                            <h4 style="margin-bottom: 12px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted);">OUTRAS NOTAS</h4>
+                            <div id="keep-other-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;"></div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="keep-empty-state" class="glass" style="display: none; text-align: center; padding: 40px; border-radius: 12px; color: var(--text-muted); margin-top: 20px;">
+                            <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" style="opacity: 0.5; margin-bottom: 10px;">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <p style="margin: 0; font-size: 1rem;">Nenhuma nota encontrada.</p>
                         </div>
                     </div>
                 </section>
@@ -1765,6 +1847,7 @@
                                 </svg>
                                 Notificações
                             </button>
+                            <button id="tab-acc-configuracoes" class="acc-tab-btn">Configurações</button>
                         </div>
                         <!-- Filters for Calendar View Only -->
                         <div id="calendar-view-toggle-container" class="view-toggle hidden"
@@ -2009,12 +2092,7 @@
                                         </button>
                                         <div class="multiselect-dropdown glass hidden" id="dash-filter-category-dropdown">
                                             <label class="multiselect-option"><input type="checkbox" value="Todos" checked> <span>Todos</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Infraestrutura"> <span>Infraestrutura</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Licenças de Software"> <span>Licenças de Software</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Serviços Web"> <span>Serviços Web</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Telefonia / Internet"> <span>Telefonia / Internet</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Equipamentos"> <span>Equipamentos</span></label>
-                                            <label class="multiselect-option"><input type="checkbox" value="Outros"> <span>Outros</span></label>
+                                            <div id="dash-filter-category-dynamic-options"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -2193,7 +2271,42 @@
                                     </table>
                                 </div>
                             </main>
-                        </div> <!-- TAB 4 END -->
+                        </div>
+                    </div> <!-- TAB 4 END -->
+
+                    <!-- TAB 5: CONFIGURAÇÕES -->
+                    <div id="acc-tab-content-configuracoes" class="acc-tab-content hidden">
+                        <div class="calendar-layout-wrapper" style="grid-template-columns: 1fr;">
+                            <main class="calendar-main-view" style="display: flex; flex-direction: column; gap: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h2 style="margin: 0;">Configurações de Contas</h2>
+                                </div>
+                                <div class="glass" style="padding: 20px; border-radius: var(--border-radius);">
+                                    <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px;">Gestão de Categorias</h3>
+                                    
+                                    <form id="form-new-account-category" style="display: flex; gap: 10px; max-width: 500px; margin-bottom: 20px;">
+                                        <input type="text" id="input-new-category-name" class="form-control glass" placeholder="Nova Categoria (ex: Consultoria, Manutenção)..." required style="flex: 1;">
+                                        <button type="submit" class="btn-primary" style="white-space: nowrap;">+ Adicionar</button>
+                                    </form>
+
+                                    <div class="table-container glass" style="margin: 0;">
+                                        <table class="data-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>NOME DA CATEGORIA</th>
+                                                    <th>TIPO</th>
+                                                    <th style="text-align: right;">AÇÕES</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="account-categories-table-body">
+                                                <!-- Populated by JS -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </main>
+                        </div>
+                    </div> <!-- TAB 5 END -->
                 </section> <!-- CLOSE ACCOUNTS SECTION -->
 
                 <!-- DEDICATED ACCOUNT PAGE -->
@@ -2351,13 +2464,13 @@
                                     <label>FREQUÊNCIA DE REPETIÇÃO (ALTERA AS PRÓXIMAS)</label>
                                     <select id="ded-acc-det-freq-input" class="form-control"
                                         style="background: rgba(0,0,0,0.2);">
-                                        <option value="Dia">Diário (Todo dia)</option>
-                                        <option value="Semana">Semanal (A cada 7 dias)</option>
-                                        <option value="15 Dias">Quinzenal (A cada 15 dias)</option>
-                                        <option value="Mensal">Mensal (Todo mês)</option>
-                                        <option value="3 Meses">Trimestral (A cada 3 meses)</option>
-                                        <option value="6 Meses">Semestral (A cada 6 meses)</option>
-                                        <option value="Ano">Anual (Uma vez por ano)</option>
+                                        <option value="1 dia">Diário (Todo dia)</option>
+                                        <option value="7 dias">Semanal (A cada 7 dias)</option>
+                                        <option value="15 dias">Quinzenal (A cada 15 dias)</option>
+                                        <option value="1 mes">Mensal (Todo mês)</option>
+                                        <option value="3 meses">Trimestral (A cada 3 meses)</option>
+                                        <option value="6 meses">Semestral (A cada 6 meses)</option>
+                                        <option value="1 ano">Anual (Uma vez por ano)</option>
                                     </select>
                                 </div>
 
@@ -2680,6 +2793,27 @@
         </div>
     </div>
 
+    <!-- Modal for Category Deletion and Transfer -->
+    <div id="modal-delete-category" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 480px;">
+            <h3>Excluir Categoria</h3>
+            <p id="delete-category-warning-text" style="color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                Existem contas vinculadas a esta categoria. Selecione para qual categoria deseja transferi-las antes de excluir:
+            </p>
+            <input type="hidden" id="delete-category-id">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">TRANSFERIR CONTAS PARA:</label>
+                <select id="select-transfer-category-target" class="form-control glass" style="width: 100%; margin-top: 5px;" required>
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+            <div class="modal-actions" style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                <button type="button" id="btn-confirm-delete-category" class="btn-primary" style="background: #ef4444; border-color: #ef4444;">Transferir e Excluir</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for Document Upload -->
     <div id="modal-upload" class="modal hidden">
         <div class="modal-content glass">
@@ -2781,6 +2915,76 @@
                     <textarea id="acc-obs" class="form-control glass" rows="2"></textarea>
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%; margin-top: 15px;">Salvar Conta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal for Editing Keep Note -->
+    <div id="modal-edit-keep" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 550px;">
+            <h3>Editar Nota Keep</h3>
+            <form id="form-edit-keep">
+                <input type="hidden" id="keep-edit-id">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; font-size: 0.85rem;">TÍTULO</label>
+                    <input type="text" id="keep-edit-title" class="form-control glass" placeholder="Título da nota...">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-weight: 600; font-size: 0.85rem;">CONTEÚDO</label>
+                    <textarea id="keep-edit-content" class="form-control glass" rows="5" placeholder="Escreva o conteúdo da nota..." required style="line-height: 1.5;"></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">COR</label>
+                        <select id="keep-edit-color" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
+                            <option value="#1e293b">Padrão</option>
+                            <option value="#78350f">Âmbar</option>
+                            <option value="#064e3b">Esmeralda</option>
+                            <option value="#164e63">Ciano</option>
+                            <option value="#1e3a8a">Azul</option>
+                            <option value="#4c1d95">Roxo</option>
+                            <option value="#831843">Rosa</option>
+                            <option value="#7f1d1d">Vermelho</option>
+                            <option value="#374151">Grafite</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">FONTE</label>
+                        <select id="keep-edit-font" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
+                            <option value="Poppins">Poppins</option>
+                            <option value="Space Mono">Space Mono</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Caveat">Caveat</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">TAMANHO</label>
+                        <select id="keep-edit-size" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
+                            <option value="small">Pequeno</option>
+                            <option value="medium">Médio</option>
+                            <option value="large">Grande</option>
+                            <option value="xlarge">Extra Grande</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer;">
+                        <input type="checkbox" id="keep-edit-pin">
+                        <span>Fixar nota no topo</span>
+                    </label>
+                </div>
+
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar Alterações</button>
+                </div>
             </form>
         </div>
     </div>

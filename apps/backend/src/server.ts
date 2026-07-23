@@ -20,6 +20,8 @@ import { User } from "./entities/User";
 import { Procedure } from "./entities/Procedure";
 import { Document } from "./entities/Document";
 import { Account } from "./entities/Account";
+import { AccountCategory } from "./entities/AccountCategory";
+import { KeepNote } from "./entities/KeepNote";
 import { MonitoringEvent } from "./entities/MonitoringEvent";
 import { ExtensionUsername } from "./entities/ExtensionUsername";
 import { ExtensionUsernameHistory } from "./entities/ExtensionUsernameHistory";
@@ -676,6 +678,151 @@ app.delete("/api/accounts/:id", async (req: Request, res: Response) => {
         const id = parseInt(req.params.id);
         const accountRepository = AppDataSource.getRepository(Account);
         await accountRepository.delete(id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Account Categories ---
+app.get("/api/account-categories", async (req: Request, res: Response) => {
+    try {
+        const repo = AppDataSource.getRepository(AccountCategory);
+        const categories = await repo.find({
+            order: { name: "ASC" }
+        });
+        res.json(categories);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/account-categories", async (req: Request, res: Response) => {
+    try {
+        const { name } = req.body;
+        if (!name || !name.trim()) {
+            res.status(400).json({ error: "Nome da categoria é obrigatório." });
+            return;
+        }
+        const repo = AppDataSource.getRepository(AccountCategory);
+        const trimmedName = name.trim();
+        const existing = await repo.findOneBy({ name: trimmedName });
+        if (existing) {
+            res.status(400).json({ error: "Categoria já existe." });
+            return;
+        }
+        const newCategory = repo.create({
+            name: trimmedName,
+            is_system: false
+        });
+        const result = await repo.save(newCategory);
+        res.json(result);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete("/api/account-categories/:id", async (req: Request, res: Response) => {
+    try {
+        const id = parseInt(req.params.id);
+        const transferTo = req.query.transferTo as string | undefined;
+
+        const repo = AppDataSource.getRepository(AccountCategory);
+        const category = await repo.findOneBy({ id });
+        if (!category) {
+            res.status(404).json({ error: "Categoria não encontrada." });
+            return;
+        }
+
+        if (transferTo && transferTo.trim()) {
+            const accountRepo = AppDataSource.getRepository(Account);
+            await accountRepo.update({ category: category.name }, { category: transferTo.trim() });
+        }
+
+        await repo.delete(id);
+        res.json({ success: true });
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Keep Notes Routes ---
+app.get("/api/keep-notes", async (req: Request, res: Response) => {
+    try {
+        const repo = AppDataSource.getRepository(KeepNote);
+        const notes = await repo.find({
+            order: {
+                is_pinned: "DESC",
+                created_at: "DESC"
+            }
+        });
+        res.json(notes);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post("/api/keep-notes", async (req: Request, res: Response) => {
+    try {
+        const { title, content, color, font_family, font_size, is_pinned } = req.body;
+        if (!content || !content.trim()) {
+            res.status(400).json({ error: "O conteúdo da nota é obrigatório." });
+            return;
+        }
+
+        const repo = AppDataSource.getRepository(KeepNote);
+        const newNote = repo.create({
+            title: title ? title.trim() : "",
+            content: content.trim(),
+            color: color || "#1e293b",
+            font_family: font_family || "Poppins",
+            font_size: font_size || "medium",
+            is_pinned: Boolean(is_pinned)
+        });
+
+        const saved = await repo.save(newNote);
+        res.json(saved);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put("/api/keep-notes/:id", async (req: Request, res: Response) => {
+    try {
+        const id = parseInt(req.params.id);
+        const repo = AppDataSource.getRepository(KeepNote);
+        const note = await repo.findOneBy({ id });
+        if (!note) {
+            res.status(404).json({ error: "Nota não encontrada." });
+            return;
+        }
+
+        const { title, content, color, font_family, font_size, is_pinned } = req.body;
+        if (title !== undefined) note.title = title.trim();
+        if (content !== undefined) note.content = content.trim();
+        if (color !== undefined) note.color = color;
+        if (font_family !== undefined) note.font_family = font_family;
+        if (font_size !== undefined) note.font_size = font_size;
+        if (is_pinned !== undefined) note.is_pinned = Boolean(is_pinned);
+
+        const updated = await repo.save(note);
+        res.json(updated);
+    } catch (err: any) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete("/api/keep-notes/:id", async (req: Request, res: Response) => {
+    try {
+        const id = parseInt(req.params.id);
+        const repo = AppDataSource.getRepository(KeepNote);
+        const note = await repo.findOneBy({ id });
+        if (!note) {
+            res.status(404).json({ error: "Nota não encontrada." });
+            return;
+        }
+
+        await repo.delete(id);
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });

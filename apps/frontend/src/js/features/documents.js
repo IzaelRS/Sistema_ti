@@ -1,5 +1,6 @@
 import { apiClient } from '../api/client.js';
 import { dom } from '../utils/dom.js';
+import { keepsHandler } from './keeps.js';
 
 let allDocs = [];
 let activeTab = 'Geral';
@@ -34,12 +35,20 @@ export const docsHandler = {
         if (activeTab.toLowerCase() === 'dashboard') {
             if (docsHeader) docsHeader.style.display = 'none';
             dom.hide('doc-list-container');
+            dom.hide('doc-keeps-container');
             dom.show('doc-dashboard-container');
             this.renderDashboard();
+        } else if (activeTab.toLowerCase() === 'keeps') {
+            if (docsHeader) docsHeader.style.display = 'none';
+            dom.hide('doc-list-container');
+            dom.hide('doc-dashboard-container');
+            dom.show('doc-keeps-container');
+            keepsHandler.fetch();
         } else {
             if (docsHeader) docsHeader.style.display = 'flex';
             dom.show('doc-list-container');
             dom.hide('doc-dashboard-container');
+            dom.hide('doc-keeps-container');
             const filtered = allDocs.filter(d => {
                 const docCat = d.category || 'Geral';
                 return docCat.toLowerCase() === activeTab.toLowerCase();

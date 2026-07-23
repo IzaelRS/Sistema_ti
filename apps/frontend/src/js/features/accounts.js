@@ -3,6 +3,7 @@ import { auth } from '../api/auth.js';
 import { dom } from '../utils/dom.js';
 
 let allAccounts = [];
+let allCategories = [];
 let accountsViewMode = 'list';
 let calendarSubView = 'month';
 let currentCalendarDate = new Date();
@@ -16,12 +17,169 @@ export const accountsHandler = {
         try {
             currentPage = 1;
             allAccounts = await apiClient.get('/accounts');
+            await this.fetchCategories();
             this.initDashboardMultiselects();
             this.populateCompanyFilter();
             this.handleSearch();
             this.checkAccountAlerts();
         } catch (err) {
             console.error('Falha ao obter contas', err);
+        }
+    },
+
+    async fetchCategories() {
+        try {
+            allCategories = await apiClient.get('/account-categories');
+            this.populateCategoryFilter();
+            this.populateCategoryModalSelect();
+            this.renderCategoriesList();
+        } catch (err) {
+            console.error('Falha ao obter categorias de contas', err);
+        }
+    },
+
+    populateCategoryFilter() {
+        const container = document.getElementById('dash-filter-category-dynamic-options');
+        if (container) {
+            const checkedCategories = new Set();
+            container.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                checkedCategories.add(cb.value);
+            });
+
+            const dbCategoryNames = (allCategories || []).map(c => c.name);
+            const accountCategoryNames = (allAccounts || []).map(acc => acc.category).filter(Boolean);
+            const categories = [...new Set([...dbCategoryNames, ...accountCategoryNames])].sort((a, b) => a.localeCompare(b));
+
+            let html = '';
+            categories.forEach(cat => {
+                const isChecked = checkedCategories.has(cat) ? 'checked' : '';
+                html += `<label class="multiselect-option"><input type="checkbox" value="${cat}" ${isChecked}> <span>${cat}</span></label>`;
+            });
+            container.innerHTML = html;
+
+            this.setupMultiselectListeners('dash-filter-category');
+        }
+    },
+
+    populateCategoryModalSelect() {
+        const select = document.getElementById('account-category');
+        if (select) {
+            const currentValue = select.value;
+            const dbCategoryNames = (allCategories || []).map(c => c.name);
+            const accountCategoryNames = (allAccounts || []).map(acc => acc.category).filter(Boolean);
+            const categories = [...new Set([...dbCategoryNames, ...accountCategoryNames])].sort((a, b) => a.localeCompare(b));
+
+            let html = '';
+            categories.forEach(cat => {
+                const selected = cat === currentValue ? 'selected' : '';
+                html += `<option value="${cat}" ${selected}>${cat}</option>`;
+            });
+            select.innerHTML = html;
+        }
+    },
+
+    renderCategoriesList() {
+        const tableBody = document.getElementById('account-categories-table-body');
+        if (!tableBody) return;
+
+        if (!allCategories || allCategories.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; color: var(--text-muted); padding: 20px;">Nenhuma categoria cadastrada.</td></tr>';
+            return;
+        }
+
+        let html = '';
+        allCategories.forEach(cat => {
+            const isSystem = cat.is_system;
+            const badgeBg = isSystem ? 'rgba(59, 130, 246, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+            const badgeColor = isSystem ? '#60a5fa' : '#34d399';
+            const badgeLabel = isSystem ? 'Sistema' : 'Personalizada';
+
+            const deleteBtn = auth.isAdmin() ? `
+                <button class="btn-icon" onclick="window.AccountsHandler.deleteCategory(${cat.id})" title="Excluir Categoria" style="padding: 4px; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #ef4444;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            ` : '-';
+
+            html += `
+                <tr>
+                    <td><strong>${cat.name}</strong></td>
+                    <td><span class="badge" style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.75rem;">${badgeLabel}</span></td>
+                    <td style="text-align: right; display: flex; justify-content: flex-end;">${deleteBtn}</td>
+                </tr>
+            `;
+        });
+        tableBody.innerHTML = html;
+    },
+
+    async saveCategory(e) {
+        if (e) e.preventDefault();
+        const input = document.getElementById('input-new-category-name');
+        if (!input) return;
+
+        const name = input.value.trim();
+        if (!name) return;
+
+        try {
+            await apiClient.post('/account-categories', { name });
+            input.value = '';
+            await this.fetchCategories();
+            this.handleSearch();
+            alert('Categoria criada com sucesso!');
+        } catch (err) {
+            alert('Erro ao criar categoria: ' + (err.message || 'Erro desconhecido.'));
+        }
+    },
+
+    deleteCategory(id) {
+        const targetId = parseInt(id, 10);
+        const cat = allCategories.find(c => c.id === targetId || String(c.id) === String(id));
+        if (!cat) {
+            console.error('Categoria não encontrada para exclusão:', id);
+            return;
+        }
+
+        const linkedAccounts = allAccounts.filter(acc => acc.category === cat.name);
+        const linkedCount = linkedAccounts.length;
+
+        const otherCategories = allCategories.filter(c => String(c.id) !== String(cat.id));
+
+        if (otherCategories.length === 0) {
+            alert('Não é possível excluir esta categoria porque não existem outras categorias para as quais transferir as contas.');
+            return;
+        }
+
+        const selectTarget = document.getElementById('select-transfer-category-target');
+        if (selectTarget) {
+            selectTarget.innerHTML = otherCategories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+        }
+
+        const warningText = document.getElementById('delete-category-warning-text');
+        if (warningText) {
+            if (linkedCount > 0) {
+                warningText.innerHTML = `Existem <strong>${linkedCount}</strong> conta(s) vinculada(s) à categoria <strong>"${cat.name}"</strong>.<br>Selecione para qual categoria deseja transferi-las antes de prosseguir com a exclusão:`;
+            } else {
+                warningText.innerHTML = `Confirma a exclusão da categoria <strong>"${cat.name}"</strong>?`;
+            }
+        }
+
+        dom.setValue('delete-category-id', cat.id);
+        dom.show('modal-delete-category');
+    },
+
+    async confirmDeleteCategory() {
+        const id = dom.getValue('delete-category-id');
+        const transferTo = dom.getValue('select-transfer-category-target');
+        if (!id) return;
+
+        try {
+            const url = `/account-categories/${id}${transferTo ? `?transferTo=${encodeURIComponent(transferTo)}` : ''}`;
+            await apiClient.delete(url);
+            dom.hide('modal-delete-category');
+            alert('Categoria excluída e contas transferidas com sucesso!');
+            await this.fetch();
+            this.renderCategoriesList();
+        } catch (err) {
+            alert('Erro ao excluir categoria: ' + (err.message || 'Erro desconhecido.'));
         }
     },
 
@@ -265,6 +423,8 @@ export const accountsHandler = {
             this.renderNotifications();
         } else if (accountsViewMode === 'dashboard') {
             this.renderDashboard();
+        } else if (accountsViewMode === 'configuracoes') {
+            this.renderCategoriesList();
         } else {
             this.renderCalendarWrapper(filtered);
         }
@@ -1090,15 +1250,23 @@ export const accountsHandler = {
                     if (dayContainer) {
                         const targetDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                         let paymentClass = acc.payment_status === 'Pago' ? 'event-paid' : acc.payment_status === 'Pendente' ? 'event-pending' : 'event-canceled';
+                        let pillAccId = acc.id;
                         if (acc.type === 'Recorrente' && targetDateStr !== acc.due_date) {
-                            paymentClass = 'event-pending'; // Projections are always pending
+                            // Check if a real (materialized) record exists for this date
+                            const realRecord = allAccounts.find(r => r.company_name === acc.company_name && r.due_date === targetDateStr);
+                            if (realRecord) {
+                                paymentClass = realRecord.payment_status === 'Pago' ? 'event-paid' : realRecord.payment_status === 'Pendente' ? 'event-pending' : 'event-canceled';
+                                pillAccId = realRecord.id;
+                            } else {
+                                paymentClass = 'event-pending'; // Projections without real records are pending
+                            }
                         }
                         const pill = document.createElement('div');
                         pill.className = `event-pill event-${acc.type.toLowerCase()} ${paymentClass}`;
                         pill.title = acc.company_name;
                         pill.innerText = acc.company_name;
                         pill.onclick = (e) => {
-                            this.openDedicatedPage(acc.id, targetDateStr);
+                            this.openDedicatedPage(pillAccId, targetDateStr);
                         };
                         dayContainer.appendChild(pill);
                     }
@@ -1134,8 +1302,19 @@ export const accountsHandler = {
                 itemsRendered++;
                 const targetDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 let dotColor = acc.payment_status === 'Pago' ? '#4ade80' : acc.payment_status === 'Pendente' ? '#facc15' : '#ef4444';
+                let dayAccId = acc.id;
+                let displayPaymentStatus = acc.payment_status;
                 if (acc.type === 'Recorrente' && targetDateStr !== acc.due_date) {
-                    dotColor = '#facc15'; // Projections are always pending
+                    // Check if a real (materialized) record exists for this date
+                    const realRecord = allAccounts.find(r => r.company_name === acc.company_name && r.due_date === targetDateStr);
+                    if (realRecord) {
+                        dotColor = realRecord.payment_status === 'Pago' ? '#4ade80' : realRecord.payment_status === 'Pendente' ? '#facc15' : '#ef4444';
+                        dayAccId = realRecord.id;
+                        displayPaymentStatus = realRecord.payment_status;
+                    } else {
+                        dotColor = '#facc15'; // Projections without real records are pending
+                        displayPaymentStatus = 'Pendente';
+                    }
                 }
                 container.innerHTML += `
                     <div class="day-event-row ${acc.type.toLowerCase()}">
@@ -1145,7 +1324,7 @@ export const accountsHandler = {
                             <p style="font-weight: bold; color: var(--text-main); margin: 4px 0;">R$ ${parseFloat(acc.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             <p>${acc.description || 'Nenhuma descrição detalhada.'}</p>
                         </div>
-                        <button class="btn-icon" onclick="window.AccountsHandler.openDedicatedPage(${acc.id}, '${targetDateStr}')" title="Detalhes">
+                        <button class="btn-icon" onclick="window.AccountsHandler.openDedicatedPage(${dayAccId}, '${targetDateStr}')" title="Detalhes">
                             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         </button>
                     </div>
@@ -1210,6 +1389,7 @@ export const accountsHandler = {
 
     openAccountModal(id = null) {
         document.getElementById('account-form').reset();
+        this.populateCategoryModalSelect();
 
         const typeSelect = document.getElementById('account-type');
         typeSelect.onchange = () => {
@@ -1318,9 +1498,6 @@ export const accountsHandler = {
 
     injectCurrentMonthProjections(historyArray) {
         const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
 
         let latestRecorrente = null;
         historyArray.forEach(acc => {
@@ -1337,17 +1514,26 @@ export const accountsHandler = {
         const newList = [...historyArray];
         const existingDates = new Set(historyArray.map(a => a.due_date));
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            if (this.isEventOnDate(latestRecorrente, year, month, d)) {
-                const targetDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                if (!existingDates.has(targetDateStr)) {
-                    newList.push({
-                        ...latestRecorrente,
-                        is_projection: true,
-                        due_date: targetDateStr,
-                        payment_status: 'Pendente', // Future ghosts are always pending
-                        unique_key: latestRecorrente.id + '_' + targetDateStr
-                    });
+        // Inject projections for the current month and the next 2 months (3 total)
+        for (let offset = 0; offset < 3; offset++) {
+            const projDate = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+            const projYear = projDate.getFullYear();
+            const projMonth = projDate.getMonth();
+            const daysInMonth = new Date(projYear, projMonth + 1, 0).getDate();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                if (this.isEventOnDate(latestRecorrente, projYear, projMonth, d)) {
+                    const targetDateStr = `${projYear}-${String(projMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    if (!existingDates.has(targetDateStr)) {
+                        newList.push({
+                            ...latestRecorrente,
+                            is_projection: true,
+                            due_date: targetDateStr,
+                            payment_status: 'Pendente', // Projections without real records are pending
+                            unique_key: latestRecorrente.id + '_' + targetDateStr
+                        });
+                        existingDates.add(targetDateStr); // Prevent duplicates across months
+                    }
                 }
             }
         }
@@ -1462,7 +1648,10 @@ export const accountsHandler = {
         if (btnSave) {
             btnSave.onclick = async () => {
                 const updatedPayload = {
-                    ...item, // keep original company_name, type, etc.
+                    company_name: item.company_name,
+                    type: item.type,
+                    category: item.category,
+                    description: item.description,
                     value: dom.getValue('ded-acc-det-val-input'),
                     due_date: dom.getValue('ded-acc-det-date-input'),
                     payment_status: dom.getValue('ded-acc-det-status-input'),
@@ -1472,15 +1661,23 @@ export const accountsHandler = {
                 };
 
                 try {
-                    await apiClient.put(`/accounts/${item.id}`, updatedPayload);
-                    alert('Fatura atualizada com sucesso!');
+                    let savedId = item.id;
+                    if (item.is_projection) {
+                        // Materialize: create a new real record for this projected date
+                        const result = await apiClient.post('/accounts', updatedPayload);
+                        savedId = result.id;
+                        alert('Fatura materializada e salva com sucesso!');
+                    } else {
+                        await apiClient.put(`/accounts/${item.id}`, updatedPayload);
+                        alert('Fatura atualizada com sucesso!');
+                    }
                     await this.fetch();
                     // Need to regrab the group since allAccounts is new
                     this.currentCompanyHistory = allAccounts.filter(a => a.company_name === item.company_name)
                         .sort((a, b) => new Date(b.due_date || 0) - new Date(a.due_date || 0));
-                    this.openDedicatedPage(item.id); // Re-trigger the whole page refresh essentially, keeping same item
+                    this.openDedicatedPage(savedId); // Re-trigger the whole page refresh
                 } catch (e) {
-                    alert('Erro ao atualizar fatura.');
+                    alert('Erro ao salvar fatura.');
                 }
             };
             if (!auth.isAdmin()) btnSave.style.display = 'none';

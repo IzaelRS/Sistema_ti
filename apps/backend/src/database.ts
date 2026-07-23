@@ -10,6 +10,8 @@ import { TimelineSubtopic } from "./entities/TimelineSubtopic";
 import { MonitoringEvent } from "./entities/MonitoringEvent";
 import { ExtensionUsername } from "./entities/ExtensionUsername";
 import { ExtensionUsernameHistory } from "./entities/ExtensionUsernameHistory";
+import { AccountCategory } from "./entities/AccountCategory";
+import { KeepNote } from "./entities/KeepNote";
 import * as bcrypt from "bcrypt";
 import path from "path";
 
@@ -22,7 +24,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME || "intranet_ti",
     synchronize: false,
     logging: false,
-    entities: [User, Procedure, Document, Account, Event, TimelineTopic, TimelineSubtopic, MonitoringEvent, ExtensionUsername, ExtensionUsernameHistory],
+    entities: [User, Procedure, Document, Account, AccountCategory, KeepNote, Event, TimelineTopic, TimelineSubtopic, MonitoringEvent, ExtensionUsername, ExtensionUsernameHistory],
     subscribers: [],
     migrations: [
         path.join(__dirname, "migrations/**/*.{ts,js}")
@@ -113,6 +115,26 @@ async function runSeeds() {
             console.log("✅ Sub-tópicos da timeline inicializados.");
         } catch (e: any) {
             console.error("Erro ao criar sub-tópicos padrões da timeline:", e.message);
+        }
+    }
+
+    // 4. Seed Account Categories
+    const categoryRepository = AppDataSource.getRepository(AccountCategory);
+    const categoryCount = await categoryRepository.count();
+    if (categoryCount === 0) {
+        try {
+            const defaultCategories = [
+                { name: "Infraestrutura", is_system: true },
+                { name: "Licenças de Software", is_system: true },
+                { name: "Serviços Web", is_system: true },
+                { name: "Telefonia / Internet", is_system: true },
+                { name: "Equipamentos", is_system: true },
+                { name: "Outros", is_system: true }
+            ];
+            await categoryRepository.save(defaultCategories);
+            console.log("✅ Categorias de contas inicializadas.");
+        } catch (e: any) {
+            console.error("Erro ao criar categorias padrões de contas:", e.message);
         }
     }
 }
