@@ -11,8 +11,8 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-DDkkYPIl.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-BjY_6nNG.css">
+  <script type="module" crossorigin src="/assets/index-DRNc4bbC.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BVz7rk43.css">
 </head>
 
 <body>
@@ -1530,95 +1530,64 @@
                     </div>
 
                     <!-- KEEPS SUBMENU CONTAINER -->
-                    <div id="doc-keeps-container" class="hidden" style="margin-top: 10px;">
-                        <!-- Quick Note Creation Box (Google Keep style) -->
-                        <div class="glass" style="max-width: 600px; margin: 0 auto 30px auto; padding: 18px; border-radius: 14px; border: 1px solid var(--glass-border); box-shadow: 0 8px 25px rgba(0,0,0,0.25);">
-                            <form id="form-quick-keep">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                    <input type="text" id="keep-quick-title" class="form-control glass" placeholder="Título..." style="border: none; background: transparent; font-size: 1.1rem; font-weight: 600; padding: 4px 0; color: #fff;">
-                                    <label title="Fixar Nota" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted);">
-                                        <input type="checkbox" id="keep-quick-pin" style="display: none;" onchange="this.parentElement.style.color = this.checked ? '#f59e0b' : 'var(--text-muted)';">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none">
-                                            <line x1="12" y1="17" x2="12" y2="22"></line>
-                                            <path d="M5 17h14l-1.5-6H6.5L5 17z"></path>
-                                            <path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"></path>
-                                        </svg>
-                                    </label>
-                                </div>
-                                <textarea id="keep-quick-content" class="form-control glass" placeholder="Criar uma nota..." required style="border: none; background: transparent; width: 100%; min-height: 80px; font-size: 0.95rem; resize: vertical; color: #fff; line-height: 1.5; padding: 4px 0;" rows="3"></textarea>
-                                
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; flex-wrap: wrap; gap: 10px;">
-                                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                        <!-- Color Select -->
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Cor:</span>
-                                            <select id="keep-quick-color" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
-                                                <option value="#1e293b">Padrão</option>
-                                                <option value="#78350f">Âmbar</option>
-                                                <option value="#064e3b">Esmeralda</option>
-                                                <option value="#164e63">Ciano</option>
-                                                <option value="#1e3a8a">Azul</option>
-                                                <option value="#4c1d95">Roxo</option>
-                                                <option value="#831843">Rosa</option>
-                                                <option value="#7f1d1d">Vermelho</option>
-                                                <option value="#374151">Grafite</option>
-                                            </select>
-                                        </div>
-                                        <!-- Font Select -->
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Fonte:</span>
-                                            <select id="keep-quick-font" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
-                                                <option value="Poppins">Poppins</option>
-                                                <option value="Space Mono">Space Mono</option>
-                                                <option value="Georgia">Georgia</option>
-                                                <option value="Roboto">Roboto</option>
-                                                <option value="Caveat">Caveat</option>
-                                            </select>
-                                        </div>
-                                        <!-- Font Size Select -->
-                                        <div style="display: flex; align-items: center; gap: 4px;">
-                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Tamanho:</span>
-                                            <select id="keep-quick-size" class="form-control glass" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff;">
-                                                <option value="small">Pequeno</option>
-                                                <option value="medium" selected>Médio</option>
-                                                <option value="large">Grande</option>
-                                                <option value="xlarge">Extra Grande</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn-primary" style="padding: 6px 16px; font-size: 0.85rem;">+ Salvar Nota</button>
-                                </div>
-                            </form>
-                        </div>
+                    <div id="doc-keeps-container" class="hidden" style="margin-top: 10px; position: relative;">
+                        <!-- Header Bar -->
+                        <div class="keep-header-bar">
+                            <h3 class="keep-section-title">
+                                <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10 9 9 9 8 9"></polyline>
+                                </svg>
+                                Minhas Notas
+                                <span id="keep-count-badge" class="keep-count-badge">0</span>
+                            </h3>
 
-                        <!-- Live Search Input -->
-                        <div class="search-bar" style="margin-bottom: 25px; max-width: 400px;">
-                            <input type="text" id="keep-search-input" class="form-control glass" placeholder="Pesquisar nas notas Keep..." oninput="window.keepsHandler.search(this.value)">
+                            <!-- Search Bar -->
+                            <div class="search-bar" style="margin: 0; max-width: 360px; width: 100%;">
+                                <input type="text" id="keep-search-input" class="form-control glass" placeholder="Pesquisar nas notas Keep..." oninput="window.keepsHandler.search(this.value)">
+                            </div>
                         </div>
 
                         <!-- Pinned Section -->
                         <div id="keep-pinned-section" style="margin-bottom: 30px; display: none;">
-                            <h4 style="margin-bottom: 12px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #f59e0b; display: flex; align-items: center; gap: 6px;">
+                            <h4 style="margin-bottom: 14px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: #f59e0b; display: flex; align-items: center; gap: 8px; font-weight: 700;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="#f59e0b"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14l-1.5-6H6.5L5 17z"></path><path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"></path></svg>
-                                FIXADAS
+                                NOTAS FIXADAS
                             </h4>
-                            <div id="keep-pinned-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;"></div>
+                            <div id="keep-pinned-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px;"></div>
                         </div>
 
                         <!-- Other Section -->
                         <div id="keep-other-section">
-                            <h4 style="margin-bottom: 12px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted);">OUTRAS NOTAS</h4>
-                            <div id="keep-other-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;"></div>
+                            <h4 id="keep-other-title" style="margin-bottom: 14px; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">NOTAS</h4>
+                            <div id="keep-other-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px;"></div>
                         </div>
 
                         <!-- Empty State -->
-                        <div id="keep-empty-state" class="glass" style="display: none; text-align: center; padding: 40px; border-radius: 12px; color: var(--text-muted); margin-top: 20px;">
-                            <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" style="opacity: 0.5; margin-bottom: 10px;">
+                        <div id="keep-empty-state" class="glass" style="display: none; text-align: center; padding: 50px 20px; border-radius: 16px; color: var(--text-muted); margin-top: 20px;">
+                            <svg viewBox="0 0 24 24" width="56" height="56" stroke="currentColor" stroke-width="1.5" fill="none" style="opacity: 0.4; margin-bottom: 14px; color: #818cf8;">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="12" y1="11" x2="12" y2="17"></line>
+                                <line x1="9" y1="14" x2="15" y2="14"></line>
                             </svg>
-                            <p style="margin: 0; font-size: 1rem;">Nenhuma nota encontrada.</p>
+                            <p style="margin: 0 0 16px 0; font-size: 1.05rem; color: #cbd5e1; font-weight: 500;">Nenhuma nota encontrada.</p>
+                            <button class="btn-primary" onclick="window.keepsHandler.openNewModal()" style="padding: 10px 20px; font-size: 0.9rem; font-weight: 600;">
+                                + Criar Primeira Nota
+                            </button>
                         </div>
+
+                        <!-- Floating Action Button + -->
+                        <button id="btn-fab-add-keep" class="keep-fab" onclick="window.keepsHandler.openNewModal()" title="Criar Nova Nota Keep">
+                            <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span class="keep-fab-text">Nova Nota</span>
+                        </button>
                     </div>
                 </section>
 
@@ -2919,71 +2888,72 @@
         </div>
     </div>
 
-    <!-- Modal for Editing Keep Note -->
+    <!-- Modal for Creating / Editing Keep Note -->
     <div id="modal-edit-keep" class="modal hidden">
-        <div class="modal-content glass" style="max-width: 550px;">
-            <h3>Editar Nota Keep</h3>
+        <div class="modal-content glass" style="max-width: 580px; border-radius: 20px; padding: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 id="modal-keep-title" style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #fff;">Nova Nota Keep</h3>
+                <button type="button" class="close-modal btn-icon" style="color: var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
             <form id="form-edit-keep">
                 <input type="hidden" id="keep-edit-id">
+                <input type="hidden" id="keep-edit-color" value="#1e293b">
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight: 600; font-size: 0.85rem;">TÍTULO</label>
-                    <input type="text" id="keep-edit-title" class="form-control glass" placeholder="Título da nota...">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">TÍTULO</label>
+                    <input type="text" id="keep-edit-title" class="form-control glass" placeholder="Título da nota (opcional)..." style="font-size: 1rem;">
                 </div>
 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label style="font-weight: 600; font-size: 0.85rem;">CONTEÚDO</label>
-                    <textarea id="keep-edit-content" class="form-control glass" rows="5" placeholder="Escreva o conteúdo da nota..." required style="line-height: 1.5;"></textarea>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">CONTEÚDO *</label>
+                    <textarea id="keep-edit-content" class="form-control glass" rows="5" placeholder="Escreva o conteúdo da nota..." required style="line-height: 1.5; font-size: 0.95rem; resize: vertical; min-height: 110px;"></textarea>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <!-- Visual Color Picker Swatches -->
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">COR DE FUNDO</label>
+                    <div id="keep-modal-swatches" class="keep-color-swatches-grid"></div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px;">
                     <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">COR</label>
-                        <select id="keep-edit-color" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
-                            <option value="#1e293b">Padrão</option>
-                            <option value="#78350f">Âmbar</option>
-                            <option value="#064e3b">Esmeralda</option>
-                            <option value="#164e63">Ciano</option>
-                            <option value="#1e3a8a">Azul</option>
-                            <option value="#4c1d95">Roxo</option>
-                            <option value="#831843">Rosa</option>
-                            <option value="#7f1d1d">Vermelho</option>
-                            <option value="#374151">Grafite</option>
+                        <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">FONTE</label>
+                        <select id="keep-edit-font" class="form-control glass" style="background: rgba(15, 23, 42, 0.8); color: #fff;">
+                            <option value="Poppins">Poppins (Padrão)</option>
+                            <option value="Space Mono">Space Mono (Código/Mono)</option>
+                            <option value="Georgia">Georgia (Serifada)</option>
+                            <option value="Roboto">Roboto (Sem serifa)</option>
+                            <option value="Caveat">Caveat (Manuscrita)</option>
                         </select>
                     </div>
 
                     <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">FONTE</label>
-                        <select id="keep-edit-font" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
-                            <option value="Poppins">Poppins</option>
-                            <option value="Space Mono">Space Mono</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Roboto">Roboto</option>
-                            <option value="Caveat">Caveat</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; display: block; margin-bottom: 4px;">TAMANHO</label>
-                        <select id="keep-edit-size" class="form-control glass" style="background: rgba(0,0,0,0.5); color: #fff;">
+                        <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">TAMANHO DO TEXTO</label>
+                        <select id="keep-edit-size" class="form-control glass" style="background: rgba(15, 23, 42, 0.8); color: #fff;">
                             <option value="small">Pequeno</option>
-                            <option value="medium">Médio</option>
+                            <option value="medium" selected>Médio</option>
                             <option value="large">Grande</option>
                             <option value="xlarge">Extra Grande</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer;">
-                        <input type="checkbox" id="keep-edit-pin">
-                        <span>Fixar nota no topo</span>
+                <div class="form-group" style="margin-bottom: 24px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer; color: #e2e8f0; margin: 0;">
+                        <input type="checkbox" id="keep-edit-pin" style="width: 18px; height: 18px; accent-color: #f59e0b; cursor: pointer;">
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="#f59e0b" stroke-width="2" fill="none"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14l-1.5-6H6.5L5 17z"></path><path d="M9 11V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v7"></path></svg>
+                            Fixar esta nota no topo
+                        </span>
                     </label>
                 </div>
 
-                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
-                    <button type="submit" class="btn-primary">Salvar Alterações</button>
+                <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="btn-secondary close-modal" style="padding: 10px 20px;">Cancelar</button>
+                    <button type="submit" id="btn-save-keep" class="btn-primary" style="padding: 10px 24px; font-weight: 600;">Salvar Nota</button>
                 </div>
             </form>
         </div>
