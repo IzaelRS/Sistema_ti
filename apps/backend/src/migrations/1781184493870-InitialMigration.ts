@@ -13,7 +13,7 @@ export class InitialMigration1781184493870 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "timeline_subtopics" ("id" SERIAL NOT NULL, "topic_id" character varying(100) NOT NULL, "name" character varying(255) NOT NULL, CONSTRAINT "PK_0ef5fbff3b3a2c4c21b9794a3b4" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "monitoring_events" ("id" SERIAL NOT NULL, "alert_key" character varying(100) NOT NULL, "title" character varying(255) NOT NULL, "description" text, "severity" character varying(50) NOT NULL DEFAULT 'info', "source" character varying(100) NOT NULL DEFAULT 'Gnew Monitor', "value_pct" integer, "created_at" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_bd203b18c8da5b593ed793246b7" PRIMARY KEY ("id"))`);
         await queryRunner.query(`INSERT INTO "users" ("name", "email", "role", "password") VALUES ('Usuário TI', 'ti@empresa.com.br', 'Administrador', '$2b$10$2v9BjVBM/.TLHe/oPmtPc.UpjZj.R.S/f7ubKXCceiicT.YX3nptO')`);
-        await queryRunner.query(`INSERT INTO "users" ("name", "email", "role", "password") VALUES ('Izael Rodrigues', 'izael.rodrigues@drmonitora.com.br', 'Administrador', '$2b$10$fSNGSlkbenumrUlKZQlmRuxfiWoli.f/vL0o0pPqs9SENkNMGkTPO')`);
+        await queryRunner.query(`INSERT INTO "users" ("name", "email", "role", "password") VALUES ('Izael Rodrigues', 'izael.rodrigues@drmonitora.com.br', 'Administrador', '$2b$10$x5o//f3AudU5u7XNsiafLeA5LYHxYkA2wYeFVLr4oSoeSpd51HJu6')`);
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
