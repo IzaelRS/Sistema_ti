@@ -7,7 +7,6 @@ import { Account } from "./entities/Account";
 import { Event } from "./entities/Event";
 import { TimelineTopic } from "./entities/TimelineTopic";
 import { TimelineSubtopic } from "./entities/TimelineSubtopic";
-import { MonitoringEvent } from "./entities/MonitoringEvent";
 import { ExtensionUsername } from "./entities/ExtensionUsername";
 import { ExtensionUsernameHistory } from "./entities/ExtensionUsernameHistory";
 import { AccountCategory } from "./entities/AccountCategory";
@@ -24,7 +23,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME || "intranet_ti",
     synchronize: false,
     logging: false,
-    entities: [User, Procedure, Document, Account, AccountCategory, KeepNote, Event, TimelineTopic, TimelineSubtopic, MonitoringEvent, ExtensionUsername, ExtensionUsernameHistory],
+    entities: [User, Procedure, Document, Account, AccountCategory, KeepNote, Event, TimelineTopic, TimelineSubtopic, ExtensionUsername, ExtensionUsernameHistory],
     subscribers: [],
     migrations: [
         path.join(__dirname, "migrations/**/*.{ts,js}")

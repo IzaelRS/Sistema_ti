@@ -13,9 +13,6 @@
 @import './components/tables.css';
 @import './components/cards.css';
 @import './components/timeline.css';
-@import './components/monitoring.css';
-
-/* Feature Specific */
 @import './components/calendar.css';
 @import './components/procedures.css';
 

@@ -154,6 +154,13 @@ export const timelineHandler = {
             loadEvents();
             applyRoleAccess();
         });
+    },
+
+    fetch() {
+        return loadConfig().then(() => {
+            loadEvents();
+            applyRoleAccess();
+        });
     }
 };
 

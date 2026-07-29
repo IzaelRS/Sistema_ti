@@ -1,4 +1,5 @@
 import { auth } from './api/auth.js';
+import { apiClient } from './api/client.js';
 import { dom } from './utils/dom.js';
 import { networkBg } from './utils/networkBg.js';
 import { usersHandler } from './features/users.js';
@@ -7,7 +8,6 @@ import { proceduresHandler } from './features/procedures.js';
 import { accountsHandler } from './features/accounts.js';
 import { timelineHandler } from './features/timeline.js';
 import { telephonyHandler } from './features/telephony.js';
-import { monitoringHandler } from './features/monitoring.js';
 import { keepsHandler } from './features/keeps.js';
 
 let currentSection = 'docs';
@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateDateFilters();
     setupEventListeners();
     timelineHandler.init();
-    monitoringHandler.init();
     telephonyHandler.init();
 
     if (auth.init()) {
@@ -97,8 +96,18 @@ function showApp() {
     }
 }
 
+function populateProfileForm() {
+    const user = auth.getUser();
+    if (!user) return;
+
+    dom.setValue('profile-name', user.name || '');
+    dom.setValue('profile-email', user.email || '');
+    dom.setValue('profile-role', user.role || '');
+    dom.setValue('profile-password', '');
+}
+
 function updateUI() {
-    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section', 'monitoring-section'].forEach(id => {
+    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section'].forEach(id => {
         dom.hide(id);
     });
 
@@ -110,16 +119,19 @@ function updateUI() {
         case 'profile':
             dom.show('account-section');
             dom.setText('section-title', 'Minha Conta');
+            populateProfileForm();
             setTimeout(() => networkBg.start(), 100);
             break;
         case 'list':
             dom.show('list-section');
             dom.setText('section-title', 'Listagem Geral');
+            proceduresHandler.fetch();
             if (auth.isAdmin() && btnNewItem) btnNewItem.classList.remove('hidden');
             break;
         case 'docs':
             dom.show('docs-section');
             dom.setText('section-title', 'Documentação');
+            docsHandler.fetch();
             break;
         case 'detail':
             dom.show('detail-section');
@@ -128,24 +140,23 @@ function updateUI() {
         case 'users':
             dom.show('users-section');
             dom.setText('section-title', 'Gestão de Usuários');
+            usersHandler.fetch();
             break;
         case 'accounts':
             dom.show('accounts-section');
             dom.setText('section-title', 'Gestão de Contas');
+            accountsHandler.fetch();
             accountsHandler.handleSearch();
             break;
         case 'timeline':
             dom.show('timeline-section');
             dom.setText('section-title', 'Timeline');
+            timelineHandler.fetch();
             break;
         case 'telephony':
             dom.show('telephony-section');
             dom.setText('section-title', 'Telefonia');
-            break;
-        case 'monitoring':
-            dom.show('monitoring-section');
-            dom.setText('section-title', 'Monitoramento');
-            monitoringHandler.fetch();
+            telephonyHandler.fetch();
             break;
     }
     applyRolePermissions();
@@ -219,6 +230,7 @@ function setupEventListeners() {
             navBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentSection = btn.dataset.section;
+            window.dispatchEvent(new CustomEvent('SectionChange', { detail: { section: currentSection } }));
             updateUI();
 
             if (window.innerWidth <= 768) {
@@ -235,25 +247,58 @@ function setupEventListeners() {
     });
 
     // Login
-    dom.on('login-form', 'submit', async (e) => {
-        e.preventDefault();
+    const handleLogin = async (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         const btn = document.getElementById('login-btn');
         const errEl = document.getElementById('login-error');
-        if (btn) btn.disabled = true;
+        const email = dom.getValue('login-email');
+        const password = dom.getValue('login-password');
 
-        const res = await auth.login(dom.getValue('login-email'), dom.getValue('login-password'));
+        if (errEl) errEl.classList.add('hidden');
 
-        if (btn) btn.disabled = false;
-
-        if (res.success) {
-            showApp();
-        } else {
+        if (!email || !password) {
             if (errEl) {
-                errEl.innerText = res.error;
+                errEl.innerText = 'Por favor, informe o e-mail e a senha.';
                 errEl.classList.remove('hidden');
             }
+            return false;
         }
-    });
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerText = 'Entrando...';
+        }
+
+        try {
+            const res = await auth.login(email, password);
+
+            if (res.success) {
+                showApp();
+            } else {
+                if (errEl) {
+                    errEl.innerText = res.error || 'Credenciais inválidas. Tente novamente.';
+                    errEl.classList.remove('hidden');
+                }
+            }
+        } catch (err) {
+            if (errEl) {
+                errEl.innerText = err.message || 'Erro de conexão com o servidor.';
+                errEl.classList.remove('hidden');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerText = 'Entrar';
+            }
+        }
+        return false;
+    };
+
+    dom.on('login-form', 'submit', handleLogin);
+    dom.on('login-btn', 'click', handleLogin);
 
     // Logout
     dom.on('btn-logout', 'click', () => {
@@ -285,7 +330,6 @@ function setupEventListeners() {
     window.ProceduresHandler = proceduresHandler;
     window.AccountsHandler = accountsHandler;
     window.TelephonyHandler = telephonyHandler;
-    window.monitoringHandler = monitoringHandler;
     window.keepsHandler = keepsHandler;
 
     // Telephony tabs binding
@@ -341,6 +385,35 @@ function setupEventListeners() {
     });
 
     // Connect top level forms
+    dom.on('profile-form', 'submit', async (e) => {
+        e.preventDefault();
+        const user = auth.getUser();
+        if (!user) return;
+
+        const name = dom.getValue('profile-name');
+        const email = dom.getValue('profile-email');
+        const password = dom.getValue('profile-password');
+
+        try {
+            const data = {
+                name,
+                email,
+                role: user.role
+            };
+            if (password) data.password = password;
+
+            const updatedUser = await apiClient.put(`/users/${user.id}`, data);
+            const newUser = { ...user, ...updatedUser };
+            localStorage.setItem('user', JSON.stringify(newUser));
+            auth.init();
+            applyRolePermissions();
+            populateProfileForm();
+            alert('Perfil atualizado com sucesso!');
+        } catch (err) {
+            console.error('Erro ao atualizar perfil:', err);
+            alert('Erro ao atualizar perfil: ' + (err.message || 'Falha na requisição'));
+        }
+    });
     dom.on('user-form', 'submit', (e) => usersHandler.save(e));
     dom.on('doc-form', 'submit', (e) => docsHandler.handleUpload(e));
     dom.on('account-form', 'submit', (e) => accountsHandler.save(e));
