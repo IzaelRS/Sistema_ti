@@ -247,6 +247,11 @@ export const docsHandler = {
                             ${doc.category}
                         </span>
                     </td>
+                    <td>
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-weight: 500; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">
+                            ${doc.department || '-'}
+                        </span>
+                    </td>
                     <td>${formattedStart}</td>
                     <td>${formattedEnd}</td>
                     <td>
@@ -292,6 +297,7 @@ export const docsHandler = {
                 docListHead.innerHTML = `
                     <tr>
                         <th>Nome</th>
+                        <th>Setor / Depto</th>
                         <th>Tamanho</th>
                         <th>Tipo</th>
                         <th>Início</th>
@@ -316,7 +322,7 @@ export const docsHandler = {
         if (paginatedItems.length === 0) {
             docListBody.innerHTML = `
                 <tr>
-                    <td colspan="${showDates ? 7 : 5}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    <td colspan="${showDates ? 8 : 5}" style="text-align: center; padding: 2rem; color: var(--text-muted);">
                         Nenhum documento encontrado nesta categoria.
                     </td>
                 </tr>
@@ -336,6 +342,9 @@ export const docsHandler = {
 
             const formattedStart = doc.start_date ? new Date(doc.start_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
             const formattedEnd = doc.end_date ? (doc.end_date === 'Indefinido' ? 'Indefinido' : new Date(doc.end_date + 'T00:00:00').toLocaleDateString('pt-BR')) : '-';
+            const deptDisplay = doc.department 
+                ? `<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-weight: 500; font-size: 0.75rem; padding: 3px 8px; border-radius: 6px;">${doc.department}</span>`
+                : `<span style="color: var(--text-muted); font-size: 0.85rem;">-</span>`;
 
             if (showDates) {
                 return `
@@ -346,6 +355,7 @@ export const docsHandler = {
                                 <span title="${doc.original_name}">${doc.original_name}</span>
                             </span>
                         </td>
+                        <td>${deptDisplay}</td>
                         <td>${sizeKB}</td>
                         <td>${displayType}</td>
                         <td>${formattedStart}</td>
@@ -410,6 +420,7 @@ export const docsHandler = {
             const startDateInput = document.getElementById('doc-start-date');
             const endDateInput = document.getElementById('doc-end-date');
             const indefiniteInput = document.getElementById('doc-indefinite');
+            const departmentInput = document.getElementById('doc-department');
 
             if (startDateInput && startDateInput.value) {
                 formData.append('startDate', startDateInput.value);
@@ -418,6 +429,9 @@ export const docsHandler = {
                 formData.append('endDate', 'Indefinido');
             } else if (endDateInput && endDateInput.value) {
                 formData.append('endDate', endDateInput.value);
+            }
+            if (departmentInput && departmentInput.value.trim()) {
+                formData.append('department', departmentInput.value.trim());
             }
         }
 
@@ -429,6 +443,8 @@ export const docsHandler = {
             if (datesContainer) datesContainer.style.display = 'none';
             const endDateInput = document.getElementById('doc-end-date');
             if (endDateInput) endDateInput.disabled = false;
+            const deptInput = document.getElementById('doc-department');
+            if (deptInput) deptInput.value = '';
             dom.setText('file-name-display', 'Respeite o formato .png ou .pdf');
             this.fetch();
             alert('Documento adicionado com sucesso!');

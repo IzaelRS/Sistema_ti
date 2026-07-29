@@ -6,14 +6,8 @@ import fs from "fs";
 import bcrypt from "bcrypt";
 import rateLimit from "express-rate-limit";
 import morgan from "morgan";
-import { MoreThan, LessThan } from "typeorm";
-import dns from "dns";
-import https from "https";
-import http from "http";
 import os from "os";
-import querystring from "querystring";
-import { exec } from "child_process";
-import { Client as SSHClient } from "ssh2";
+import { MoreThan, LessThan } from "typeorm";
 
 import { AppDataSource, initializeDatabase } from "./database";
 import { User } from "./entities/User";
@@ -336,6 +330,7 @@ app.post("/api/documents", uploadLimiter, upload.single("document"), async (req:
         const customName = req.body.customName;
         const start_date = req.body.startDate || null;
         const end_date = req.body.endDate || null;
+        const department = req.body.department ? req.body.department.trim() : null;
         
         let finalName = originalname;
         if (customName && customName.trim() !== "") {
@@ -357,11 +352,12 @@ app.post("/api/documents", uploadLimiter, upload.single("document"), async (req:
             path: relativePath,
             category,
             start_date,
-            end_date
+            end_date,
+            department
         });
 
         const result = await documentRepository.save(newDoc);
-        res.status(201).json({ id: result.id, originalname: finalName, filename, category, start_date, end_date });
+        res.status(201).json({ id: result.id, originalname: finalName, filename, category, start_date, end_date, department });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }

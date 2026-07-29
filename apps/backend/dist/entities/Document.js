@@ -51,6 +51,10 @@ __decorate([
     __metadata("design:type", String)
 ], Document.prototype, "end_date", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Document.prototype, "department", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" }),
     __metadata("design:type", Date)
 ], Document.prototype, "created_at", void 0);

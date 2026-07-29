@@ -705,6 +705,7 @@
                                             <tr>
                                                 <th>Documento</th>
                                                 <th>Categoria</th>
+                                                <th>Setor</th>
                                                 <th>Início</th>
                                                 <th>Fim</th>
                                                 <th>Tempo Restante</th>
@@ -1988,19 +1989,25 @@
                     </select>
                 </div>
                 
-                <!-- Date fields for Contratos and Termo de Uso -->
-                <div class="form-group" id="doc-dates-container" style="display: none; margin-bottom: 1.5rem; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label class="form-label" for="doc-start-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Início</label>
-                        <input type="date" id="doc-start-date" class="form-control glass" style="width:100%;">
+                <!-- Date and Department fields for Contratos and Termo de Uso -->
+                <div id="doc-dates-container" style="display: none; margin-bottom: 1.5rem; flex-direction: column; gap: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <label class="form-label" for="doc-start-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Início</label>
+                            <input type="date" id="doc-start-date" class="form-control glass" style="width:100%;">
+                        </div>
+                        <div>
+                            <label class="form-label" for="doc-end-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Fim</label>
+                            <input type="date" id="doc-end-date" class="form-control glass" style="width:100%;">
+                            <div style="margin-top: 5px; display: flex; align-items: center; gap: 5px;">
+                                <input type="checkbox" id="doc-indefinite" style="cursor: pointer;">
+                                <label for="doc-indefinite" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">Indefinido</label>
+                            </div>
+                        </div>
                     </div>
                     <div>
-                        <label class="form-label" for="doc-end-date" style="display:block; margin-bottom:0.5rem; font-weight:500;">Vigência Fim</label>
-                        <input type="date" id="doc-end-date" class="form-control glass" style="width:100%;">
-                        <div style="margin-top: 5px; display: flex; align-items: center; gap: 5px;">
-                            <input type="checkbox" id="doc-indefinite" style="cursor: pointer;">
-                            <label for="doc-indefinite" style="font-size: 0.85rem; color: var(--text-muted); cursor: pointer; user-select: none;">Indefinido</label>
-                        </div>
+                        <label class="form-label" for="doc-department" style="display:block; margin-bottom:0.5rem; font-weight:500;">Departamento / Setor</label>
+                        <input type="text" id="doc-department" class="form-control glass" style="width:100%;" placeholder="Ex: Financeiro, RH, TI, Jurídico...">
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 1.5rem;">

@@ -29,6 +29,9 @@ export class Document {
     @Column({ type: "varchar", length: 50, nullable: true })
     end_date?: string;
 
+    @Column({ type: "varchar", length: 100, nullable: true })
+    department?: string;
+
     @CreateDateColumn({ type: "timestamp", default: () => "CURRENT_TIMESTAMP" })
     created_at: Date;
 }

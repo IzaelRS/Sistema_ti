@@ -303,6 +303,7 @@ app.post("/api/documents", uploadLimiter, upload.single("document"), async (req,
         const customName = req.body.customName;
         const start_date = req.body.startDate || null;
         const end_date = req.body.endDate || null;
+        const department = req.body.department ? req.body.department.trim() : null;
         let finalName = originalname;
         if (customName && customName.trim() !== "") {
             const ext = path_1.default.extname(originalname);
@@ -323,10 +324,11 @@ app.post("/api/documents", uploadLimiter, upload.single("document"), async (req,
             path: relativePath,
             category,
             start_date,
-            end_date
+            end_date,
+            department
         });
         const result = await documentRepository.save(newDoc);
-        res.status(201).json({ id: result.id, originalname: finalName, filename, category, start_date, end_date });
+        res.status(201).json({ id: result.id, originalname: finalName, filename, category, start_date, end_date, department });
     }
     catch (err) {
         res.status(500).json({ error: err.message });

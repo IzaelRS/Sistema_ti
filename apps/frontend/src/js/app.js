@@ -520,7 +520,7 @@ function setupEventListeners() {
         const cat = e.target.value.toLowerCase();
         const datesContainer = document.getElementById('doc-dates-container');
         if (datesContainer) {
-            datesContainer.style.display = (cat === 'contratos' || cat === 'termo de uso') ? 'grid' : 'none';
+            datesContainer.style.display = (cat === 'contratos' || cat === 'termo de uso') ? 'flex' : 'none';
         }
     });
 
