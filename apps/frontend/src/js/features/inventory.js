@@ -6,6 +6,8 @@ let inventoryItems = [];
 let auditLogs = [];
 let inventoryCategories = [];
 let currentSubTab = 'monitoring';
+let currentPage = 1;
+let itemsPerPage = 10;
 
 export const inventoryHandler = {
     init() {
@@ -187,17 +189,34 @@ export const inventoryHandler = {
         if (statReserve) statReserve.textContent = reserve;
     },
 
+    setPageSize(size) {
+        itemsPerPage = size;
+        currentPage = 1;
+        this.renderTable();
+    },
+
+    changePage(page) {
+        currentPage = page;
+        this.renderTable();
+    },
+
     renderTable() {
         const tbody = document.getElementById('inv-table-body');
         const countSpan = document.getElementById('inv-items-count');
 
+        const totalItems = inventoryItems.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        if (currentPage < 1) currentPage = 1;
+
         if (countSpan) {
-            countSpan.textContent = `${inventoryItems.length} ${inventoryItems.length === 1 ? 'item encontrado' : 'itens encontrados'}`;
+            countSpan.textContent = `${totalItems} ${totalItems === 1 ? 'item encontrado' : 'itens encontrados'}`;
         }
 
         if (!tbody) return;
 
-        if (inventoryItems.length === 0) {
+        if (totalItems === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
@@ -205,8 +224,12 @@ export const inventoryHandler = {
                     </td>
                 </tr>
             `;
+            this.renderPaginationControls('inventory-pagination', 0, 0);
             return;
         }
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedItems = inventoryItems.slice(startIndex, startIndex + itemsPerPage);
 
         const statusBadges = {
             ativo: '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Ativo</span>',
@@ -215,7 +238,7 @@ export const inventoryHandler = {
             desativado: '<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Desativado</span>'
         };
 
-        tbody.innerHTML = inventoryItems.map(item => `
+        tbody.innerHTML = paginatedItems.map(item => `
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
                 <td style="padding: 12px 10px;">
                     <span style="font-family: monospace; font-weight: 700; color: #a5b4fc; background: rgba(99, 102, 241, 0.1); padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">
@@ -256,7 +279,7 @@ export const inventoryHandler = {
             btn.addEventListener('click', (e) => {
                 const id = Number(btn.getAttribute('data-id'));
                 const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openEditForm(item);
+                if (item) this.openEditItemModal(item);
             });
         });
 
@@ -267,6 +290,78 @@ export const inventoryHandler = {
                 this.deleteItem(id, name);
             });
         });
+
+        this.renderPaginationControls('inventory-pagination', totalPages, totalItems);
+    },
+
+    renderPaginationControls(containerId, totalPages, totalItems) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (totalPages === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px;">
+                <label style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
+                <select class="form-control glass" onchange="window.InventoryHandler.setPageSize(Number(this.value))" style="width: 80px; padding: 4px 8px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">
+                    <option value="10" ${itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                    <option value="25" ${itemsPerPage === 25 ? 'selected' : ''}>25</option>
+                    <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${itemsPerPage === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        `;
+
+        // Prev Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === 1 ? 'disabled' : ''} 
+                    onclick="window.InventoryHandler.changePage(${currentPage - 1})"
+                    title="Página Anterior">
+                &laquo;
+            </button>
+        `;
+
+        // Page buttons
+        let lastPrintedPage = 0;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                if (lastPrintedPage && i - lastPrintedPage > 1) {
+                    html += `<span style="color: var(--text-muted); padding: 0 4px;">...</span>`;
+                }
+                html += `
+                    <button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="window.InventoryHandler.changePage(${i})">
+                        ${i}
+                    </button>
+                `;
+                lastPrintedPage = i;
+            }
+        }
+
+        // Next Button
+        html += `
+            <button class="pagination-btn" 
+                    ${currentPage === totalPages ? 'disabled' : ''} 
+                    onclick="window.InventoryHandler.changePage(${currentPage + 1})"
+                    title="Próxima Página">
+                &raquo;
+            </button>
+        `;
+
+        // Pagination Info
+        const start = (currentPage - 1) * itemsPerPage + 1;
+        const end = Math.min(currentPage * itemsPerPage, totalItems);
+        html += `
+            <span class="pagination-info">
+                Exibindo ${start}-${end} de ${totalItems}
+            </span>
+        `;
+
+        container.innerHTML = html;
     },
 
     renderAuditTable() {

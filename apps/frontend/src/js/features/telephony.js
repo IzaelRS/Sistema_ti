@@ -618,7 +618,18 @@ export const telephonyHandler = {
             return;
         }
 
-        let html = '';
+        let html = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px;">
+                <label style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
+                <select class="form-control glass" onchange="window.TelephonyHandler.setPageSize(Number(this.value))" style="width: 85px; padding: 4px 8px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">
+                    <option value="10" ${itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                    <option value="25" ${itemsPerPage === 25 ? 'selected' : ''}>25</option>
+                    <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${itemsPerPage === 100 ? 'selected' : ''}>100</option>
+                    <option value="500" ${itemsPerPage === 500 ? 'selected' : ''}>500</option>
+                </select>
+            </div>
+        `;
         
         // Prev Button
         html += `

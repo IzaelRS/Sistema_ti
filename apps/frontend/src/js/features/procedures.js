@@ -13,7 +13,7 @@ let draggedElementIndex = null;
 let draggedElementParentId = null; // only for containers
 
 let currentPage = 1;
-const ITEMS_PER_PAGE = 10;
+let itemsPerPage = 10;
 let currentFilteredItems = [];
 
 export const proceduresHandler = {
@@ -49,14 +49,14 @@ export const proceduresHandler = {
 
         currentFilteredItems = items;
         const totalItems = items.length;
-        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
 
         // Adjust currentPage if it's out of bounds
         if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
         if (currentPage < 1) currentPage = 1;
 
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        const paginatedItems = items.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage);
 
         if (listingViewMode === 'list') {
             dom.show('list-table-container');
@@ -809,6 +809,12 @@ export const proceduresHandler = {
         this.renderTable(filtered);
     },
 
+    setPageSize(size) {
+        itemsPerPage = size;
+        currentPage = 1;
+        this.renderTable(currentFilteredItems);
+    },
+
     changePage(page) {
         currentPage = page;
         this.renderTable(currentFilteredItems);
@@ -823,7 +829,17 @@ export const proceduresHandler = {
             return;
         }
 
-        let html = '';
+        let html = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px;">
+                <label style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
+                <select class="form-control glass" onchange="window.ProceduresHandler.setPageSize(Number(this.value))" style="width: 80px; padding: 4px 8px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">
+                    <option value="10" ${itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                    <option value="25" ${itemsPerPage === 25 ? 'selected' : ''}>25</option>
+                    <option value="50" ${itemsPerPage === 50 ? 'selected' : ''}>50</option>
+                    <option value="100" ${itemsPerPage === 100 ? 'selected' : ''}>100</option>
+                </select>
+            </div>
+        `;
         
         // Prev Button
         html += `
@@ -863,8 +879,8 @@ export const proceduresHandler = {
         `;
 
         // Pagination Info
-        const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
-        const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+        const start = (currentPage - 1) * itemsPerPage + 1;
+        const end = Math.min(currentPage * itemsPerPage, totalItems);
         html += `
             <span class="pagination-info">
                 Exibindo ${start}-${end} de ${totalItems}

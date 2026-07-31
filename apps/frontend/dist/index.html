@@ -11,8 +11,8 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-6cMeQ8er.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Cd1yXVKo.css">
+  <script type="module" crossorigin src="/assets/index-BKvAl8Zw.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-oKtXGZYb.css">
 </head>
 
 <body>
@@ -440,27 +440,10 @@
                     </div>
                 </section>
                 <section id="list-section" class="display-section">
-                    <div class="search-bar">
-                        <input type="text" id="list-search" placeholder="Filtrar na listagem...">
-                    </div>
-                    <div class="list-controls"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <div class="view-toggle" style="margin-bottom: 0;">
-                            <button id="toggle-list" class="toggle-btn active" title="Visualizar em Lista">
-                                <svg viewBox="0 0 24 24">
-                                    <path
-                                        d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
-                                </svg>
-                                Lista
-                            </button>
-                            <button id="toggle-cards" class="toggle-btn" title="Visualizar em Cards">
-                                <svg viewBox="0 0 24 24">
-                                    <path d="M3 3h8v8H3zm0 10h8v8H3zm10 0h8v8h-8zm0-10h8v8h-8z" />
-                                </svg>
-                                Cards
-                            </button>
+                    <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
+                        <div class="search-bar" style="margin-bottom: 0; flex: 1; max-width: 500px;">
+                            <input type="text" id="list-search" placeholder="Filtrar na listagem...">
                         </div>
-
                         <button id="btn-new-item" class="btn-primary">
                             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2"
                                 fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -470,6 +453,7 @@
                             <span>Novo Procedimento</span>
                         </button>
                     </div>
+
                     <div id="list-table-container" class="table-container glass">
                         <table id="proc-table">
                             <thead>
@@ -489,7 +473,25 @@
                     <div id="list-cards-container" class="grid-list hidden">
                         <!-- Cards will be rendered here -->
                     </div>
-                    <div id="list-pagination" class="pagination-container"></div>
+
+                    <div class="list-footer-controls" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-top: 20px;">
+                        <div class="view-toggle" style="margin-bottom: 0;">
+                            <button id="toggle-list" class="toggle-btn active" title="Visualizar em Lista">
+                                <svg viewBox="0 0 24 24">
+                                    <path
+                                        d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z" />
+                                </svg>
+                                Lista
+                            </button>
+                            <button id="toggle-cards" class="toggle-btn" title="Visualizar em Cards">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M3 3h8v8H3zm0 10h8v8H3zm10 0h8v8h-8zm0-10h8v8h-8z" />
+                                </svg>
+                                Cards
+                            </button>
+                        </div>
+                        <div id="list-pagination" class="pagination-container" style="margin-top: 0;"></div>
+                    </div>
                 </section>
 
                 <section id="detail-section" class="display-section hidden">
@@ -645,26 +647,27 @@
                         <button id="tab-doc-dashboard" class="acc-tab-btn" onclick="window.DocsHandler.setActiveTab('dashboard')">Dashboard</button>
                     </div>
 
-                    <div id="doc-list-container" class="table-container glass">
-                        <table class="table-minimal">
-                            <thead id="doc-list-thead">
-                                <tr>
-                                    <th>Nome</th>
-                                    <th>Tamanho</th>
-                                    <th>Tipo</th>
-                                    <th>Data</th>
-                                    <th id="th-doc-actions">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="doc-list-body">
-                                <!-- Documents will be rendered here -->
-                            </tbody>
-                        </table>
+                    <div id="doc-list-container">
+                        <div class="table-container glass">
+                            <table class="table-minimal">
+                                <thead id="doc-list-thead">
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Tamanho</th>
+                                        <th>Tipo</th>
+                                        <th>Data</th>
+                                        <th id="th-doc-actions">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="doc-list-body">
+                                    <!-- Documents will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="doc-pagination" class="pagination-container" style="margin-top: 20px;"></div>
                     </div>
-                    <div id="doc-pagination" class="pagination-container"></div>
 
                     <div id="doc-dashboard-container" class="hidden" style="margin-top: 20px;">
-                        <div style="display: grid; grid-template-columns: 220px 1fr; gap: 20px;">
                             <!-- Filtros Sidebar -->
                             <aside class="dashboard-sidebar glass" style="padding: 20px; border-radius: var(--border-radius); height: fit-content; border: 1px solid var(--glass-border);">
                                 <h3 style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; color: var(--text-main);">Filtros</h3>
@@ -809,14 +812,6 @@
                             <input type="text" id="telephony-search" class="form-control glass" placeholder="Pesquisar ramais por número, nome ou usuário...">
                         </div>
                         <div style="display: flex; align-items: center; gap: 15px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <label for="telephony-page-size" style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
-                                <select id="telephony-page-size" class="form-control glass" style="width: 100px; padding: 8px; border-radius: 8px; cursor: pointer;">
-                                    <option value="100" selected>100</option>
-                                    <option value="500">500</option>
-                                    <option value="1000">1000</option>
-                                </select>
-                            </div>
                             <button id="telephony-reload-btn" class="btn-primary" style="display: flex; align-items: center; gap: 8px;" title="Atualizar ramais">
                                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline points="23 4 23 10 17 10"></polyline>
@@ -997,6 +992,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="users-pagination" class="pagination-container" style="margin-top: 20px;"></div>
                 </section>
 
                 <!-- ACCOUNTS SECTION (Main Container) -->
@@ -1837,6 +1833,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div id="inventory-pagination" class="pagination-container" style="margin-top: 15px;"></div>
                         </div>
 
                         <!-- Audit Logs History Section -->

@@ -337,6 +337,7 @@ function setupEventListeners() {
     window.ProceduresHandler = proceduresHandler;
     window.AccountsHandler = accountsHandler;
     window.TelephonyHandler = telephonyHandler;
+    window.InventoryHandler = inventoryHandler;
     window.keepsHandler = keepsHandler;
 
     // Telephony tabs binding
