@@ -9,6 +9,7 @@ import { accountsHandler } from './features/accounts.js';
 import { timelineHandler } from './features/timeline.js';
 import { telephonyHandler } from './features/telephony.js';
 import { keepsHandler } from './features/keeps.js';
+import { inventoryHandler } from './features/inventory.js';
 
 let currentSection = 'docs';
 
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     timelineHandler.init();
     telephonyHandler.init();
+    inventoryHandler.init();
 
     if (auth.init()) {
         console.log('Sessão restaurada:', auth.getUser().email);
@@ -107,7 +109,7 @@ function populateProfileForm() {
 }
 
 function updateUI() {
-    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section'].forEach(id => {
+    ['account-section', 'docs-section', 'list-section', 'detail-section', 'users-section', 'accounts-section', 'timeline-section', 'dedicated-account-page', 'telephony-section', 'inventory-section'].forEach(id => {
         dom.hide(id);
     });
 
@@ -157,6 +159,11 @@ function updateUI() {
             dom.show('telephony-section');
             dom.setText('section-title', 'Telefonia');
             telephonyHandler.fetch();
+            break;
+        case 'inventory':
+            dom.show('inventory-section');
+            dom.setText('section-title', 'Inventário');
+            inventoryHandler.fetch();
             break;
     }
     applyRolePermissions();
@@ -479,9 +486,14 @@ function setupEventListeners() {
         proceduresHandler.search(e.target.value.toLowerCase());
     });
 
-    // Documents Search
+    // Documents and Keeps Search
     dom.on('doc-search', 'input', (e) => {
-        docsHandler.search(e.target.value.toLowerCase());
+        const val = e.target.value;
+        if (docsHandler.getActiveTab() && docsHandler.getActiveTab().toLowerCase() === 'keeps') {
+            keepsHandler.search(val);
+        } else {
+            docsHandler.search(val.toLowerCase());
+        }
     });
 
     // Documents Dashboard Filters

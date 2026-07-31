@@ -283,6 +283,32 @@
     box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35), 0 0 15px rgba(255, 255, 255, 0.1) !important;
 }
 
+.keep-draggable-card {
+    cursor: grab;
+    user-select: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.keep-draggable-card:active {
+    cursor: grabbing;
+}
+
+.keep-draggable-card.dragging {
+    opacity: 0.45;
+    transform: scale(0.97);
+    border: 2px dashed #818cf8 !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+.keep-drag-handle {
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.keep-draggable-card:hover .keep-drag-handle svg {
+    opacity: 0.9 !important;
+    color: #818cf8;
+}
+
 .keep-color-swatches-grid {
     display: flex;
     gap: 8px;

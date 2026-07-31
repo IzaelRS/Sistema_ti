@@ -20,6 +20,10 @@ export const docsHandler = {
         }
     },
 
+    getActiveTab() {
+        return activeTab;
+    },
+
     setActiveTab(tabName) {
         activeTab = tabName;
         currentPage = 1;
@@ -32,6 +36,10 @@ export const docsHandler = {
 
     filterAndRender() {
         const docsHeader = document.querySelector('.docs-header');
+        const searchInput = document.getElementById('doc-search');
+        const btnNewDoc = document.getElementById('btn-new-doc');
+        const btnNewKeep = document.getElementById('btn-new-keep');
+
         if (activeTab.toLowerCase() === 'dashboard') {
             if (docsHeader) docsHeader.style.display = 'none';
             dom.hide('doc-list-container');
@@ -39,13 +47,31 @@ export const docsHandler = {
             dom.show('doc-dashboard-container');
             this.renderDashboard();
         } else if (activeTab.toLowerCase() === 'keeps') {
-            if (docsHeader) docsHeader.style.display = 'none';
+            if (docsHeader) docsHeader.style.display = 'flex';
+            if (searchInput) {
+                searchInput.placeholder = 'Pesquisar nas notas Keep...';
+                searchInput.value = keepsHandler.getSearchQuery ? keepsHandler.getSearchQuery() : '';
+            }
+            if (btnNewDoc) btnNewDoc.classList.add('hidden');
+            if (btnNewKeep) btnNewKeep.classList.remove('hidden');
+
             dom.hide('doc-list-container');
             dom.hide('doc-dashboard-container');
             dom.show('doc-keeps-container');
             keepsHandler.fetch();
         } else {
             if (docsHeader) docsHeader.style.display = 'flex';
+            if (searchInput) {
+                searchInput.placeholder = 'Pesquisar documentos...';
+                searchInput.value = '';
+            }
+            if (btnNewDoc) {
+                const isAdmin = window.auth && window.auth.isAdmin ? window.auth.isAdmin() : true;
+                btnNewDoc.classList.toggle('role-hidden', !isAdmin);
+                btnNewDoc.classList.remove('hidden');
+            }
+            if (btnNewKeep) btnNewKeep.classList.add('hidden');
+
             dom.show('doc-list-container');
             dom.hide('doc-dashboard-container');
             dom.hide('doc-keeps-container');

@@ -22,6 +22,7 @@ const KeepNote_1 = require("./entities/KeepNote");
 const ExtensionUsername_1 = require("./entities/ExtensionUsername");
 const ExtensionUsernameHistory_1 = require("./entities/ExtensionUsernameHistory");
 const timeline_routes_1 = __importDefault(require("./routes/timeline_routes"));
+const inventory_routes_1 = __importDefault(require("./routes/inventory_routes"));
 // Carregar variáveis do arquivo .env local, se existir
 const envPath = path_1.default.join(__dirname, "../../../.env");
 if (fs_1.default.existsSync(envPath)) {
@@ -151,6 +152,7 @@ app.use((req, res, next) => {
 // --- API Endpoints ---
 // 0. Timeline Integration API
 app.use("/api/timeline", timeline_routes_1.default);
+app.use("/api/inventory", inventory_routes_1.default);
 // 1. Procedures (FAQs)
 app.get("/api/procedures", async (req, res) => {
     try {
@@ -693,6 +695,7 @@ app.get("/api/keep-notes", async (req, res) => {
         const notes = await repo.find({
             order: {
                 is_pinned: "DESC",
+                position: "ASC",
                 created_at: "DESC"
             }
         });
@@ -702,9 +705,33 @@ app.get("/api/keep-notes", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+app.put("/api/keep-notes-reorder", async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) {
+            res.status(400).json({ error: "Lista de itens inválida." });
+            return;
+        }
+        const repo = database_1.AppDataSource.getRepository(KeepNote_1.KeepNote);
+        for (const item of items) {
+            if (item.id) {
+                const updateData = {};
+                if (item.position !== undefined)
+                    updateData.position = Number(item.position);
+                if (item.is_pinned !== undefined)
+                    updateData.is_pinned = Boolean(item.is_pinned);
+                await repo.update(item.id, updateData);
+            }
+        }
+        res.json({ success: true });
+    }
+    catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 app.post("/api/keep-notes", async (req, res) => {
     try {
-        const { title, content, color, font_family, font_size, is_pinned } = req.body;
+        const { title, content, color, font_family, font_size, is_pinned, position } = req.body;
         if (!content || !content.trim()) {
             res.status(400).json({ error: "O conteúdo da nota é obrigatório." });
             return;
@@ -716,7 +743,8 @@ app.post("/api/keep-notes", async (req, res) => {
             color: color || "#1e293b",
             font_family: font_family || "Poppins",
             font_size: font_size || "medium",
-            is_pinned: Boolean(is_pinned)
+            is_pinned: Boolean(is_pinned),
+            position: position !== undefined ? Number(position) : 0
         });
         const saved = await repo.save(newNote);
         res.json(saved);
@@ -734,7 +762,7 @@ app.put("/api/keep-notes/:id", async (req, res) => {
             res.status(404).json({ error: "Nota não encontrada." });
             return;
         }
-        const { title, content, color, font_family, font_size, is_pinned } = req.body;
+        const { title, content, color, font_family, font_size, is_pinned, position } = req.body;
         if (title !== undefined)
             note.title = title.trim();
         if (content !== undefined)
@@ -747,6 +775,8 @@ app.put("/api/keep-notes/:id", async (req, res) => {
             note.font_size = font_size;
         if (is_pinned !== undefined)
             note.is_pinned = Boolean(is_pinned);
+        if (position !== undefined)
+            note.position = Number(position);
         const updated = await repo.save(note);
         res.json(updated);
     }

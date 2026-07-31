@@ -3,6 +3,7 @@ import { dom } from '../utils/dom.js';
 
 let allNotes = [];
 let searchQuery = '';
+let activeDraggedCard = null;
 
 const COLOR_PALETTE = [
     { name: 'Padrão', value: '#1e293b', border: '#334155' },
@@ -43,17 +44,26 @@ export const keepsHandler = {
         this.render();
     },
 
+    getSearchQuery() {
+        return searchQuery;
+    },
+
     search(query) {
         searchQuery = (query || '').toLowerCase().trim();
+        const searchInput = document.getElementById('doc-search');
+        if (searchInput && searchInput.value !== query) {
+            searchInput.value = query;
+        }
         this.render();
     },
 
     getFilteredNotes() {
-        if (!searchQuery) return allNotes;
-        return allNotes.filter(n => 
+        let notes = searchQuery ? allNotes.filter(n => 
             (n.title && n.title.toLowerCase().includes(searchQuery)) ||
             (n.content && n.content.toLowerCase().includes(searchQuery))
-        );
+        ) : [...allNotes];
+
+        return notes.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     },
 
     render() {
@@ -76,7 +86,13 @@ export const keepsHandler = {
             if (pinnedSection) pinnedSection.style.display = 'none';
             pinnedContainer.innerHTML = '';
             otherContainer.innerHTML = '';
-            if (emptyState) emptyState.style.display = 'block';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                const msgEl = emptyState.querySelector('p');
+                if (msgEl) {
+                    msgEl.innerText = searchQuery ? `Nenhuma nota encontrada para "${searchQuery}".` : 'Nenhuma nota cadastrada.';
+                }
+            }
             return;
         }
 
@@ -96,6 +112,7 @@ export const keepsHandler = {
         }
 
         otherContainer.innerHTML = otherNotes.map(n => this.renderNoteCard(n)).join('');
+        this.initDragAndDrop();
     },
 
     renderNoteCard(note) {
@@ -107,10 +124,23 @@ export const keepsHandler = {
         const pinTitle = note.is_pinned ? 'Desafixar Nota' : 'Fixar Nota';
 
         return `
-            <div class="keep-card keep-card-enhanced" style="background: ${bgColor}; font-family: ${fontFamilyCss}; border: 1px solid rgba(255,255,255,0.15); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,0.25);" onclick="if(!event.target.closest('button')){ window.keepsHandler.openEditModal(${note.id}); }">
+            <div class="keep-card keep-card-enhanced keep-draggable-card"
+                 draggable="true"
+                 data-id="${note.id}"
+                 data-pinned="${note.is_pinned ? 'true' : 'false'}"
+                 style="background: ${bgColor}; font-family: ${fontFamilyCss}; border: 1px solid rgba(255,255,255,0.15); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,0.25);"
+                 onclick="if(!event.target.closest('button') && !event.target.closest('.keep-drag-handle')){ window.keepsHandler.openEditModal(${note.id}); }">
                 <div>
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 8px;">
-                        ${note.title ? `<h4 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #ffffff; word-break: break-word; line-height: 1.3;">${note.title}</h4>` : '<span style="flex:1;"></span>'}
+                        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                            <span class="keep-drag-handle" title="Arrastar para reordenar" style="cursor: grab; display: inline-flex; align-items: center; padding: 2px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="opacity: 0.5;">
+                                    <circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/>
+                                    <circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                                </svg>
+                            </span>
+                            ${note.title ? `<h4 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: #ffffff; word-break: break-word; line-height: 1.3;">${note.title}</h4>` : '<span style="flex:1;"></span>'}
+                        </div>
                         <button class="btn-icon" onclick="event.stopPropagation(); window.keepsHandler.togglePin(${note.id})" title="${pinTitle}" style="padding: 6px; color: ${pinIconColor}; opacity: 0.9; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="${note.is_pinned ? '#f59e0b' : 'none'}" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="17" x2="12" y2="22"></line>
@@ -139,6 +169,121 @@ export const keepsHandler = {
                 </div>
             </div>
         `;
+    },
+
+    initDragAndDrop() {
+        const containers = [
+            document.getElementById('keep-pinned-grid'),
+            document.getElementById('keep-other-grid')
+        ].filter(Boolean);
+
+        containers.forEach(container => {
+            if (container.dataset.dragInitialized) return;
+            container.dataset.dragInitialized = 'true';
+
+            container.addEventListener('dragstart', (e) => {
+                const card = e.target.closest('.keep-draggable-card');
+                if (!card) return;
+                activeDraggedCard = card;
+                card.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', card.dataset.id);
+            });
+
+            container.addEventListener('dragend', async (e) => {
+                const card = e.target.closest('.keep-draggable-card') || activeDraggedCard;
+                if (card) card.classList.remove('dragging');
+                activeDraggedCard = null;
+                await this.saveCardOrder();
+            });
+
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (!activeDraggedCard) return;
+
+                const afterElement = this.getDragAfterElement(container, e.clientX, e.clientY);
+                if (afterElement === activeDraggedCard) return;
+
+                if (afterElement) {
+                    container.insertBefore(activeDraggedCard, afterElement);
+                } else {
+                    container.appendChild(activeDraggedCard);
+                }
+            });
+        });
+    },
+
+    getDragAfterElement(container, x, y) {
+        const cards = [...container.querySelectorAll('.keep-draggable-card:not(.dragging)')];
+        if (cards.length === 0) return null;
+
+        let closestCard = null;
+        let minDistance = Number.POSITIVE_INFINITY;
+
+        for (const card of cards) {
+            const box = card.getBoundingClientRect();
+            const centerX = box.left + box.width / 2;
+            const centerY = box.top + box.height / 2;
+            const distance = Math.hypot(x - centerX, y - centerY);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestCard = card;
+            }
+        }
+
+        if (!closestCard) return null;
+
+        const box = closestCard.getBoundingClientRect();
+        const centerX = box.left + box.width / 2;
+
+        if (x < centerX) {
+            return closestCard;
+        } else {
+            return closestCard.nextElementSibling;
+        }
+    },
+
+    async saveCardOrder() {
+        const pinnedGrid = document.getElementById('keep-pinned-grid');
+        const otherGrid = document.getElementById('keep-other-grid');
+
+        const items = [];
+
+        if (pinnedGrid) {
+            const pinnedCards = [...pinnedGrid.querySelectorAll('.keep-draggable-card')];
+            pinnedCards.forEach((card, index) => {
+                const id = Number(card.dataset.id);
+                if (id) {
+                    items.push({ id, position: index, is_pinned: true });
+                }
+            });
+        }
+
+        if (otherGrid) {
+            const otherCards = [...otherGrid.querySelectorAll('.keep-draggable-card')];
+            otherCards.forEach((card, index) => {
+                const id = Number(card.dataset.id);
+                if (id) {
+                    items.push({ id, position: index, is_pinned: false });
+                }
+            });
+        }
+
+        items.forEach(item => {
+            const note = allNotes.find(n => n.id === item.id);
+            if (note) {
+                note.position = item.position;
+                note.is_pinned = item.is_pinned;
+            }
+        });
+
+        try {
+            await apiClient.put('/keep-notes-reorder', { items });
+        } catch (err) {
+            console.error('Erro ao salvar nova ordem das notas:', err);
+        }
     },
 
     renderColorSwatches(selectedColor = '#1e293b') {
