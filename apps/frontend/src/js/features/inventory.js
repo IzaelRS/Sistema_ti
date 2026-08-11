@@ -16,17 +16,19 @@ let poolStatusFilter = 'all';
 let poolSearchTerm = '';
 let poolCurrentPage = 1;
 let poolItemsPerPage = 10;
+let expandedPoolCategories = new Set();
 
 const DEFAULT_CATEGORIES = [
     { name: "Notebook", description: "Laptops e computadores portáteis", is_system: true },
     { name: "Desktop", description: "Computadores de mesa e estações de trabalho", is_system: true },
+    { name: "Headset", description: "Headsets, fones e equipamentos de áudio/comunicação", is_system: true },
+    { name: "Monitor", description: "Monitores e telas de vídeo", is_system: true },
+    { name: "Periférico", description: "Teclados, mouses, webcams e adaptadores", is_system: true },
     { name: "Servidor", description: "Servidores físicos e lâminas de rack", is_system: true },
     { name: "Switch", description: "Switches de rede de acesso e distribuição", is_system: true },
     { name: "Roteador", description: "Roteadores e gateways de borda", is_system: true },
-    { name: "Monitor", description: "Monitores e telas de vídeo", is_system: true },
     { name: "Impressora", description: "Impressoras térmicas, multifuncionais e laser", is_system: true },
     { name: "Nobreak", description: "Nobreaks e estabilizadores", is_system: true },
-    { name: "Periférico", description: "Teclados, mouses, webcams e fones", is_system: true },
     { name: "Outro", description: "Diversos e equipamentos gerais", is_system: true }
 ];
 
@@ -366,14 +368,10 @@ export const inventoryHandler = {
         const btnRefreshPool = document.getElementById('btn-pool-refresh');
         const btnExportMatrix = document.getElementById('btn-pool-export-matrix');
         const btnExportProducts = document.getElementById('btn-pool-export-products');
-        const btnExportGrid = document.getElementById('btn-pool-export-grid');
-        const poolSearchInput = document.getElementById('pool-search-input');
-        const statusPills = document.querySelectorAll('#pool-status-pills .pool-filter-pill');
 
         if (poolCategorySelect) {
             poolCategorySelect.addEventListener('change', (e) => {
                 poolCategoryFilter = e.target.value;
-                poolCurrentPage = 1;
                 this.renderPoolView();
             });
         }
@@ -382,7 +380,6 @@ export const inventoryHandler = {
             btnClearCategory.addEventListener('click', () => {
                 poolCategoryFilter = 'all';
                 if (poolCategorySelect) poolCategorySelect.value = 'all';
-                poolCurrentPage = 1;
                 this.renderPoolView();
                 this.showToast('info', 'Filtro de categoria do Pool resetado.');
             });
@@ -402,32 +399,6 @@ export const inventoryHandler = {
         if (btnExportProducts) {
             btnExportProducts.addEventListener('click', () => this.exportPoolProductsToCSV());
         }
-
-        if (btnExportGrid) {
-            btnExportGrid.addEventListener('click', () => this.exportPoolGridToCSV());
-        }
-
-        if (poolSearchInput) {
-            let debounceTimer;
-            poolSearchInput.addEventListener('input', (e) => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    poolSearchTerm = e.target.value.toLowerCase().trim();
-                    poolCurrentPage = 1;
-                    this.renderPoolGrid();
-                }, 200);
-            });
-        }
-
-        statusPills.forEach(pill => {
-            pill.addEventListener('click', () => {
-                statusPills.forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                poolStatusFilter = pill.getAttribute('data-pool-status') || 'all';
-                poolCurrentPage = 1;
-                this.renderPoolGrid();
-            });
-        });
     },
 
     clearFilters() {
@@ -895,6 +866,7 @@ export const inventoryHandler = {
         if (!tbody) return;
 
         const { matrix, totals } = this.getCategoryMatrixData();
+        const catalog = this.getProductCatalog();
 
         if (matrix.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">Nenhum dado encontrado para a categoria selecionada.</td></tr>`;
@@ -902,19 +874,35 @@ export const inventoryHandler = {
             return;
         }
 
-        tbody.innerHTML = matrix.map(row => {
+        let html = '';
+
+        matrix.forEach((row, idx) => {
             const barColor = Number(row.usagePct) >= 75 ? '#34d399' : Number(row.usagePct) >= 40 ? '#60a5fa' : '#fbbf24';
-            return `
-                <tr>
-                    <td style="font-weight: 600; color: #fff;">
-                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${row.total > 0 ? '#818cf8' : 'rgba(255,255,255,0.2)'}; margin-right: 8px;"></span>
-                        ${this.escapeHtml(row.category)}
+            const catNorm = (row.category || 'Outro').toLowerCase();
+            const productsInCat = catalog.filter(p => (p.category || 'Outro').toLowerCase() === catNorm);
+            const isExpanded = expandedPoolCategories.has(row.category);
+            const catSafeId = `pool-cat-${idx}`;
+
+            html += `
+                <tr class="pool-category-row" data-cat="${this.escapeHtml(row.category)}" data-target="${catSafeId}" style="cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.2s;" onmouseover="this.style.background='rgba(99, 102, 241, 0.08)'" onmouseout="this.style.background='transparent'">
+                    <td style="font-weight: 600; color: #fff; padding: 12px 14px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="pool-cat-toggle-icon" id="toggle-icon-${catSafeId}" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #818cf8; font-size: 0.75rem; transition: transform 0.2s; font-family: monospace;">
+                                    ${isExpanded ? '▼' : '▶'}
+                                </span>
+                                <span style="font-size: 0.95rem; font-weight: 700;">📁 ${this.escapeHtml(row.category)}</span>
+                            </div>
+                            <span style="font-size: 0.75rem; color: #a5b4fc; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 8px; border-radius: 10px; font-weight: 600;">
+                                ${productsInCat.length} ${productsInCat.length === 1 ? 'modelo' : 'modelos'}
+                            </span>
+                        </div>
                     </td>
-                    <td class="pool-cell-number" style="color: #34d399;">${row.active}</td>
-                    <td class="pool-cell-number" style="color: #60a5fa;">${row.reserve}</td>
-                    <td class="pool-cell-number" style="color: #fbbf24;">${row.maintenance}</td>
-                    <td class="pool-cell-number" style="color: #f87171;">${row.desativado}</td>
-                    <td class="pool-cell-number" style="color: #fff; font-size: 1rem; background: rgba(255,255,255,0.02);">${row.total}</td>
+                    <td class="pool-cell-number" style="color: #34d399; font-weight: 700; font-size: 0.95rem;">${row.active}</td>
+                    <td class="pool-cell-number" style="color: #60a5fa; font-weight: 700; font-size: 0.95rem;">${row.reserve}</td>
+                    <td class="pool-cell-number" style="color: #fbbf24; font-weight: 700; font-size: 0.95rem;">${row.maintenance}</td>
+                    <td class="pool-cell-number" style="color: #f87171; font-weight: 700; font-size: 0.95rem;">${row.desativado}</td>
+                    <td class="pool-cell-number" style="color: #fff; font-size: 1.05rem; font-weight: 800; background: rgba(255,255,255,0.02);">${row.total}</td>
                     <td style="text-align: center; padding: 8px 12px;">
                         <div style="font-weight: 700; font-size: 0.82rem; color: ${barColor}; font-family: monospace;">${row.usagePct}%</div>
                         <div class="pool-progress-container">
@@ -922,8 +910,101 @@ export const inventoryHandler = {
                         </div>
                     </td>
                 </tr>
+                <tr id="dropdown-${catSafeId}" class="pool-cat-dropdown-row ${isExpanded ? '' : 'hidden'}" style="background: rgba(15, 23, 42, 0.65);">
+                    <td colspan="7" style="padding: 0 0 16px 0;">
+                        <div style="margin: 6px 14px 10px 14px; padding: 16px; border-radius: 12px; background: rgba(30, 41, 59, 0.75); border: 1px solid rgba(99, 102, 241, 0.25); box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+                                <strong style="color: #818cf8; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+                                    <span>🏷️ Modelos, Marcas e Informações em "${this.escapeHtml(row.category)}"</span>
+                                </strong>
+                                <span style="font-size: 0.78rem; color: var(--text-muted);">
+                                    ${productsInCat.length} ${productsInCat.length === 1 ? 'modelo cadastrado' : 'modelos cadastrados'}
+                                </span>
+                            </div>
+                            
+                            ${productsInCat.length === 0 ? `
+                                <div style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 0.85rem;">
+                                    Nenhum equipamento cadastrado nesta categoria ainda.
+                                </div>
+                            ` : `
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                        <thead>
+                                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); text-align: left;">
+                                                <th style="padding: 8px 10px; font-size: 0.75rem;">EQUIPAMENTO / MODELO</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem;">MARCA / FABRICANTE</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: center; color: #34d399;">🟢 ESTOQUE</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: center; color: #60a5fa;">🔵 EM USO</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: center; color: #fbbf24;">🟡 MANUT.</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: center; color: #f87171;">🔴 BAIXA</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: center; color: #fff;">TOTAL</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem;">INFORMAÇÕES / NOTAS</th>
+                                                <th style="padding: 8px 10px; font-size: 0.75rem; text-align: right;">AÇÃO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${productsInCat.map(p => `
+                                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                                    <td style="padding: 9px 10px; font-weight: 600; color: #fff;">
+                                                        ${this.escapeHtml(p.name)}
+                                                    </td>
+                                                    <td style="padding: 9px 10px; color: #a5b4fc;">
+                                                        ${p.brand_model ? `<span style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.25); padding: 2px 7px; border-radius: 4px; font-weight: 600;">${this.escapeHtml(p.brand_model)}</span>` : '<span style="color: var(--text-muted);">-</span>'}
+                                                    </td>
+                                                    <td style="padding: 9px 10px; text-align: center; color: #34d399; font-weight: 700; font-family: 'Space Mono', monospace;">${p.available}</td>
+                                                    <td style="padding: 9px 10px; text-align: center; color: #60a5fa; font-weight: 700; font-family: 'Space Mono', monospace;">${p.inUse}</td>
+                                                    <td style="padding: 9px 10px; text-align: center; color: #fbbf24; font-weight: 700; font-family: 'Space Mono', monospace;">${p.maintenance}</td>
+                                                    <td style="padding: 9px 10px; text-align: center; color: #f87171; font-weight: 700; font-family: 'Space Mono', monospace;">${p.desativado}</td>
+                                                    <td style="padding: 9px 10px; text-align: center; color: #fff; font-weight: 800; font-family: 'Space Mono', monospace;">${p.total}</td>
+                                                    <td style="padding: 9px 10px; color: var(--text-muted); font-size: 0.78rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                        ${this.escapeHtml(p.items[0]?.notes || 'Sem observações')}
+                                                    </td>
+                                                    <td style="padding: 9px 10px; text-align: right;">
+                                                        <button class="btn-secondary btn-pool-move-model" data-key="${this.escapeHtml(p.key)}" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600; border-radius: 6px; cursor: pointer;">
+                                                            ⚡ Movimentar
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `}
+                        </div>
+                    </td>
+                </tr>
             `;
-        }).join('');
+        });
+
+        tbody.innerHTML = html;
+
+        // Attach accordion click handlers
+        tbody.querySelectorAll('.pool-category-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                const cat = row.getAttribute('data-cat');
+                const targetId = row.getAttribute('data-target');
+                const dropdownRow = document.getElementById(`dropdown-${targetId}`);
+                const icon = document.getElementById(`toggle-icon-${targetId}`);
+
+                if (expandedPoolCategories.has(cat)) {
+                    expandedPoolCategories.delete(cat);
+                    if (dropdownRow) dropdownRow.classList.add('hidden');
+                    if (icon) icon.textContent = '▶';
+                } else {
+                    expandedPoolCategories.add(cat);
+                    if (dropdownRow) dropdownRow.classList.remove('hidden');
+                    if (icon) icon.textContent = '▼';
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.btn-pool-move-model').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const key = btn.getAttribute('data-key');
+                this.openMovementModal('in', key);
+            });
+        });
 
         if (tfoot) {
             tfoot.innerHTML = `
@@ -1050,196 +1131,6 @@ export const inventoryHandler = {
         URL.revokeObjectURL(url);
 
         this.showToast('success', 'Relatório de disponibilidade de produtos exportado com sucesso.');
-    },
-
-    renderPoolGrid() {
-        const tbody = document.getElementById('pool-grid-tbody');
-        const countSpan = document.getElementById('pool-grid-count');
-        if (!tbody) return;
-
-        let filtered = this.getFilteredPoolItems();
-
-        // Apply status pill filter
-        if (poolStatusFilter !== 'all') {
-            filtered = filtered.filter(i => (i.status || '').toLowerCase() === poolStatusFilter.toLowerCase());
-        }
-
-        // Apply search term filter
-        if (poolSearchTerm) {
-            filtered = filtered.filter(i => {
-                const combined = `${i.name || ''} ${i.brand_model || ''} ${i.serial_number || ''} ${i.asset_tag || ''} ${i.location || ''} ${i.assigned_to || ''} ${i.ip_address || ''} ${i.category || ''}`.toLowerCase();
-                return combined.includes(poolSearchTerm);
-            });
-        }
-
-        const totalItems = filtered.length;
-        const totalPages = Math.ceil(totalItems / poolItemsPerPage);
-
-        if (poolCurrentPage > totalPages) poolCurrentPage = Math.max(1, totalPages);
-        if (poolCurrentPage < 1) poolCurrentPage = 1;
-
-        if (countSpan) {
-            countSpan.textContent = `${totalItems} ${totalItems === 1 ? 'item exibido' : 'itens exibidos'} no pool`;
-        }
-
-        if (totalItems === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
-                        Nenhum item encontrado no pool com os filtros selecionados.
-                    </td>
-                </tr>
-            `;
-            this.renderPoolPagination(0, 0);
-            return;
-        }
-
-        const startIndex = (poolCurrentPage - 1) * poolItemsPerPage;
-        const paginated = filtered.slice(startIndex, startIndex + poolItemsPerPage);
-
-        const statusBadges = {
-            ativo: '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">🟢 Ativo</span>',
-            reserva: '<span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">🔵 Estoque</span>',
-            manutencao: '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">🟡 Manutenção</span>',
-            desativado: '<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">🔴 Desativado</span>'
-        };
-
-        tbody.innerHTML = paginated.map(item => {
-            const statusKey = (item.status || 'ativo').toLowerCase();
-            const badgeHtml = statusBadges[statusKey] || `<span class="badge">${this.escapeHtml(item.status)}</span>`;
-
-            return `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" data-item-id="${item.id}">
-                    <td style="padding: 10px 8px;">
-                        <span style="font-family: monospace; font-weight: 700; color: #a5b4fc; background: rgba(99, 102, 241, 0.12); padding: 3px 7px; border-radius: 4px; font-size: 0.8rem;">
-                            ${item.asset_tag ? this.escapeHtml(item.asset_tag) : 'S/P-' + item.id}
-                        </span>
-                    </td>
-                    <td style="padding: 10px 8px;">
-                        <strong style="color: #fff; font-size: 0.9rem; display: block;">${this.escapeHtml(item.name)}</strong>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">${item.brand_model ? this.escapeHtml(item.brand_model) : ''}</span>
-                    </td>
-                    <td style="padding: 10px 8px; color: #cbd5e1; font-size: 0.85rem;">
-                        ${this.escapeHtml(item.category || 'Outro')}
-                    </td>
-                    <td style="padding: 10px 8px;">
-                        ${badgeHtml}
-                    </td>
-                    <td style="padding: 10px 8px; color: #cbd5e1; font-size: 0.85rem;">
-                        ${item.location ? this.escapeHtml(item.location) : '-'}
-                    </td>
-                    <td style="padding: 10px 8px; color: #cbd5e1; font-size: 0.85rem;">
-                        ${item.assigned_to ? this.escapeHtml(item.assigned_to) : '<span style="color: var(--text-muted);">-</span>'}
-                    </td>
-                    <td style="padding: 10px 8px; font-size: 0.8rem; font-family: monospace; color: var(--text-muted);">
-                        <div>${item.serial_number ? this.escapeHtml(item.serial_number) : '-'}</div>
-                        <div style="color: #818cf8;">${item.ip_address ? this.escapeHtml(item.ip_address) : ''}</div>
-                    </td>
-                    <td style="padding: 10px 8px; text-align: right;" onclick="event.stopPropagation();">
-                        <button class="btn-icon btn-pool-view-item" data-id="${item.id}" title="Visualizar Detalhes" style="color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 5px; border-radius: 6px;">
-                            <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        // Action listeners
-        tbody.querySelectorAll('tr[data-item-id]').forEach(row => {
-            row.addEventListener('click', () => {
-                const id = Number(row.getAttribute('data-item-id'));
-                const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openItemDetailsModal(item);
-            });
-        });
-
-        tbody.querySelectorAll('.btn-pool-view-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = Number(btn.getAttribute('data-id'));
-                const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openItemDetailsModal(item);
-            });
-        });
-
-        this.renderPoolPagination(totalPages, totalItems);
-    },
-
-    setPoolPageSize(size) {
-        poolItemsPerPage = size;
-        poolCurrentPage = 1;
-        this.renderPoolGrid();
-    },
-
-    changePoolPage(page) {
-        poolCurrentPage = page;
-        this.renderPoolGrid();
-    },
-
-    renderPoolPagination(totalPages, totalItems) {
-        const container = document.getElementById('pool-pagination');
-        if (!container) return;
-
-        if (totalPages === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        let html = `
-            <div style="display: flex; align-items: center; gap: 8px; margin-right: 15px;">
-                <label style="font-size: 0.85rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;">Itens por página:</label>
-                <select class="form-control glass" onchange="window.InventoryHandler.setPoolPageSize(Number(this.value))" style="width: 80px; padding: 4px 8px; font-size: 0.85rem; border-radius: 6px; cursor: pointer;">
-                    <option value="10" ${poolItemsPerPage === 10 ? 'selected' : ''}>10</option>
-                    <option value="25" ${poolItemsPerPage === 25 ? 'selected' : ''}>25</option>
-                    <option value="50" ${poolItemsPerPage === 50 ? 'selected' : ''}>50</option>
-                    <option value="100" ${poolItemsPerPage === 100 ? 'selected' : ''}>100</option>
-                </select>
-            </div>
-        `;
-
-        html += `
-            <button class="pagination-btn" 
-                    ${poolCurrentPage === 1 ? 'disabled' : ''} 
-                    onclick="window.InventoryHandler.changePoolPage(${poolCurrentPage - 1})"
-                    title="Página Anterior">
-                &laquo;
-            </button>
-        `;
-
-        let lastPrintedPage = 0;
-        for (let i = 1; i <= totalPages; i++) {
-            if (i === 1 || i === totalPages || (i >= poolCurrentPage - 1 && i <= poolCurrentPage + 1)) {
-                if (lastPrintedPage && i - lastPrintedPage > 1) {
-                    html += `<span style="color: var(--text-muted); padding: 0 4px;">...</span>`;
-                }
-                html += `
-                    <button class="pagination-btn ${i === poolCurrentPage ? 'active' : ''}" 
-                            onclick="window.InventoryHandler.changePoolPage(${i})">
-                        ${i}
-                    </button>
-                `;
-                lastPrintedPage = i;
-            }
-        }
-
-        html += `
-            <button class="pagination-btn" 
-                    ${poolCurrentPage === totalPages ? 'disabled' : ''} 
-                    onclick="window.InventoryHandler.changePoolPage(${poolCurrentPage + 1})"
-                    title="Próxima Página">
-                &raquo;
-            </button>
-        `;
-
-        const start = (poolCurrentPage - 1) * poolItemsPerPage + 1;
-        const end = Math.min(poolCurrentPage * poolItemsPerPage, totalItems);
-        html += `
-            <span class="pagination-info">
-                Exibindo ${start}-${end} de ${totalItems}
-            </span>
-        `;
-
-        container.innerHTML = html;
     },
 
     exportPoolMatrixToCSV() {

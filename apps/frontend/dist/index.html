@@ -11,7 +11,7 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-nbiKkCxq.js"></script>
+  <script type="module" crossorigin src="/assets/index-ClA5l8hA.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-crBiCwcx.css">
 </head>
 
@@ -1777,13 +1777,14 @@
                                     <option value="all">Todas as Categorias</option>
                                     <option value="Notebook">Notebook</option>
                                     <option value="Desktop">Desktop</option>
+                                    <option value="Headset">Headset</option>
+                                    <option value="Monitor">Monitor</option>
+                                    <option value="Periférico">Periférico</option>
                                     <option value="Servidor">Servidor</option>
                                     <option value="Switch">Switch</option>
                                     <option value="Roteador">Roteador</option>
-                                    <option value="Monitor">Monitor</option>
                                     <option value="Impressora">Impressora</option>
                                     <option value="Nobreak">Nobreak</option>
-                                    <option value="Periférico">Periférico</option>
                                     <option value="Outro">Outro</option>
                                 </select>
 
@@ -1911,13 +1912,14 @@
                                             <select id="inv-form-category" class="form-control glass" required style="width: 100%; padding: 11px 12px; background: rgba(15, 23, 42, 0.95); color: #fff;">
                                                 <option value="Notebook">Notebook</option>
                                                 <option value="Desktop">Desktop</option>
+                                                <option value="Headset">Headset</option>
+                                                <option value="Monitor">Monitor</option>
+                                                <option value="Periférico">Periférico</option>
                                                 <option value="Servidor">Servidor</option>
                                                 <option value="Switch">Switch</option>
                                                 <option value="Roteador">Roteador</option>
-                                                <option value="Monitor">Monitor</option>
                                                 <option value="Impressora">Impressora</option>
                                                 <option value="Nobreak">Nobreak</option>
-                                                <option value="Periférico">Periférico</option>
                                                 <option value="Outro">Outro</option>
                                             </select>
                                         </div>
@@ -2161,81 +2163,6 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-
-                        <!-- Seção 2: Grade Geral de Equipamentos do Pool (Tabela Detalhada com Filtros Rápidos) -->
-                        <div class="glass" style="padding: 24px; border-radius: 16px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
-                                <div>
-                                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-                                        📋 Grade Geral de Ativos Coletados no Sistema (Estilo Planilha)
-                                    </h3>
-                                    <span id="pool-grid-count" style="color: var(--text-muted); font-size: 0.85rem;">0 itens no pool</span>
-                                </div>
-
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                                    <button id="btn-pool-export-grid" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
-                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                        Exportar Planilha Completa
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Filtros rápidos por Status (Submenus da Planilha) e Pesquisa -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-                                <div class="pool-subnav-bar" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;" id="pool-status-pills">
-                                    <button class="pool-tab-btn pool-filter-pill active" data-pool-status="all">
-                                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                                        Todos os Ativos
-                                        <span id="pool-pill-all" class="pool-badge">0</span>
-                                    </button>
-                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="ativo">
-                                        <span class="pool-status-dot dot-active"></span>
-                                        Ativo / Uso
-                                        <span id="pool-pill-ativo" class="pool-badge">0</span>
-                                    </button>
-                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="reserva">
-                                        <span class="pool-status-dot dot-reserve"></span>
-                                        Estoque
-                                        <span id="pool-pill-reserva" class="pool-badge">0</span>
-                                    </button>
-                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="manutencao">
-                                        <span class="pool-status-dot dot-maintenance"></span>
-                                        Manutenção
-                                        <span id="pool-pill-manutencao" class="pool-badge">0</span>
-                                    </button>
-                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="desativado">
-                                        <span class="pool-status-dot dot-desativado"></span>
-                                        Desativado
-                                        <span id="pool-pill-desativado" class="pool-badge">0</span>
-                                    </button>
-                                </div>
-
-                                <div style="display: flex; gap: 10px; flex: 1; min-width: 260px; max-width: 480px;">
-                                    <input type="text" id="pool-search-input" class="form-control glass" placeholder="🔍 Filtrar planilha por nome, patrimônio, S/N, IP..." style="width: 100%; padding: 8px 14px; font-size: 0.85rem;">
-                                </div>
-                            </div>
-
-                            <div style="overflow-x: auto;">
-                                <table class="custom-table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-                                    <thead>
-                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">PATRIMÔNIO</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">EQUIPAMENTO</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">CATEGORIA</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">STATUS POOL</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">SETOR / LOCAL</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">RESPONSÁVEL</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">S/N & IP</th>
-                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: right;">AÇÕES</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="pool-grid-tbody">
-                                        <!-- Injetado dinamicamente via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div id="pool-pagination" class="pagination-container" style="margin-top: 15px;"></div>
                         </div>
                     </div>
                 </section>
