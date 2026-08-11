@@ -324,17 +324,17 @@ export const inventoryHandler = {
         const statusFilter = document.getElementById('inv-filter-status');
 
         let debounceTimer;
-        const triggerFetch = () => {
+        const triggerRender = () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 currentPage = 1;
-                this.fetch();
-            }, 250);
+                this.renderTable();
+            }, 150);
         };
 
-        if (searchInput) searchInput.addEventListener('input', triggerFetch);
-        if (categoryFilter) categoryFilter.addEventListener('change', triggerFetch);
-        if (statusFilter) statusFilter.addEventListener('change', triggerFetch);
+        if (searchInput) searchInput.addEventListener('input', triggerRender);
+        if (categoryFilter) categoryFilter.addEventListener('change', triggerRender);
+        if (statusFilter) statusFilter.addEventListener('change', triggerRender);
     },
 
     setupDetailsModalListeners() {
@@ -440,27 +440,17 @@ export const inventoryHandler = {
         if (statusFilter) statusFilter.value = 'all';
 
         currentPage = 1;
-        this.fetch();
+        this.renderTable();
         this.showToast('info', 'Filtros restaurados com sucesso.');
     },
 
-    async fetch(highlightId = null) {
+    async fetch(highlightKey = null) {
         try {
-            const searchInput = document.getElementById('inv-search-input');
-            const categoryFilter = document.getElementById('inv-filter-category');
-            const statusFilter = document.getElementById('inv-filter-status');
-
-            const params = new URLSearchParams();
-            if (searchInput && searchInput.value.trim()) params.append('search', searchInput.value.trim());
-            if (categoryFilter && categoryFilter.value !== 'all') params.append('category', categoryFilter.value);
-            if (statusFilter && statusFilter.value !== 'all') params.append('status', statusFilter.value);
-
-            const queryString = params.toString() ? `?${params.toString()}` : '';
-            const data = await apiClient.get(`/inventory${queryString}`);
+            const data = await apiClient.get('/inventory');
             
             inventoryItems = Array.isArray(data) ? data : [];
             this.renderStats();
-            this.renderTable(highlightId);
+            this.renderTable(highlightKey);
 
             // Fetch Audit Logs asynchronously
             this.fetchAuditLogs();
@@ -531,30 +521,65 @@ export const inventoryHandler = {
         this.renderTable();
     },
 
-    renderTable(highlightId = null) {
+    renderTable(highlightKey = null) {
         const tbody = document.getElementById('inv-table-body');
         const countSpan = document.getElementById('inv-items-count');
 
-        const totalItems = inventoryItems.length;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        let products = this.getProductCatalog();
+
+        const searchInput = document.getElementById('inv-search-input');
+        const categoryFilter = document.getElementById('inv-filter-category');
+        const statusFilter = document.getElementById('inv-filter-status');
+
+        const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        const catVal = categoryFilter ? categoryFilter.value : 'all';
+        const statusVal = statusFilter ? statusFilter.value : 'all';
+
+        if (searchTerm) {
+            products = products.filter(p => 
+                p.name.toLowerCase().includes(searchTerm) ||
+                (p.category && p.category.toLowerCase().includes(searchTerm)) ||
+                (p.brand_model && p.brand_model.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        if (catVal && catVal !== 'all') {
+            products = products.filter(p => p.category === catVal);
+        }
+
+        if (statusVal && statusVal !== 'all') {
+            if (statusVal === 'reserva') {
+                products = products.filter(p => p.available > 0);
+            } else if (statusVal === 'ativo') {
+                products = products.filter(p => p.inUse > 0);
+            } else if (statusVal === 'manutencao') {
+                products = products.filter(p => p.maintenance > 0);
+            } else if (statusVal === 'desativado') {
+                products = products.filter(p => p.desativado > 0);
+            }
+        }
+
+        const totalProducts = products.length;
+        const totalUnits = products.reduce((acc, p) => acc + p.total, 0);
+        const totalPages = Math.ceil(totalProducts / itemsPerPage);
 
         if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
         if (currentPage < 1) currentPage = 1;
 
         if (countSpan) {
-            countSpan.textContent = `${totalItems} ${totalItems === 1 ? 'item encontrado' : 'itens encontrados'}`;
+            countSpan.textContent = `${totalProducts} ${totalProducts === 1 ? 'modelo de equipamento' : 'modelos de equipamentos'} (${totalUnits} unidades)`;
         }
 
         if (!tbody) return;
 
-        if (totalItems === 0) {
+        if (totalProducts === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                    <td colspan="8" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
                         <div style="font-size: 2rem; margin-bottom: 8px;">📦</div>
                         <div style="font-weight: 600; font-size: 1rem; color: #fff;">Nenhum equipamento encontrado</div>
                         <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
-                            Tente limpar os filtros de pesquisa ou cadastre um novo item na aba Configuração.
+                            Tente limpar os filtros de pesquisa ou cadastre um novo equipamento na aba Configuração.
                         </div>
                     </td>
                 </tr>
@@ -564,58 +589,60 @@ export const inventoryHandler = {
         }
 
         const startIndex = (currentPage - 1) * itemsPerPage;
-        const paginatedItems = inventoryItems.slice(startIndex, startIndex + itemsPerPage);
+        const paginatedProducts = products.slice(startIndex, startIndex + itemsPerPage);
 
-        const statusBadges = {
-            ativo: '<span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Ativo / Em Uso</span>',
-            manutencao: '<span class="badge" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Em Manutenção</span>',
-            reserva: '<span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Reserva / Estoque</span>',
-            desativado: '<span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.75rem;">Desativado</span>'
-        };
-
-        tbody.innerHTML = paginatedItems.map(item => {
-            const isHighlight = highlightId && Number(item.id) === Number(highlightId);
+        tbody.innerHTML = paginatedProducts.map(p => {
+            const isHighlight = highlightKey && p.key === highlightKey;
             const rowClass = isHighlight ? 'row-newly-added' : '';
-            const statusKey = (item.status || 'ativo').toLowerCase();
-            const badgeHtml = statusBadges[statusKey] || `<span class="badge">${this.escapeHtml(item.status)}</span>`;
 
             return `
-            <tr class="${rowClass}" style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" data-item-id="${item.id}">
-                <td style="padding: 12px 10px;">
-                    <span style="font-family: monospace; font-weight: 700; color: #a5b4fc; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); padding: 4px 9px; border-radius: 6px; font-size: 0.85rem;">
-                        ${item.asset_tag ? this.escapeHtml(item.asset_tag) : 'S/P-' + item.id}
-                    </span>
-                    ${isHighlight ? '<span style="display: inline-block; margin-left: 6px; font-size: 0.7rem; font-weight: 700; background: #10b981; color: #fff; padding: 2px 6px; border-radius: 10px;">NOVO</span>' : ''}
+            <tr class="${rowClass}" style="border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" data-product-key="${this.escapeHtml(p.key)}">
+                <td style="padding: 12px 14px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong style="color: #fff; font-size: 0.95rem;">${this.escapeHtml(p.name)}</strong>
+                        ${isHighlight ? '<span style="font-size: 0.7rem; font-weight: 700; background: #10b981; color: #fff; padding: 2px 6px; border-radius: 10px;">NOVO</span>' : ''}
+                    </div>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">${p.brand_model ? this.escapeHtml(p.brand_model) : ''}</span>
                 </td>
-                <td style="padding: 12px 10px;">
-                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${this.escapeHtml(item.name)}</strong>
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">${item.brand_model ? this.escapeHtml(item.brand_model) : ''}</span>
-                </td>
-                <td style="padding: 12px 10px; color: #e2e8f0; font-size: 0.85rem;">
-                    <span style="background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px; font-weight: 500;">
-                        ${this.escapeHtml(item.category || 'Outro')}
+                <td style="padding: 12px 14px;">
+                    <span style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); padding: 4px 10px; border-radius: 8px; font-weight: 600; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                        📁 ${this.escapeHtml(p.category || 'Outro')}
                     </span>
                 </td>
-                <td style="padding: 12px 10px;">
-                    ${badgeHtml}
+                <td style="padding: 12px 14px; text-align: center;">
+                    <span class="pool-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 800; font-size: 0.95rem; font-family: 'Space Mono', monospace; padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        ${p.available}
+                    </span>
                 </td>
-                <td style="padding: 12px 10px; font-size: 0.85rem; color: var(--text-muted);">
-                    <div style="color: #fff; font-weight: 500;">${item.location ? this.escapeHtml(item.location) : 'N/A'}</div>
-                    <div style="font-size: 0.8rem;">${item.assigned_to ? '👤 ' + this.escapeHtml(item.assigned_to) : 'Sem responsável'}</div>
+                <td style="padding: 12px 14px; text-align: center;">
+                    <span class="pool-badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; font-weight: 800; font-size: 0.95rem; font-family: 'Space Mono', monospace; padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        ${p.inUse}
+                    </span>
                 </td>
-                <td style="padding: 12px 10px; font-size: 0.85rem; color: var(--text-muted); font-family: monospace;">
-                    <div>${item.serial_number ? 'S/N: ' + this.escapeHtml(item.serial_number) : '-'}</div>
-                    <div style="color: #818cf8; font-weight: 600;">${item.ip_address ? 'IP: ' + this.escapeHtml(item.ip_address) : ''}</div>
+                <td style="padding: 12px 14px; text-align: center;">
+                    <span class="pool-badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-weight: 800; font-size: 0.95rem; font-family: 'Space Mono', monospace; padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                        ${p.maintenance}
+                    </span>
                 </td>
-                <td style="padding: 12px 10px; text-align: right;" onclick="event.stopPropagation();">
-                    <div style="display: inline-flex; gap: 4px; align-items: center;">
-                        <button class="btn-icon btn-view-inv" data-id="${item.id}" title="Visualizar Detalhes" style="color: #38bdf8; background: rgba(56, 189, 248, 0.1); padding: 6px; border-radius: 6px;">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <td style="padding: 12px 14px; text-align: center;">
+                    <span class="pool-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; font-weight: 800; font-size: 0.95rem; font-family: 'Space Mono', monospace; padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        ${p.desativado}
+                    </span>
+                </td>
+                <td style="padding: 12px 14px; text-align: center;">
+                    <strong style="color: #fff; font-size: 1.05rem; font-family: 'Space Mono', monospace;">
+                        ${p.total}
+                    </strong>
+                </td>
+                <td style="padding: 12px 14px; text-align: right;" onclick="event.stopPropagation();">
+                    <div style="display: inline-flex; gap: 6px; align-items: center;">
+                        <button class="btn-icon btn-move-product" data-key="${this.escapeHtml(p.key)}" title="Movimentar Equipamento" style="color: #34d399; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 10px; border-radius: 6px; font-weight: 600; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+                            <span>⚡ Movimentar</span>
                         </button>
-                        <button class="btn-icon btn-edit-inv" data-id="${item.id}" title="Editar Equipamento" style="color: #818cf8; background: rgba(129, 140, 248, 0.1); padding: 6px; border-radius: 6px;">
+                        <button class="btn-icon btn-edit-product" data-key="${this.escapeHtml(p.key)}" title="Editar Equipamento" style="color: #818cf8; background: rgba(129, 140, 248, 0.15); border: 1px solid rgba(129, 140, 248, 0.3); padding: 6px; border-radius: 6px;">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                        <button class="btn-icon btn-delete-inv" data-id="${item.id}" data-name="${this.escapeHtml(item.name)}" title="Excluir Equipamento" style="color: #ef4444; background: rgba(239, 68, 68, 0.1); padding: 6px; border-radius: 6px;">
+                        <button class="btn-icon btn-delete-product" data-key="${this.escapeHtml(p.key)}" data-name="${this.escapeHtml(p.name)}" title="Excluir Equipamento" style="color: #ef4444; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px; border-radius: 6px;">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                         </button>
                     </div>
@@ -625,42 +652,66 @@ export const inventoryHandler = {
         }).join('');
 
         // Attach action listeners
-        tbody.querySelectorAll('tr[data-item-id]').forEach(row => {
+        tbody.querySelectorAll('tr[data-product-key]').forEach(row => {
             row.addEventListener('click', () => {
-                const id = Number(row.getAttribute('data-item-id'));
-                const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openItemDetailsModal(item);
+                const key = row.getAttribute('data-product-key');
+                this.openMovementModal('in', key);
             });
         });
 
-        tbody.querySelectorAll('.btn-view-inv').forEach(btn => {
+        tbody.querySelectorAll('.btn-move-product').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = Number(btn.getAttribute('data-id'));
-                const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openItemDetailsModal(item);
+                const key = btn.getAttribute('data-key');
+                this.openMovementModal('in', key);
             });
         });
 
-        tbody.querySelectorAll('.btn-edit-inv').forEach(btn => {
+        tbody.querySelectorAll('.btn-edit-product').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = Number(btn.getAttribute('data-id'));
-                const item = inventoryItems.find(i => i.id === id);
-                if (item) this.openEditForm(item);
+                const key = btn.getAttribute('data-key');
+                const p = products.find(prod => prod.key === key);
+                if (p && p.items && p.items.length > 0) {
+                    this.openEditForm(p.items[0]);
+                }
             });
         });
 
-        tbody.querySelectorAll('.btn-delete-inv').forEach(btn => {
+        tbody.querySelectorAll('.btn-delete-product').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const id = Number(btn.getAttribute('data-id'));
+                const key = btn.getAttribute('data-key');
                 const name = btn.getAttribute('data-name');
-                this.deleteItem(id, name);
+                this.deleteProduct(key, name);
             });
         });
 
-        this.renderPaginationControls('inventory-pagination', totalPages, totalItems);
+        this.renderPaginationControls('inventory-pagination', totalPages, totalProducts);
+    },
+
+    async deleteProduct(productKey, productName) {
+        const catalog = this.getProductCatalog();
+        const p = catalog.find(prod => prod.key === productKey);
+        if (!p) return;
+
+        if (!confirm(`Tem certeza que deseja excluir o equipamento "${productName}" (${p.total} unidade(s) registradas)? Esta ação removerá os itens do inventário.`)) {
+            return;
+        }
+
+        const user = auth.getUser();
+        const performed_by = user ? `${user.name} (${user.email})` : 'Usuário TI';
+
+        try {
+            for (const item of p.items) {
+                await apiClient.delete(`/inventory/${item.id}?performed_by=${encodeURIComponent(performed_by)}`);
+            }
+            this.showToast('success', `Equipamento "${productName}" excluído.`);
+            await this.fetch();
+        } catch (error) {
+            console.error('Erro ao excluir produto:', error);
+            this.showToast('error', 'Erro ao excluir equipamento: ' + (error.message || 'Falha na requisição.'));
+        }
     },
 
     renderPaginationControls(containerId, totalPages, totalItems) {
