@@ -11,8 +11,8 @@
         href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
         rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script type="module" crossorigin src="/assets/index-BKvAl8Zw.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-oKtXGZYb.css">
+  <script type="module" crossorigin src="/assets/index-CvUun0Pb.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-crBiCwcx.css">
 </head>
 
 <body>
@@ -1709,6 +1709,10 @@
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="margin-right: 6px; vertical-align: middle;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
                             Monitoramento
                         </button>
+                        <button id="tab-inv-pool" class="acc-tab-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="margin-right: 6px; vertical-align: middle;"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                            Pool
+                        </button>
                         <button id="tab-inv-config" class="acc-tab-btn">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" style="margin-right: 6px; vertical-align: middle;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                             Configuração
@@ -1766,7 +1770,7 @@
 
                         <!-- Search and Filters Bar -->
                         <div class="glass" style="padding: 16px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; gap: 12px; flex: 1; min-width: 280px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 12px; flex: 1; min-width: 280px; flex-wrap: wrap; align-items: center;">
                                 <input type="text" id="inv-search-input" class="form-control glass" placeholder="🔍 Buscar por nome, marca, série, patrimônio, IP..." style="flex: 1; min-width: 200px; padding: 8px 14px;">
                                 
                                 <select id="inv-filter-category" class="form-control glass" style="width: auto; padding: 8px 14px;">
@@ -1790,16 +1794,32 @@
                                     <option value="reserva">Reserva / Estoque</option>
                                     <option value="desativado">Desativado</option>
                                 </select>
+
+                                <button id="btn-inv-clear-filters" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem;" title="Limpar todos os filtros de pesquisa">
+                                    🔄 Limpar
+                                </button>
                             </div>
 
                             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                <button id="btn-inv-movement-in" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600;" title="Adicionar / Dar Entrada em Item Cadastrado">
-                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    + Entrada (Adicionar)
+                                <button id="btn-inv-export-csv" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 14px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-weight: 600;" title="Exportar Lista de Equipamentos para CSV / Excel">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Exportar CSV
                                 </button>
-                                <button id="btn-inv-movement-out" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 600;" title="Retirar / Dar Baixa em Item Cadastrado">
-                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                                    - Saída (Retirar)
+                                <button id="btn-inv-movement-in" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 15px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 600;" title="Adicionar / Dar Entrada em Item no Estoque">
+                                    <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    + Entrada
+                                </button>
+                                <button id="btn-inv-movement-use" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 15px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-weight: 600;" title="Alocar / Colocar Equipamento Em Uso">
+                                    <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    👤 Em Uso
+                                </button>
+                                <button id="btn-inv-movement-maint" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 15px; background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 600;" title="Enviar / Registrar Equipamento em Manutenção">
+                                    <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                                    🔧 Manutenção
+                                </button>
+                                <button id="btn-inv-movement-out" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 9px 15px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 600;" title="Retirar / Dar Baixa em Item Cadastrado">
+                                    <svg viewBox="0 0 24 24" width="17" height="17" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    - Saída
                                 </button>
                                 <button id="btn-inv-create-new" class="btn-primary" style="display: flex; align-items: center; gap: 6px; padding: 9px 18px;">
                                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -1861,104 +1881,68 @@
                         </div>
                     </div>
 
-                    <!-- Submenu 2: Configuração (Configuração e Criação/Edição de Item) -->
+                    <!-- Submenu 2: Configuração (Cadastro de Equipamentos no Catálogo) -->
                     <div id="view-inv-config" class="inv-tab-content hidden">
-                        <div class="glass" style="padding: 24px; border-radius: 16px; max-width: 900px; margin: 0 auto;">
-                            <h3 id="inv-form-title" style="margin-top: 0; margin-bottom: 20px; font-size: 1.3rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px;">
+                        <div class="glass" style="padding: 28px; border-radius: 16px; max-width: 750px; margin: 0 auto;">
+                            <h3 id="inv-form-title" style="margin-top: 0; margin-bottom: 6px; font-size: 1.3rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px;">
                                 <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                Configurar / Cadastrar Item de Inventário
+                                Cadastrar Equipamento no Catálogo
                             </h3>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0; margin-bottom: 22px;">
+                                Cadastre novos modelos e tipos de equipamentos para disponibilizá-los no estoque e movimentações do sistema.
+                            </p>
 
                             <form id="inventory-form">
                                 <input type="hidden" id="inv-form-id">
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
-                                    <div class="form-group" style="grid-column: span 2;">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">NOME DO ITEM / EQUIPAMENTO *</label>
-                                        <input type="text" id="inv-form-name" class="form-control glass" placeholder="Ex: Notebook Dell Latitude 5420" required style="width: 100%; padding: 10px;">
+                                <div style="display: flex; flex-direction: column; gap: 18px; margin-bottom: 24px;">
+                                    <div class="form-group">
+                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">NOME DO EQUIPAMENTO / MODELO *</label>
+                                        <input type="text" id="inv-form-name" class="form-control glass" placeholder="Ex: Notebook Dell Latitude 5420, Teclado USB, Monitor 24..." required style="width: 100%; padding: 12px 14px; font-size: 0.95rem;">
+                                        <div id="inv-form-product-match" class="hidden" style="margin-top: 8px; padding: 10px 14px; border-radius: 8px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); font-size: 0.85rem;">
+                                            <!-- Dynamic product availability feedback injected via JS -->
+                                        </div>
+                                    </div>
+
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">CATEGORIA *</label>
+                                            <select id="inv-form-category" class="form-control glass" required style="width: 100%; padding: 11px 12px; background: rgba(15, 23, 42, 0.95); color: #fff;">
+                                                <option value="Notebook">Notebook</option>
+                                                <option value="Desktop">Desktop</option>
+                                                <option value="Servidor">Servidor</option>
+                                                <option value="Switch">Switch</option>
+                                                <option value="Roteador">Roteador</option>
+                                                <option value="Monitor">Monitor</option>
+                                                <option value="Impressora">Impressora</option>
+                                                <option value="Nobreak">Nobreak</option>
+                                                <option value="Periférico">Periférico</option>
+                                                <option value="Outro">Outro</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">MARCA / FABRICANTE</label>
+                                            <input type="text" id="inv-form-brand-model" class="form-control glass" placeholder="Ex: Dell, Logitech, HP, Lenovo..." style="width: 100%; padding: 11px 12px;">
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group" id="group-inv-form-qty">
+                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">QUANTIDADE INICIAL A ADICIONAR NO ESTOQUE</label>
+                                        <input type="number" id="inv-form-quantity" class="form-control glass" min="1" max="500" value="1" style="width: 100%; padding: 11px 12px; font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700;">
+                                        <small style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; display: block;">As unidades criadas serão registradas automaticamente no Estoque (Reserva).</small>
                                     </div>
 
                                     <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">CATEGORIA *</label>
-                                        <select id="inv-form-category" class="form-control glass" required style="width: 100%; padding: 10px;">
-                                            <option value="Notebook">Notebook</option>
-                                            <option value="Desktop">Desktop</option>
-                                            <option value="Servidor">Servidor</option>
-                                            <option value="Switch">Switch</option>
-                                            <option value="Roteador">Roteador</option>
-                                            <option value="Monitor">Monitor</option>
-                                            <option value="Impressora">Impressora</option>
-                                            <option value="Nobreak">Nobreak</option>
-                                            <option value="Periférico">Periférico</option>
-                                            <option value="Outro">Outro</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">STATUS *</label>
-                                        <select id="inv-form-status" class="form-control glass" required style="width: 100%; padding: 10px;">
-                                            <option value="ativo">Ativo / Em Uso</option>
-                                            <option value="manutencao">Em Manutenção</option>
-                                            <option value="reserva">Reserva / Estoque</option>
-                                            <option value="desativado">Desativado</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">MARCA / MODELO</label>
-                                        <input type="text" id="inv-form-brand-model" class="form-control glass" placeholder="Ex: Dell / Latitude 5420 i7 16GB" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">PATRIMÔNIO / ETIQUETA</label>
-                                        <input type="text" id="inv-form-asset-tag" class="form-control glass" placeholder="Ex: PAT-2026-089" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">NÚMERO DE SÉRIE / CHASSI</label>
-                                        <input type="text" id="inv-form-serial-number" class="form-control glass" placeholder="Ex: 8XGT92M" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">SETOR / LOCALIZAÇÃO</label>
-                                        <input type="text" id="inv-form-location" class="form-control glass" placeholder="Ex: TI / Sala Servidores / Recepção" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">RESPONSÁVEL / USUÁRIO ATRIBUÍDO</label>
-                                        <input type="text" id="inv-form-assigned-to" class="form-control glass" placeholder="Ex: João Silva (Analista)" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">ENDEREÇO IP</label>
-                                        <input type="text" id="inv-form-ip-address" class="form-control glass" placeholder="Ex: 192.168.1.150" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">ENDEREÇO MAC</label>
-                                        <input type="text" id="inv-form-mac-address" class="form-control glass" placeholder="Ex: 00:1A:2B:3C:4D:5E" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">DATA DE COMPRA</label>
-                                        <input type="date" id="inv-form-purchase-date" class="form-control glass" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">VENCIMENTO DA GARANTIA</label>
-                                        <input type="date" id="inv-form-warranty-expires" class="form-control glass" style="width: 100%; padding: 10px;">
-                                    </div>
-
-                                    <div class="form-group" style="grid-column: span 2;">
-                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">OBSERVAÇÕES / NOTAS</label>
-                                        <textarea id="inv-form-notes" class="form-control glass" rows="3" placeholder="Informações de garantia, acessórios, estado de conservação..." style="width: 100%; padding: 10px; min-height: 80px;"></textarea>
+                                        <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 6px;">OBSERVAÇÕES / ESPECIFICAÇÕES DO EQUIPAMENTO</label>
+                                        <textarea id="inv-form-notes" class="form-control glass" rows="3" placeholder="Informações adicionais, especificações técnicas, detalhes de padrão..." style="width: 100%; padding: 12px; min-height: 80px;"></textarea>
                                     </div>
                                 </div>
 
-                                <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+                                <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 18px;">
                                     <button type="button" id="btn-inv-form-reset" class="btn-secondary" style="padding: 10px 20px;">Limpar</button>
                                     <button type="button" id="btn-inv-form-cancel" class="btn-secondary" style="padding: 10px 20px;">Cancelar</button>
-                                    <button type="submit" id="btn-inv-form-save" class="btn-primary" style="padding: 10px 24px; font-weight: 600;">Salvar Equipamento</button>
+                                    <button type="submit" id="btn-inv-form-save" class="btn-primary" style="padding: 10px 24px; font-weight: 600;">Cadastrar Equipamento</button>
                                 </div>
                             </form>
                         </div>
@@ -2012,6 +1996,245 @@
                                     </table>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Submenu 4: Pool de Ativos (Resumo Executivo, Matriz de Status e Planilha Geral) -->
+                    <div id="view-inv-pool" class="inv-tab-content hidden">
+                        <!-- Top Category Filter & Actions Bar -->
+                        <div class="glass" style="padding: 14px 18px; border-radius: 14px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border: 1px solid rgba(99, 102, 241, 0.25); background: rgba(30, 41, 59, 0.45);">
+                            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                <label for="pool-filter-category" style="font-weight: 700; font-size: 0.85rem; color: #a5b4fc; display: flex; align-items: center; gap: 6px; letter-spacing: 0.05em; text-transform: uppercase;">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                                    Filtrar Categoria:
+                                </label>
+                                <select id="pool-filter-category" class="form-control glass" style="width: auto; min-width: 240px; padding: 8px 14px; font-weight: 600; color: #fff; cursor: pointer; border-radius: 8px;">
+                                    <option value="all">📁 Todas as Categorias (Geral)</option>
+                                    <!-- Dynamic options populated via JS -->
+                                </select>
+                                <button id="btn-pool-clear-category" class="btn-secondary" style="padding: 8px 12px; font-size: 0.82rem;" title="Limpar filtro de categoria do Pool">
+                                    🔄 Todas
+                                </button>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button id="btn-pool-refresh" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem;" title="Atualizar dados do Pool">
+                                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    Atualizar Dados
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Hero / Pool KPI Cards -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 24px;">
+                            <div class="glass" style="padding: 18px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #6366f1;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Total Geral no Pool</div>
+                                    <div id="pool-stat-total" style="font-size: 2rem; font-weight: 800; color: #fff; margin-top: 4px; font-family: 'Space Mono', monospace;">0</div>
+                                    <span style="font-size: 0.75rem; color: #a5b4fc;">100% dos ativos cadastrados</span>
+                                </div>
+                                <div style="background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 12px; border-radius: 12px;">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                                </div>
+                            </div>
+
+                            <div class="glass" style="padding: 18px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #10b981;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Pool Ativo / Em Uso</div>
+                                    <div id="pool-stat-active" style="font-size: 2rem; font-weight: 800; color: #34d399; margin-top: 4px; font-family: 'Space Mono', monospace;">0</div>
+                                    <span id="pool-stat-active-pct" style="font-size: 0.75rem; color: #34d399;">0% do total</span>
+                                </div>
+                                <div style="background: rgba(16, 185, 129, 0.15); color: #34d399; padding: 12px; border-radius: 12px;">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                </div>
+                            </div>
+
+                            <div class="glass" style="padding: 18px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #3b82f6;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Pool Reserva / Estoque</div>
+                                    <div id="pool-stat-reserve" style="font-size: 2rem; font-weight: 800; color: #60a5fa; margin-top: 4px; font-family: 'Space Mono', monospace;">0</div>
+                                    <span id="pool-stat-reserve-pct" style="font-size: 0.75rem; color: #60a5fa;">0% do total</span>
+                                </div>
+                                <div style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; padding: 12px; border-radius: 12px;">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                </div>
+                            </div>
+
+                            <div class="glass" style="padding: 18px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #f59e0b;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Pool Manutenção</div>
+                                    <div id="pool-stat-maintenance" style="font-size: 2rem; font-weight: 800; color: #fbbf24; margin-top: 4px; font-family: 'Space Mono', monospace;">0</div>
+                                    <span id="pool-stat-maintenance-pct" style="font-size: 0.75rem; color: #fbbf24;">0% do total</span>
+                                </div>
+                                <div style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; padding: 12px; border-radius: 12px;">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                                </div>
+                            </div>
+
+                            <div class="glass" style="padding: 18px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid #ef4444;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Pool Desativado / Baixa</div>
+                                    <div id="pool-stat-desativado" style="font-size: 2rem; font-weight: 800; color: #f87171; margin-top: 4px; font-family: 'Space Mono', monospace;">0</div>
+                                    <span id="pool-stat-desativado-pct" style="font-size: 0.75rem; color: #f87171;">0% do total</span>
+                                </div>
+                                <div style="background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 12px; border-radius: 12px;">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Seção 1: Matriz de Consolidação por Categoria (Estilo Planilha Excel) -->
+                        <div class="glass" style="padding: 24px; border-radius: 16px; margin-bottom: 25px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                        📊 Matriz Consolidada de Itens por Categoria (Visão Resumo)
+                                    </h3>
+                                    <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.85rem;">
+                                        Totalização de equipamentos agregados por categoria e status operacional do pool.
+                                    </p>
+                                </div>
+                                <button id="btn-pool-export-matrix" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    Exportar Resumo Excel
+                                </button>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="pool-matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 22%;">CATEGORIA</th>
+                                            <th style="width: 13%; text-align: center; color: #34d399;">🟢 ATIVO / USO</th>
+                                            <th style="width: 13%; text-align: center; color: #60a5fa;">🔵 ESTOQUE / RESERVA</th>
+                                            <th style="width: 13%; text-align: center; color: #fbbf24;">🟡 MANUTENÇÃO</th>
+                                            <th style="width: 13%; text-align: center; color: #f87171;">🔴 DESATIVADO</th>
+                                            <th style="width: 13%; text-align: center; color: #fff;">📊 TOTAL GERAL</th>
+                                            <th style="width: 13%; text-align: center;">📈 % EM USO</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pool-matrix-tbody">
+                                        <!-- Preenchido dinamicamente via JS -->
+                                    </tbody>
+                                    <tfoot id="pool-matrix-tfoot">
+                                        <!-- Linha de Totais Gerais -->
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Seção Intermediária: Tabela de Disponibilidade e Saldos de Estoque por Produto (Case-Insensitive) -->
+                        <div class="glass" style="padding: 24px; border-radius: 16px; margin-bottom: 25px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                        📦 Disponibilidade e Saldos de Estoque por Produto / Modelo
+                                    </h3>
+                                    <p style="margin: 4px 0 0 0; color: var(--text-muted); font-size: 0.85rem;">
+                                        Controle de disponibilidade consolidada por produto (nome e categoria unificados).
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button id="btn-pool-export-products" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        Exportar Saldos CSV
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="pool-matrix-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 25%;">PRODUTO / MODELO</th>
+                                            <th style="width: 14%;">CATEGORIA</th>
+                                            <th style="width: 13%; text-align: center; color: #34d399;">🟢 EM ESTOQUE (RESERVA)</th>
+                                            <th style="width: 11%; text-align: center; color: #60a5fa;">🔵 EM USO</th>
+                                            <th style="width: 11%; text-align: center; color: #fbbf24;">🟡 MANUTENÇÃO</th>
+                                            <th style="width: 11%; text-align: center; color: #fff;">📊 TOTAL</th>
+                                            <th style="width: 15%; text-align: center;">DISPONIBILIDADE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pool-products-tbody">
+                                        <!-- Injetado dinamicamente via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Seção 2: Grade Geral de Equipamentos do Pool (Tabela Detalhada com Filtros Rápidos) -->
+                        <div class="glass" style="padding: 24px; border-radius: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px;">
+                                <div>
+                                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                        📋 Grade Geral de Ativos Coletados no Sistema (Estilo Planilha)
+                                    </h3>
+                                    <span id="pool-grid-count" style="color: var(--text-muted); font-size: 0.85rem;">0 itens no pool</span>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                    <button id="btn-pool-export-grid" class="btn-secondary" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3);">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        Exportar Planilha Completa
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Filtros rápidos por Status (Submenus da Planilha) e Pesquisa -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+                                <div class="pool-subnav-bar" style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;" id="pool-status-pills">
+                                    <button class="pool-tab-btn pool-filter-pill active" data-pool-status="all">
+                                        <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                        Todos os Ativos
+                                        <span id="pool-pill-all" class="pool-badge">0</span>
+                                    </button>
+                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="ativo">
+                                        <span class="pool-status-dot dot-active"></span>
+                                        Ativo / Uso
+                                        <span id="pool-pill-ativo" class="pool-badge">0</span>
+                                    </button>
+                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="reserva">
+                                        <span class="pool-status-dot dot-reserve"></span>
+                                        Estoque
+                                        <span id="pool-pill-reserva" class="pool-badge">0</span>
+                                    </button>
+                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="manutencao">
+                                        <span class="pool-status-dot dot-maintenance"></span>
+                                        Manutenção
+                                        <span id="pool-pill-manutencao" class="pool-badge">0</span>
+                                    </button>
+                                    <button class="pool-tab-btn pool-filter-pill" data-pool-status="desativado">
+                                        <span class="pool-status-dot dot-desativado"></span>
+                                        Desativado
+                                        <span id="pool-pill-desativado" class="pool-badge">0</span>
+                                    </button>
+                                </div>
+
+                                <div style="display: flex; gap: 10px; flex: 1; min-width: 260px; max-width: 480px;">
+                                    <input type="text" id="pool-search-input" class="form-control glass" placeholder="🔍 Filtrar planilha por nome, patrimônio, S/N, IP..." style="width: 100%; padding: 8px 14px; font-size: 0.85rem;">
+                                </div>
+                            </div>
+
+                            <div style="overflow-x: auto;">
+                                <table class="custom-table" style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;">
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">PATRIMÔNIO</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">EQUIPAMENTO</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">CATEGORIA</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">STATUS POOL</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">SETOR / LOCAL</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">RESPONSÁVEL</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem;">S/N & IP</th>
+                                            <th style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: right;">AÇÕES</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pool-grid-tbody">
+                                        <!-- Injetado dinamicamente via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="pool-pagination" class="pagination-container" style="margin-top: 15px;"></div>
                         </div>
                     </div>
                 </section>
@@ -2479,12 +2702,12 @@
         </div>
     </div>
 
-    <!-- Modal para Movimentação de Estoque (+ Entrada / - Saída) -->
+    <!-- Modal para Movimentação de Equipamentos e Estoque -->
     <div id="modal-inv-movement" class="modal hidden">
-        <div class="modal-content glass" style="max-width: 620px; border-radius: 20px; padding: 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
-                <h3 id="inv-movement-modal-title" style="margin: 0; font-size: 1.3rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-                    <span id="inv-movement-icon">🟢</span> Movimentação de Ativo
+        <div class="modal-content glass" style="max-width: 650px; border-radius: 20px; padding: 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+                <h3 id="inv-movement-modal-title" style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    <span id="inv-movement-icon">📦</span> Movimentação de Equipamento
                 </h3>
                 <button type="button" id="btn-close-inv-movement" class="btn-icon" style="color: var(--text-muted);">
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -2492,41 +2715,102 @@
             </div>
 
             <form id="form-inv-movement">
-                <input type="hidden" id="inv-move-type" value="in"> <!-- 'in' ou 'out' -->
+                <input type="hidden" id="inv-move-type" value="in">
 
+                <!-- 1. Seleção do Produto / Equipamento (Busca com Autocomplete) -->
+                <div class="form-group" style="margin-bottom: 16px; position: relative;">
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span>1. SELECIONE O PRODUTO (NOME / CATEGORIA) *</span>
+                        <span style="font-size: 0.72rem; color: #818cf8; font-weight: 500;">🔍 Digite para buscar e autocompletar</span>
+                    </label>
+                    <div style="position: relative;">
+                        <input type="text" id="inv-move-item-input" class="form-control glass" placeholder="Digite para buscar produto (Ex: Dell, Mouse, Teclado)..." autocomplete="off" required style="width: 100%; padding: 11px 40px 11px 14px; background: rgba(15, 23, 42, 0.95); color: #fff; font-size: 0.95rem; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px;">
+                        <input type="hidden" id="inv-move-item-id" required>
+                        <button type="button" id="btn-inv-move-clear-select" class="btn-icon" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: none; color: var(--text-muted); padding: 4px;" title="Limpar e pesquisar outro">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+
+                    <!-- Dropdown List de Autocomplete -->
+                    <div id="inv-move-autocomplete-list" class="inv-autocomplete-dropdown hidden">
+                        <!-- Itens renderizados dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- Painel de Disponibilidade & Saldo em Tempo Real -->
+                <div id="inv-move-stock-summary" class="glass hidden" style="padding: 14px 16px; border-radius: 12px; margin-bottom: 16px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99, 102, 241, 0.3);">
+                    <div style="font-size: 0.75rem; font-weight: 700; color: #a5b4fc; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em;">
+                        📊 Saldos Cadastrados deste Produto:
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: center;">
+                        <div style="background: rgba(16, 185, 129, 0.12); padding: 8px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                            <div style="font-size: 0.72rem; color: #34d399; font-weight: 600;">ESTOQUE</div>
+                            <div id="inv-move-avail-stock" style="font-size: 1.2rem; font-weight: 800; color: #34d399; font-family: 'Space Mono', monospace;">0</div>
+                        </div>
+                        <div style="background: rgba(59, 130, 246, 0.12); padding: 8px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.25);">
+                            <div style="font-size: 0.72rem; color: #60a5fa; font-weight: 600;">EM USO</div>
+                            <div id="inv-move-in-use" style="font-size: 1.2rem; font-weight: 800; color: #60a5fa; font-family: 'Space Mono', monospace;">0</div>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.12); padding: 8px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.25);">
+                            <div style="font-size: 0.72rem; color: #fbbf24; font-weight: 600;">MANUTENÇÃO</div>
+                            <div id="inv-move-in-maint" style="font-size: 1.2rem; font-weight: 800; color: #fbbf24; font-family: 'Space Mono', monospace;">0</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                            <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">TOTAL</div>
+                            <div id="inv-move-total-stock" style="font-size: 1.2rem; font-weight: 800; color: #fff; font-family: 'Space Mono', monospace;">0</div>
+                        </div>
+                    </div>
+                    <!-- Alerta Dinâmico -->
+                    <div id="inv-move-stock-alert" class="hidden" style="margin-top: 10px; padding: 8px 12px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        ⚠️ Atenção: Não há unidades disponíveis para a movimentação selecionada.
+                    </div>
+                </div>
+
+                <!-- 2. Tipo de Movimentação (4 Botões) -->
                 <div class="form-group" style="margin-bottom: 16px;">
-                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">SELECIONE O EQUIPAMENTO / ATIVO *</label>
-                    <select id="inv-move-item-id" class="form-control glass" required style="width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.9); color: #fff;">
-                        <option value="">Selecione um equipamento cadastrado...</option>
-                    </select>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">NOVO STATUS *</label>
-                        <select id="inv-move-status" class="form-control glass" required style="width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.9); color: #fff;">
-                            <option value="ativo">Ativo / Em Uso</option>
-                            <option value="reserva">Reserva / Estoque</option>
-                            <option value="manutencao">Em Manutenção</option>
-                            <option value="desativado">Desativado / Baixa</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">MOTIVO DA MOVIMENTAÇÃO *</label>
-                        <select id="inv-move-reason" class="form-control glass" required style="width: 100%; padding: 10px; background: rgba(15, 23, 42, 0.9); color: #fff;">
-                            <option value="Alocação para Usuário">Alocação para Usuário</option>
-                            <option value="Devolução ao Estoque">Devolução ao Estoque</option>
-                            <option value="Entrada de Novo Lote">Entrada de Novo Lote</option>
-                            <option value="Envio para Manutenção">Envio para Manutenção</option>
-                            <option value="Retorno de Manutenção">Retorno de Manutenção</option>
-                            <option value="Transferência de Setor">Transferência de Setor</option>
-                            <option value="Empréstimo Temporário">Empréstimo Temporário</option>
-                            <option value="Baixa por Defeito / Sucata">Baixa por Defeito / Sucata</option>
-                        </select>
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 8px;">2. TIPO DE MOVIMENTAÇÃO *</label>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                        <button type="button" class="inv-type-btn active" data-type="in" id="btn-type-in" style="padding: 10px 6px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="font-size: 1.1rem;">🟢</span>
+                            <span>Entrada</span>
+                        </button>
+                        <button type="button" class="inv-type-btn" data-type="use" id="btn-type-use" style="padding: 10px 6px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="font-size: 1.1rem;">🔵</span>
+                            <span>Em Uso</span>
+                        </button>
+                        <button type="button" class="inv-type-btn" data-type="maint" id="btn-type-maint" style="padding: 10px 6px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="font-size: 1.1rem;">🟡</span>
+                            <span>Manutenção</span>
+                        </button>
+                        <button type="button" class="inv-type-btn" data-type="out" id="btn-type-out" style="padding: 10px 6px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                            <span style="font-size: 1.1rem;">🔴</span>
+                            <span>Saída</span>
+                        </button>
                     </div>
                 </div>
 
+                <!-- 3. Ação / Origem da Movimentação (Sub-opções Dinâmicas) -->
+                <div id="inv-move-action-container" class="form-group" style="margin-bottom: 16px;">
+                    <label id="lbl-inv-move-action-title" style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 8px;">3. AÇÃO / ORIGEM DA MOVIMENTAÇÃO *</label>
+                    <div id="inv-move-action-options" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Injetado dinamicamente via JS -->
+                    </div>
+                </div>
+
+                <!-- 4. Quantidade a Movimentar -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span>4. QUANTIDADE A MOVIMENTAR *</span>
+                        <span id="inv-move-qty-hint" style="font-size: 0.75rem; color: #a5b4fc; font-weight: 600;">(1 unidade selecionada)</span>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <button type="button" id="btn-inv-qty-minus" class="btn-secondary" style="width: 44px; height: 42px; padding: 0; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border-radius: 8px;">-</button>
+                        <input type="number" id="inv-move-quantity" class="form-control glass" min="1" max="500" value="1" required style="flex: 1; text-align: center; font-size: 1.25rem; font-weight: 800; font-family: 'Space Mono', monospace; padding: 8px; color: #fff;">
+                        <button type="button" id="btn-inv-qty-plus" class="btn-secondary" style="width: 44px; height: 42px; padding: 0; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; justify-content: center; border-radius: 8px;">+</button>
+                    </div>
+                </div>
+
+                <!-- 5. Dados Complementares (Setor, Usuário, Observação) -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
                     <div>
                         <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">SETOR / LOCALIZAÇÃO</label>
@@ -2534,14 +2818,14 @@
                     </div>
 
                     <div>
-                        <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">USUÁRIO RESPONSÁVEL</label>
+                        <label id="lbl-inv-move-assigned-to" style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">USUÁRIO RESPONSÁVEL</label>
                         <input type="text" id="inv-move-assigned-to" class="form-control glass" placeholder="Ex: Maria Santos" style="width: 100%; padding: 10px;">
                     </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">OBSERVAÇÕES / JUSTIFICATIVA</label>
-                    <textarea id="inv-move-notes" class="form-control glass" rows="3" placeholder="Detalhes adicionais da movimentação..." style="width: 100%; padding: 10px; min-height: 70px;"></textarea>
+                    <label style="font-weight: 600; font-size: 0.8rem; letter-spacing: 0.05em; color: var(--text-muted); display: block; margin-bottom: 6px;">OBSERVAÇÃO / JUSTIFICATIVA</label>
+                    <textarea id="inv-move-notes" class="form-control glass" rows="2" placeholder="Detalhes ou observações da movimentação..." style="width: 100%; padding: 10px; min-height: 60px;"></textarea>
                 </div>
 
                 <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px;">
@@ -2551,6 +2835,85 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal Detalhes do Equipamento / Ativo -->
+    <div id="modal-inv-details" class="modal hidden">
+        <div class="modal-content glass" style="max-width: 650px; border-radius: 20px; padding: 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 14px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span id="inv-detail-asset-tag" style="font-family: monospace; font-weight: 700; color: #a5b4fc; background: rgba(99, 102, 241, 0.15); padding: 4px 10px; border-radius: 6px; font-size: 0.9rem;">PAT-2026-001</span>
+                        <span id="inv-detail-status-badge"></span>
+                    </div>
+                    <h2 id="inv-detail-name" style="margin: 0; font-size: 1.35rem; font-weight: 700; color: #fff;">Nome do Equipamento</h2>
+                    <span id="inv-detail-brand" style="font-size: 0.85rem; color: var(--text-muted);">Marca / Modelo</span>
+                </div>
+                <button type="button" id="btn-close-inv-details" class="btn-icon close-modal" style="color: var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Categoria</div>
+                    <div id="inv-detail-category" style="font-weight: 600; color: #fff; font-size: 0.95rem;">Notebook</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Número de Série / Chassi</div>
+                    <div id="inv-detail-serial" style="font-family: monospace; color: #cbd5e1; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Localização / Setor</div>
+                    <div id="inv-detail-location" style="color: #cbd5e1; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Usuário Responsável</div>
+                    <div id="inv-detail-assigned" style="color: #cbd5e1; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Endereço IP</div>
+                    <div id="inv-detail-ip" style="font-family: monospace; color: #818cf8; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Endereço MAC</div>
+                    <div id="inv-detail-mac" style="font-family: monospace; color: #cbd5e1; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Data de Compra</div>
+                    <div id="inv-detail-purchase-date" style="color: #cbd5e1; font-size: 0.95rem;">-</div>
+                </div>
+
+                <div class="glass" style="padding: 14px; border-radius: 12px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Garantia</div>
+                    <div id="inv-detail-warranty-wrapper" style="font-size: 0.95rem;">-</div>
+                </div>
+            </div>
+
+            <div class="glass" style="padding: 14px; border-radius: 12px; margin-bottom: 20px;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Observações e Histórico</div>
+                <div id="inv-detail-notes" style="color: #e2e8f0; font-size: 0.9rem; line-height: 1.5; white-space: pre-wrap;">-</div>
+            </div>
+
+            <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-inv-detail-edit" class="btn-primary" style="padding: 9px 18px; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Editar Equipamento
+                    </button>
+                </div>
+                <button type="button" id="btn-close-inv-details-footer" class="btn-secondary" style="padding: 9px 20px;">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Notifications for Inventory -->
+    <div id="inv-toast-container" class="inv-toast-container"></div>
 
     <!-- Firebase / Vendor Scripts (Optional) -->
     <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->

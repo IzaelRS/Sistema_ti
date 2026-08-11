@@ -336,4 +336,415 @@
     border-color: #ffffff;
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
     transform: scale(1.1);
-}
+}
+
+/* ============================================================ */
+/* Inventory Enhancements & Toast Notifications                 */
+/* ============================================================ */
+@keyframes row-highlight-glow {
+    0% {
+        background-color: rgba(99, 102, 241, 0.35);
+        box-shadow: inset 0 0 15px rgba(99, 102, 241, 0.5);
+    }
+    50% {
+        background-color: rgba(99, 102, 241, 0.2);
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+.row-newly-added {
+    animation: row-highlight-glow 4s ease-out forwards;
+}
+
+.inv-toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.inv-toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.2);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    max-width: 420px;
+    animation: toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.inv-toast.success {
+    border-left: 4px solid #10b981;
+}
+
+.inv-toast.error {
+    border-left: 4px solid #ef4444;
+}
+
+.inv-toast.info {
+    border-left: 4px solid #3b82f6;
+}
+
+.inv-toast.fade-out {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+}
+
+@keyframes toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.warranty-badge-valid {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.warranty-badge-expired {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ============================================================ */
+/* Inventory Pool View & Excel-style Grid Table                 */
+/* ============================================================ */
+.pool-matrix-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.88rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.pool-matrix-table th {
+    background: rgba(15, 23, 42, 0.85);
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted, #94a3b8);
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pool-matrix-table th:last-child {
+    border-right: none;
+}
+
+.pool-matrix-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    transition: background 0.15s ease;
+}
+
+.pool-matrix-table td:last-child {
+    border-right: none;
+}
+
+.pool-matrix-table tr:hover td {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.pool-matrix-table tfoot td {
+    background: rgba(30, 41, 59, 0.7);
+    font-weight: 800;
+    color: #fff;
+    border-top: 2px solid rgba(99, 102, 241, 0.4);
+    border-bottom: none;
+}
+
+.pool-cell-number {
+    font-family: 'Space Mono', monospace, sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+}
+
+/* ============================================================ */
+/* Pool Submenus & Tab Filter Navigation Buttons               */
+/* ============================================================ */
+.pool-subnav-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+}
+
+.pool-tab-btn, .pool-filter-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted, #94a3b8);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    outline: none;
+}
+
+.pool-tab-btn:hover, .pool-filter-pill:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Active states with colors */
+.pool-tab-btn.active, .pool-filter-pill.active {
+    background: rgba(99, 102, 241, 0.25);
+    color: #fff;
+    border-color: #6366f1;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+}
+
+.pool-tab-btn[data-pool-status="ativo"].active, .pool-filter-pill[data-pool-status="ativo"].active {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: #10b981;
+    color: #34d399;
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+.pool-tab-btn[data-pool-status="reserva"].active, .pool-filter-pill[data-pool-status="reserva"].active {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: #3b82f6;
+    color: #60a5fa;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.35);
+}
+
+.pool-tab-btn[data-pool-status="manutencao"].active, .pool-filter-pill[data-pool-status="manutencao"].active {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: #f59e0b;
+    color: #fbbf24;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+}
+
+.pool-tab-btn[data-pool-status="desativado"].active, .pool-filter-pill[data-pool-status="desativado"].active {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: #ef4444;
+    color: #f87171;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+}
+
+.pool-badge {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-family: 'Space Mono', monospace;
+}
+
+.pool-tab-btn.active .pool-badge, .pool-filter-pill.active .pool-badge {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.pool-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dot-active { background: #10b981; box-shadow: 0 0 6px #10b981; }
+.dot-reserve { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
+.dot-maintenance { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+.dot-desativado { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+
+.pool-progress-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.pool-progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+/* Autocomplete searchable select */
+.inv-autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1050;
+    background: #0f172a;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+}
+
+.inv-autocomplete-item {
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.inv-autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.inv-autocomplete-item:hover, .inv-autocomplete-item.active {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+.inv-autocomplete-item .match-highlight {
+    color: #60a5fa;
+    font-weight: 700;
+}
+
+/* Movement Source Selector Pills */
+.inv-source-pill {
+    transition: all 0.2s ease;
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+}
+
+.inv-source-pill:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.inv-source-pill.active-stock {
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #34d399 !important;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.inv-source-pill.active-use {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #60a5fa !important;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.25);
+}
+
+/* Movement Type Buttons */
+.inv-type-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+}
+.inv-type-btn:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+}
+.inv-type-btn.active[data-type="in"] {
+    border-color: rgba(16, 185, 129, 0.6) !important;
+    background: rgba(16, 185, 129, 0.22) !important;
+    color: #34d399 !important;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+}
+.inv-type-btn.active[data-type="use"] {
+    border-color: rgba(59, 130, 246, 0.6) !important;
+    background: rgba(59, 130, 246, 0.22) !important;
+    color: #60a5fa !important;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.25);
+}
+.inv-type-btn.active[data-type="maint"] {
+    border-color: rgba(245, 158, 11, 0.6) !important;
+    background: rgba(245, 158, 11, 0.22) !important;
+    color: #fbbf24 !important;
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+.inv-type-btn.active[data-type="out"] {
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    background: rgba(239, 68, 68, 0.22) !important;
+    color: #f87171 !important;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+}
+
+/* Action pills inside modal */
+.inv-action-pill {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+.inv-action-pill:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+}
+.inv-action-pill.active {
+    border-color: #6366f1 !important;
+    background: rgba(99, 102, 241, 0.2) !important;
+    color: #fff !important;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+

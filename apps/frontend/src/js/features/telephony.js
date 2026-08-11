@@ -55,7 +55,7 @@ export const telephonyHandler = {
         const searchBar = document.querySelector('#telephony-section .search-bar');
         const pagination = document.getElementById('telephony-pagination');
         if (searchBar) searchBar.style.display = tab === 'history' ? 'none' : 'flex';
-        if (pagination) pagination.style.display = tab === 'history' ? 'none' : 'block';
+        if (pagination) pagination.style.display = tab === 'history' ? 'none' : 'flex';
 
         if (tab === 'history') {
             this.fetchAndRenderHistory();

@@ -192,6 +192,66 @@ router.post("/", async (req: Request, res: Response) => {
     }
 });
 
+// POST /api/inventory/batch - Create multiple items in batch
+router.post("/batch", async (req: Request, res: Response) => {
+    try {
+        const itemRepo = AppDataSource.getRepository(InventoryItem);
+        const auditRepo = AppDataSource.getRepository(InventoryAuditLog);
+
+        const {
+            name, category, brand_model,
+            status, location, assigned_to,
+            purchase_date, warranty_expires, notes, performed_by,
+            quantity = 1, asset_tag_prefix
+        } = req.body;
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: "O nome do item é obrigatório." });
+        }
+
+        const qty = Math.max(1, Math.min(Number(quantity) || 1, 200));
+        const createdItems: InventoryItem[] = [];
+
+        for (let i = 0; i < qty; i++) {
+            const assetTag = asset_tag_prefix ? `${asset_tag_prefix}-${String(Date.now()).slice(-4)}-${i + 1}` : undefined;
+            const newItem = new InventoryItem();
+            newItem.name = name.trim();
+            newItem.category = category || "Outro";
+            newItem.brand_model = brand_model?.trim() || undefined;
+            newItem.serial_number = undefined;
+            newItem.asset_tag = assetTag;
+            newItem.status = status || "reserva";
+            newItem.location = location?.trim() || undefined;
+            newItem.assigned_to = assigned_to?.trim() || undefined;
+            newItem.ip_address = undefined;
+            newItem.mac_address = undefined;
+            newItem.purchase_date = purchase_date || undefined;
+            newItem.warranty_expires = warranty_expires || undefined;
+            newItem.notes = notes?.trim() || undefined;
+            createdItems.push(newItem);
+        }
+
+        const savedItems = await itemRepo.save(createdItems);
+
+        // Record Audit Log for the batch
+        if (savedItems.length > 0) {
+            const auditLog = auditRepo.create({
+                item_id: savedItems[0].id,
+                item_name: `${name.trim()} (Lote de ${qty} un)`,
+                action: "Entrada em Lote",
+                performed_by: performed_by || "Sistema / Usuário TI",
+                details: `Entrada em lote de ${qty} unidades do produto '${name.trim()}' (Categoria: ${category || 'Outro'}) com status '${status || 'reserva'}'.`
+            });
+            await auditRepo.save(auditLog);
+        }
+
+        return res.status(201).json(savedItems);
+    } catch (error: any) {
+        console.error("Erro ao criar itens em lote:", error);
+        return res.status(500).json({ error: "Erro ao criar itens em lote no inventário." });
+    }
+});
+
 // PUT /api/inventory/:id - Update item
 router.put("/:id", async (req: Request, res: Response) => {
     try {
